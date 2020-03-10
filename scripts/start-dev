@@ -1,0 +1,3 @@
+#!/bin/bash
+
+~/go/bin/gin -p 4001 -a 4000 run cmd/main.go
