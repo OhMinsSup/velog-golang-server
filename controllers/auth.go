@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -24,8 +25,7 @@ func SendEmailController(context *gin.Context) {
 		return
 	}
 
-	var response map[string]interface{}
-	response["registerd"] = registerd
-
-	context.JSON(200, response)
+	context.JSON(200, helpers.JSON{
+		"registerd": registerd,
+	})
 }

@@ -32,7 +32,7 @@ func Initialize() (*gorm.DB, error) {
 }
 
 func Migrate(db *gorm.DB) {
-	db.AutoMigrate(&models.EmailAuth{})
+	db.AutoMigrate(&models.User{}, &models.EmailAuth{})
 	//db.Model(&AuthToken{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	fmt.Println("Auto Migration has beed processed")
 }
