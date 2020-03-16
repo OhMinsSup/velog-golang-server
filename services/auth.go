@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"github.com/OhMinsSup/story-server/database/models"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/SKAhack/go-shortid"
@@ -27,8 +26,12 @@ func CodeService(code string, db *gorm.DB) error {
 	}
 
 	currentTime := time.Now().Unix()
-	compareTime := time.Unix(emailAuth.CreatedAt.Unix(), 0)
-	fmt.Println(currentTime, compareTime)
+	compareTime := emailAuth.CreatedAt.Unix()
+	expireDate := time.Hour * 24
+	diff := currentTime - compareTime
+	if time.Since(time.Unix(diff, 0).AddDate(0, 0, -1)) > expireDate || emailAuth.Logged {
+		return nil
+	}
 
 	return nil
 }
