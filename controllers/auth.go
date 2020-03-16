@@ -29,3 +29,10 @@ func SendEmailController(context *gin.Context) {
 		"registerd": registerd,
 	})
 }
+
+func CodeController(ctx *gin.Context) {
+	code := ctx.Param("code")
+
+	db := ctx.MustGet("db").(*gorm.DB)
+
+}

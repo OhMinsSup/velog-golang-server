@@ -1,6 +1,8 @@
 package services
 
 import (
+	"errors"
+	"fmt"
 	"github.com/OhMinsSup/story-server/database/models"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/SKAhack/go-shortid"
@@ -8,7 +10,28 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+var errorNotFoundEmailAuth = errors.New("Not Found Email Auth")
+var errorTokenAlreadyUse = errors.New("Token Already Use")
+
+func CodeService(code string, db *gorm.DB) error {
+	var emailAuth models.EmailAuth
+	if err := db.Where("code = ?", code).First(&emailAuth); err != nil {
+		return errorNotFoundEmailAuth
+	}
+
+	if emailAuth.Logged {
+		return errorTokenAlreadyUse
+	}
+
+	currentTime := time.Now().Unix()
+	compareTime := time.Unix(emailAuth.CreatedAt.Unix(), 0)
+	fmt.Println(currentTime, compareTime)
+
+	return nil
+}
 
 func SendEmailService(email string, db *gorm.DB) (bool, error) {
 	exists := false

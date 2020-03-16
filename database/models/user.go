@@ -9,9 +9,10 @@ type User struct {
 	IsCertified bool   `gorm:"default:false"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	DeletedAt   *time.Time `sql:"index"`
+	DeletedAt   *time.Time  `sql:"index"`
+	AuthTokens  []AuthToken `gorm:"foreignkey:UserID"`
+	UserProfile UserProfile `gorm:"foreignkey:UserID"`
 }
-
 
 func (user *User) GenerateUserToken() {
 
