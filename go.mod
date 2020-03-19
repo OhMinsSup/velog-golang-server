@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/SKAhack/go-shortid v0.0.0-20140827050853-24d054c393fe
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/golang/protobuf v1.3.4 // indirect

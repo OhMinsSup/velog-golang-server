@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"github.com/OhMinsSup/story-server/database/models"
+	"github.com/OhMinsSup/story-server/helpers"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/SKAhack/go-shortid"
 	"github.com/jinzhu/gorm"
@@ -14,32 +15,67 @@ import (
 
 var errorNotFoundEmailAuth = errors.New("Not Found Email Auth")
 var errorTokenAlreadyUse = errors.New("Token Already Use")
+var errorTokenExpiredCode = errors.New("Expireed Code")
+var errorUserProfileDefine = errors.New("User Profile Define")
 
-func CodeService(code string, db *gorm.DB) error {
+func CodeService(code string, db *gorm.DB) (helpers.JSON, error) {
 	var emailAuth models.EmailAuth
-	if err := db.Where("code = ?", code).First(&emailAuth); err != nil {
-		return errorNotFoundEmailAuth
+	if existsEmail := db.Where("code = ?", code).First(&emailAuth); existsEmail == nil {
+		return helpers.JSON{}, errorNotFoundEmailAuth
 	}
 
 	if emailAuth.Logged {
-		return errorTokenAlreadyUse
+		return helpers.JSON{}, errorTokenAlreadyUse
 	}
 
+	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
 	currentTime := time.Now().Unix()
-	compareTime := emailAuth.CreatedAt.Unix()
-	expireDate := time.Hour * 24
-	diff := currentTime - compareTime
-	if time.Since(time.Unix(diff, 0).AddDate(0, 0, -1)) > expireDate || emailAuth.Logged {
-		return nil
+	if currentTime > expireTime || emailAuth.Logged {
+		return helpers.JSON{}, errorTokenExpiredCode
 	}
 
-	return nil
+	// check user with code
+	var user models.User
+	if err := db.Where("email = ?", strings.ToLower(emailAuth.Email)).First(&user).Error; err != nil {
+		// 해당 이메일로 등록한 유저가 없는 경우
+		subject := "email-register"
+		payload := helpers.JSON{
+			"email": emailAuth.Email,
+			"id":    emailAuth.ID,
+		}
+
+		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
+		if err != nil {
+			return helpers.JSON{}, err
+		}
+
+		return helpers.JSON{
+			"email":          emailAuth.Email,
+			"register_token": registerToken,
+		}, nil
+	}
+
+	var userProfile models.UserProfile
+	if err := db.Where("user_id = ?", user.ID).First(&userProfile).Error; err != nil {
+		return helpers.JSON{}, errorUserProfileDefine
+	}
+
+	tokens := user.GenerateUserToken(db)
+	// 해당 이메일로 등록한 유저가 있는 경우
+	return helpers.JSON{
+		"id":           user.ID,
+		"username":     user.Username,
+		"email":        user.Email,
+		"profile":      userProfile,
+		"accessToken":  tokens["accessToken"],
+		"refreshToken": tokens["refreshToken"],
+	}, nil
 }
 
 func SendEmailService(email string, db *gorm.DB) (bool, error) {
 	exists := false
 	var user models.User
-	if err := db.Where("email = ?", strings.ToLower(email)).First(&user); err == nil {
+	if existsUser := db.Where("email = ?", strings.ToLower(email)).First(&user); existsUser == nil {
 		exists = true
 	}
 

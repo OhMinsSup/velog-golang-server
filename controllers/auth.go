@@ -5,6 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"log"
 )
 
 type SendEmailBody struct {
@@ -22,6 +23,7 @@ func SendEmailController(context *gin.Context) {
 	db := context.MustGet("db").(*gorm.DB)
 	registerd, err := services.SendEmailService(body.Email, db)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 
@@ -30,9 +32,14 @@ func SendEmailController(context *gin.Context) {
 	})
 }
 
-func CodeController(ctx *gin.Context) {
-	code := ctx.Param("code")
+func CodeController(context *gin.Context) {
+	code := context.Param("code")
 
-	db := ctx.MustGet("db").(*gorm.DB)
-
+	db := context.MustGet("db").(*gorm.DB)
+	result, err := services.CodeService(code, db)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	context.JSON(200, result)
 }
