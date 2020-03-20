@@ -1,13 +1,12 @@
 package helpers
 
 import (
-	"errors"
 	"github.com/dgrijalva/jwt-go"
+	"log"
 	"time"
 )
 
 var signingKey = []byte("AllYourBase")
-var errorGenerateToken = errors.New("Generate Token Error")
 
 func generateToken(payload JSON, subject string, expire time.Duration) (string, error) {
 	// Create the Claims
@@ -22,10 +21,29 @@ func generateToken(payload JSON, subject string, expire time.Duration) (string, 
 
 	tokenString, err := token.SignedString(signingKey)
 	if err != nil {
-		return "", errorGenerateToken
+		return "", ErrorGenerateToken
 	}
 
 	return tokenString, nil
+}
+
+func DecodeToken(deocedToken string) (JSON, error) {
+	result, err := jwt.Parse(deocedToken, func(token *jwt.Token) (i interface{}, err error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			log.Println("Unexpected signing method: %v", token.Header["alg"])
+			return nil, ErrorSigningMethod
+		}
+		return signingKey, nil
+	})
+
+	if err != nil {
+		return nil, ErrorInvalidToken
+	}
+
+	if !result.Valid {
+		return nil, ErrorInvalidToken
+	}
+	return result.Claims.(jwt.MapClaims), nil
 }
 
 func GenerateRegisterToken(payload JSON, subject string) (string, error) {

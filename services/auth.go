@@ -1,8 +1,8 @@
 package services
 
 import (
-	"errors"
 	"github.com/OhMinsSup/story-server/database/models"
+	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/SKAhack/go-shortid"
@@ -13,25 +13,73 @@ import (
 	"time"
 )
 
-var errorNotFoundEmailAuth = errors.New("Not Found Email Auth")
-var errorTokenAlreadyUse = errors.New("Token Already Use")
-var errorTokenExpiredCode = errors.New("Expireed Code")
-var errorUserProfileDefine = errors.New("User Profile Define")
+func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB) (helpers.JSON, error) {
+	decoded, err := helpers.DecodeToken(body.RegisterToken)
+	if err != nil {
+		return helpers.JSON{}, helpers.ErrorInvalidToken
+	}
+
+	if decoded["subject"] != "email-register" {
+		return nil, helpers.ErrorInvalidToken
+	}
+
+	payload := decoded["payload"].(helpers.JSON)
+
+	var userModel models.User
+	if err := db.Where("email = ?", strings.ToLower(payload["email"].(string))).Or("username = ?", body.UserName).First(&userModel).Error; err == nil {
+		return nil, helpers.ErrorAlreadyExists
+	}
+
+	var emailAuthModel models.EmailAuth
+	if existsEmailAuth := db.Where("id = ?", payload["id"].(string)).First(&emailAuthModel); existsEmailAuth != nil {
+		emailAuthModel.Logged = true
+		db.Save(&emailAuthModel)
+	}
+
+	user := models.User{
+		Email:       strings.ToLower(payload["email"].(string)),
+		IsCertified: true,
+		Username:    body.UserName,
+	}
+
+	db.NewRecord(user)
+	db.Create(&user)
+
+	userProfile := models.UserProfile{
+		DisplayName: body.DisplayName,
+		ShortBio:    body.ShortBio,
+		UserID:      user.ID,
+	}
+
+	db.NewRecord(userProfile)
+	db.Create(&userProfile)
+
+	tokens := user.GenerateUserToken(db)
+
+	return helpers.JSON{
+		"id":           user.ID,
+		"username":     user.Username,
+		"email":        user.Email,
+		"profile":      userProfile,
+		"accessToken":  tokens["accessToken"],
+		"refreshToken": tokens["refreshToken"],
+	}, nil
+}
 
 func CodeService(code string, db *gorm.DB) (helpers.JSON, error) {
 	var emailAuth models.EmailAuth
 	if existsEmail := db.Where("code = ?", code).First(&emailAuth); existsEmail == nil {
-		return helpers.JSON{}, errorNotFoundEmailAuth
+		return nil, helpers.ErrorNotFoundEmailAuth
 	}
 
 	if emailAuth.Logged {
-		return helpers.JSON{}, errorTokenAlreadyUse
+		return nil, helpers.ErrorTokenAlreadyUse
 	}
 
 	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
 	currentTime := time.Now().Unix()
 	if currentTime > expireTime || emailAuth.Logged {
-		return helpers.JSON{}, errorTokenExpiredCode
+		return nil, helpers.ErrorTokenExpiredCode
 	}
 
 	// check user with code
@@ -57,7 +105,7 @@ func CodeService(code string, db *gorm.DB) (helpers.JSON, error) {
 
 	var userProfile models.UserProfile
 	if err := db.Where("user_id = ?", user.ID).First(&userProfile).Error; err != nil {
-		return helpers.JSON{}, errorUserProfileDefine
+		return helpers.JSON{}, helpers.ErrorUserProfileDefine
 	}
 
 	tokens := user.GenerateUserToken(db)
