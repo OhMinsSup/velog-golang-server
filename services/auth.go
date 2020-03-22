@@ -6,28 +6,30 @@ import (
 	"github.com/OhMinsSup/story-server/helpers"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/SKAhack/go-shortid"
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB) (helpers.JSON, error) {
+func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	decoded, err := helpers.DecodeToken(body.RegisterToken)
 	if err != nil {
-		return helpers.JSON{}, helpers.ErrorInvalidToken
+		return nil, http.StatusForbidden, helpers.ErrorInvalidToken
 	}
 
 	if decoded["subject"] != "email-register" {
-		return nil, helpers.ErrorInvalidToken
+		return nil, http.StatusForbidden, helpers.ErrorInvalidToken
 	}
 
 	payload := decoded["payload"].(helpers.JSON)
 
 	var userModel models.User
 	if err := db.Where("email = ?", strings.ToLower(payload["email"].(string))).Or("username = ?", body.UserName).First(&userModel).Error; err == nil {
-		return nil, helpers.ErrorAlreadyExists
+		return nil, http.StatusConflict, helpers.ErrorAlreadyExists
 	}
 
 	var emailAuthModel models.EmailAuth
@@ -55,6 +57,8 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB) (helpers.JSON
 	db.Create(&userProfile)
 
 	tokens := user.GenerateUserToken(db)
+	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
+	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
 
 	return helpers.JSON{
 		"id":           user.ID,
@@ -63,23 +67,23 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB) (helpers.JSON
 		"profile":      userProfile,
 		"accessToken":  tokens["accessToken"],
 		"refreshToken": tokens["refreshToken"],
-	}, nil
+	}, http.StatusOK, nil
 }
 
-func CodeService(code string, db *gorm.DB) (helpers.JSON, error) {
+func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	var emailAuth models.EmailAuth
 	if existsEmail := db.Where("code = ?", code).First(&emailAuth); existsEmail == nil {
-		return nil, helpers.ErrorNotFoundEmailAuth
+		return nil, http.StatusNotFound, helpers.ErrorNotFoundEmailAuth
 	}
 
 	if emailAuth.Logged {
-		return nil, helpers.ErrorTokenAlreadyUse
+		return nil, http.StatusForbidden, helpers.ErrorTokenAlreadyUse
 	}
 
 	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
 	currentTime := time.Now().Unix()
 	if currentTime > expireTime || emailAuth.Logged {
-		return nil, helpers.ErrorTokenExpiredCode
+		return nil, http.StatusForbidden, helpers.ErrorTokenExpiredCode
 	}
 
 	// check user with code
@@ -94,21 +98,23 @@ func CodeService(code string, db *gorm.DB) (helpers.JSON, error) {
 
 		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
 		if err != nil {
-			return helpers.JSON{}, err
+			return nil, http.StatusConflict, err
 		}
 
 		return helpers.JSON{
 			"email":          emailAuth.Email,
 			"register_token": registerToken,
-		}, nil
+		}, http.StatusOK, nil
 	}
 
 	var userProfile models.UserProfile
 	if err := db.Where("user_id = ?", user.ID).First(&userProfile).Error; err != nil {
-		return helpers.JSON{}, helpers.ErrorUserProfileDefine
+		return nil, http.StatusNotFound, helpers.ErrorUserProfileDefine
 	}
 
 	tokens := user.GenerateUserToken(db)
+	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
+	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
 	// 해당 이메일로 등록한 유저가 있는 경우
 	return helpers.JSON{
 		"id":           user.ID,
@@ -117,13 +123,13 @@ func CodeService(code string, db *gorm.DB) (helpers.JSON, error) {
 		"profile":      userProfile,
 		"accessToken":  tokens["accessToken"],
 		"refreshToken": tokens["refreshToken"],
-	}, nil
+	}, http.StatusOK, nil
 }
 
-func SendEmailService(email string, db *gorm.DB) (bool, error) {
+func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	exists := false
 	var user models.User
-	if existsUser := db.Where("email = ?", strings.ToLower(email)).First(&user); existsUser == nil {
+	if existsUser := db.Where("email = ?", strings.ToLower(email)).First(&user); existsUser != nil {
 		exists = true
 	}
 
@@ -139,7 +145,7 @@ func SendEmailService(email string, db *gorm.DB) (bool, error) {
 
 	wd, err := os.Getwd()
 	if err != nil {
-		return exists, err
+		return exists, http.StatusConflict, err
 	}
 
 	var bindData emailService.EmailBindData
@@ -154,10 +160,12 @@ func SendEmailService(email string, db *gorm.DB) (bool, error) {
 	addr := os.Getenv("SMTP")
 	username := os.Getenv("SMTP_USERNAME")
 	password := os.Getenv("SMTP_PASSWORD")
+	host := "smtp.gmail.com"
+	port := "587"
 
 	emailConfig := emailService.SetupEmailCredentials(
-		"smtp.gmail.com",
-		"587",
+		host,
+		port,
 		addr,
 		username,
 		password,
@@ -167,12 +175,12 @@ func SendEmailService(email string, db *gorm.DB) (bool, error) {
 	// 해당 이슈를 참고 html 읽는중에 병목현상이 발생
 	// https://stackoverflow.com/questions/31361745/slow-performance-of-html-template-in-go-lang-any-workaround
 	if err := sender.ParseTemplate(filepath.Join(wd, "./statics/emailTemplate.html"), bindData); err != nil {
-		return exists, err
+		return exists, http.StatusConflict, err
 	}
 
 	if err := sender.Send(email); err != nil {
-		return exists, err
+		return exists, http.StatusConflict, err
 	}
 
-	return exists, nil
+	return exists, http.StatusOK, nil
 }

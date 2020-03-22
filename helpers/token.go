@@ -43,6 +43,7 @@ func DecodeToken(deocedToken string) (JSON, error) {
 	if !result.Valid {
 		return nil, ErrorInvalidToken
 	}
+
 	return result.Claims.(jwt.MapClaims), nil
 }
 
