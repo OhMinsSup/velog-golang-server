@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"github.com/OhMinsSup/story-server/database/models"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -8,6 +9,28 @@ import (
 	"strings"
 	"time"
 )
+
+func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error) {
+	decodeTokenData, errDecode := helpers.DecodeToken(refreshToken)
+	if errDecode != nil {
+		return "", helpers.ErrorInvalidToken
+	}
+
+	payload := decodeTokenData["payload"].(map[string]interface{})
+
+	var user models.User
+	if err := db.Where("id = ?", payload["user_id"].(string)).First(&user).Error; err != nil {
+		return "", helpers.ErrorInvalidToken
+	}
+
+	tokenId := payload["token_id"].(string)
+	exp := int64(decodeTokenData["exp"].(float64))
+
+	tokens := user.RefreshUserToken(tokenId, exp, refreshToken)
+	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
+	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+	return payload["token_id"].(string), nil
+}
 
 func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 	return func(context *gin.Context) {
@@ -39,23 +62,28 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		payload := decodeTokenData["payload"].(map[string]interface{})
-		tokenExpire := int64(decodeTokenData["exp"].(float64))
-		now := time.Now().Unix()
-		diff := (tokenExpire * 1000) - now
-		log.Println("tokenExpire", tokenExpire)
-		log.Println("now", now)
-		log.Println("diff", diff)
-		log.Println("(tokenExpire * 1000)", tokenExpire*1000)
-		log.Println(diff < 1000*60*30)
 		refreshToken, errRefresh := context.Cookie("refresh_token")
 		if errRefresh != nil {
 			context.Next()
 			return
 		}
 
-		if diff < 1000*60*30 && (refreshToken != "" || errRefresh != nil) {
+		payload := decodeTokenData["payload"].(map[string]interface{})
+		tokenExpire := int64(decodeTokenData["exp"].(float64))
+		now := time.Now().Unix()
+		diff := tokenExpire - now
+
+		if diff < 60*60 && refreshToken != "" {
 			log.Println("refreshToken")
+			userId, err := refresh(db, context, refreshToken)
+			if err != nil {
+				panic(err)
+				return
+			}
+
+			context.Set("id", userId)
+			context.Next()
+			return
 		}
 
 		context.Set("id", payload["id"])

@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/jinzhu/gorm"
+	"log"
 	"time"
 )
 
@@ -47,5 +48,35 @@ func (user *User) GenerateUserToken(db *gorm.DB) helpers.JSON {
 	}
 }
 
-func (user *User) RefreshUserToken() {
+func (user *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalRefreshToken string) helpers.JSON {
+	now := time.Now().Unix()
+	diff := refreshTokenExp - now
+
+	log.Println("refreshing..")
+	refreshToken := originalRefreshToken
+
+	if diff < 60*60*24*15 {
+		log.Println("refreshing refreshToken")
+		accessSubject := "access_token"
+		accessPayload := helpers.JSON{
+			"user_id": user.ID,
+		}
+
+		accessToken, _ := helpers.GenerateAccessToken(accessPayload, accessSubject)
+
+		refreshSubject := "refresh_token"
+		refreshPayload := helpers.JSON{
+			"user_id":  user.ID,
+			"token_id": tokenId,
+		}
+
+		refreshToken, _ = helpers.GenerateRefreshToken(refreshPayload, refreshSubject)
+
+		return helpers.JSON{
+			"accessToken":  accessToken,
+			"refreshToken": refreshToken,
+		}
+	}
+
+	return nil
 }
