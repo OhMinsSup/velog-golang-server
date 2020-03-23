@@ -56,6 +56,20 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	db.NewRecord(userProfile)
 	db.Create(&userProfile)
 
+	velogConfig := models.VelogConfig{
+		UserID: user.ID,
+	}
+
+	db.NewRecord(velogConfig)
+	db.Create(&velogConfig)
+
+	userMeta := models.UserMeta{
+		UserID: user.ID,
+	}
+
+	db.NewRecord(userMeta)
+	db.Create(&userMeta)
+
 	tokens := user.GenerateUserToken(db)
 	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
 	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
@@ -64,7 +78,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 		"id":           user.ID,
 		"username":     user.Username,
 		"email":        user.Email,
-		"profile":      userProfile,
+		"thumbnail":    userProfile.Thumbnail,
+		"display_name": userProfile.DisplayName,
+		"short_bio":    userProfile.ShortBio,
 		"accessToken":  tokens["accessToken"],
 		"refreshToken": tokens["refreshToken"],
 	}, http.StatusOK, nil
@@ -120,7 +136,9 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 		"id":           user.ID,
 		"username":     user.Username,
 		"email":        user.Email,
-		"profile":      userProfile,
+		"thumbnail":    userProfile.Thumbnail,
+		"display_name": userProfile.DisplayName,
+		"short_bio":    userProfile.ShortBio,
 		"accessToken":  tokens["accessToken"],
 		"refreshToken": tokens["refreshToken"],
 	}, http.StatusOK, nil

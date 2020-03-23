@@ -17,6 +17,8 @@ type User struct {
 	DeletedAt   *time.Time  `sql:"index"`
 	AuthTokens  []AuthToken `gorm:"foreignkey:UserID"`
 	UserProfile UserProfile `gorm:"foreignkey:UserID"`
+	UserMeta    UserMeta    `gorm:"foreignkey:UserID"`
+	VelogConfig VelogConfig `gorm:"foreignkey:UserID"`
 }
 
 func (user *User) GenerateUserToken(db *gorm.DB) helpers.JSON {

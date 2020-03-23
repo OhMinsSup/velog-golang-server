@@ -32,9 +32,11 @@ func Initialize() (*gorm.DB, error) {
 }
 
 func Migrate(db *gorm.DB) {
-	db.AutoMigrate(&models.User{}, &models.EmailAuth{}, &models.AuthToken{}, &models.UserProfile{})
+	db.AutoMigrate(&models.User{}, &models.EmailAuth{}, &models.AuthToken{}, &models.UserProfile{}, &models.UserMeta{}, &models.VelogConfig{})
 	db.Model(&models.AuthToken{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.UserProfile{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
+	db.Model(&models.UserMeta{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
+	db.Model(&models.VelogConfig{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	fmt.Println("Auto Migration has beed processed")
 }
 

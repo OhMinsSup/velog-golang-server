@@ -6,7 +6,7 @@ type UserProfile struct {
 	ID          string `gorm:"primary_key;uuid"`
 	DisplayName string
 	ShortBio    string
-	thumbnail   string
+	Thumbnail   string
 	UserID      string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
