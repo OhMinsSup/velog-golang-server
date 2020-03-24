@@ -12,3 +12,5 @@ var ErrorTokenExpiredCode = errors.New("Expireed Code")
 
 var ErrorUserProfileDefine = errors.New("User Profile Define")
 var ErrorAlreadyExists = errors.New("Already Exists")
+
+var ErrorProviderValided = errors.New("Provider valid")
