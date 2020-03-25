@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/helpers/social"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -22,9 +23,7 @@ func SocialRedirect(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(200,
-		helpers.JSON{
-			"next":     next,
-			"provider": provider,
-		})
+	loginUrl := social.GenerateSocialLink(provider, next)
+
+	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
 }
