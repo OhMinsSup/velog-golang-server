@@ -27,3 +27,15 @@ func SocialRedirect(ctx *gin.Context) {
 
 	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
 }
+
+func GithubCallback(ctx *gin.Context) {
+	code := ctx.Query("code")
+	if code == "" {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorNotFound)
+		return
+	}
+
+	accessToken := social.GetGithubAccessToken(code)
+
+	ctx.Next()
+}

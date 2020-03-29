@@ -14,3 +14,4 @@ var ErrorUserProfileDefine = errors.New("User Profile Define")
 var ErrorAlreadyExists = errors.New("Already Exists")
 
 var ErrorProviderValided = errors.New("Provider valid")
+var ErrorNotFound = errors.New("Not Found")

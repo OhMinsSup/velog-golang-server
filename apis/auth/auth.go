@@ -16,5 +16,8 @@ func ApplyRoutes(r *gin.RouterGroup) {
 		// social
 
 		auth.GET("/social/redirect/:provider", controllers.SocialRedirect)
+		auth.GET("/callback/github")
+		auth.GET("/callback/google")
+		auth.GET("/callback/facebook")
 	}
 }

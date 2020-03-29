@@ -54,14 +54,14 @@ func Social(provider, next string) SocialAction {
 }
 
 func GenerateSocialLink(provier, next string) string {
-	g := Social(provier, next)
+	uri := Social(provier, next)
 	switch provier {
 	case "facebook":
-		return g.Facebook()
+		return uri.Facebook()
 	case "google":
-		return g.Google()
+		return uri.Google()
 	case "github":
-		return g.Github()
+		return uri.Github()
 	default:
 		return ""
 	}
