@@ -66,17 +66,18 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-func GetGithubProfile(accessToken string) error {
+func GetGithubProfile(accessToken string) *github.User {
 	tokenSource := &TokenSource{
 		AccessToken: accessToken,
 	}
+
 	ctx := context.Background()
 	oauthClient := oauth2.NewClient(ctx, tokenSource)
 	client := github.NewClient(oauthClient)
 	user, _, err := client.Users.Get(ctx, "")
+	log.Println("user:", user)
 	if err != nil {
 		panic(err)
 	}
-	log.Println(user)
-	return nil
+	return user
 }
