@@ -6,12 +6,42 @@ import (
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/helpers/social"
 	"github.com/gin-gonic/gin"
+	"github.com/google/go-github/github"
 	"github.com/jinzhu/gorm"
+	"log"
 	"net/http"
 	"strings"
 )
 
 func SocialCallback(ctx *gin.Context) {
+	profile := ctx.MustGet("profile").(*github.User)
+	social := ctx.MustGet("social").(*models.SocialAccount)
+	accessToken := ctx.MustGet("accessToken").(string)
+	provider := ctx.MustGet("provider").(string)
+
+	if profile == nil || accessToken == "" {
+		ctx.AbortWithError(http.StatusForbidden, helpers.ErrorForbidden)
+		return
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	var user models.User
+	if social != nil {
+		if err := db.Where("user_id = ?", social.ID).First(&user).Error; err != nil {
+			ctx.AbortWithError(http.StatusNotFound, helpers.ErrorUserIsMissing)
+			return
+		}
+
+		tokens := user.GenerateUserToken(db)
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+
+		redirectUrl := "http://localhost:3000"
+		next := ""
+		ctx.Redirect(http.StatusMovedPermanently, redirectUrl + next)
+		return
+	}
+	log.Println(provider, social)
 	ctx.JSON(200, "HAHA")
 }
 
@@ -62,6 +92,7 @@ func GithubCallback(ctx *gin.Context) {
 	ctx.Set("accessToken", accessToken)
 	ctx.Set("provider", provider)
 	ctx.Next()
+	return
 }
 
 func GoogleCallback(ctx *gin.Context) {

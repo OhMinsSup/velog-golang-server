@@ -12,6 +12,7 @@ var ErrorTokenExpiredCode = errors.New("Expireed Code")
 
 var ErrorUserProfileDefine = errors.New("User Profile Define")
 var ErrorAlreadyExists = errors.New("Already Exists")
-
+var ErrorUserIsMissing = errors.New("User is missing")
 var ErrorProviderValided = errors.New("Provider valid")
 var ErrorNotFound = errors.New("Not Found")
+var ErrorForbidden = errors.New("Forbidden")
