@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	clientId     = ""
-	clientSecret = ""
+	github_clientId     = ""
+	github_clientSecret = ""
 )
 
 type GithubOAuthResult struct {
@@ -29,7 +29,7 @@ type GithubOAuthParams struct {
 }
 
 func GetGithubAccessToken(code string) string {
-	oauthParams := GithubOAuthParams{code, clientId, clientSecret}
+	oauthParams := GithubOAuthParams{code, github_clientId, github_clientSecret}
 	data, _ := json.Marshal(oauthParams)
 	buff := bytes.NewBuffer(data)
 

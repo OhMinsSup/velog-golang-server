@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/github"
 	"github.com/jinzhu/gorm"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -38,11 +37,38 @@ func SocialCallback(ctx *gin.Context) {
 
 		redirectUrl := "http://localhost:3000"
 		next := ""
-		ctx.Redirect(http.StatusMovedPermanently, redirectUrl + next)
+		ctx.Redirect(http.StatusMovedPermanently, redirectUrl+next)
 		return
 	}
-	log.Println(provider, social)
-	ctx.JSON(200, "HAHA")
+
+	if profile.Email != nil {
+		db.Where("email = ?", profile.Email).First(&user)
+	}
+
+	if &user != nil {
+		tokens := user.GenerateUserToken(db)
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+		redirectUrl := "https://localhost:3000/"
+		ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
+		return
+	}
+
+	payload := helpers.JSON{
+		"profile":     profile,
+		"provider":    provider,
+		"accessToken": accessToken,
+	}
+
+	registerToken, err := helpers.GenerateRegisterToken(payload, "")
+	if err != nil {
+		ctx.AbortWithError(http.StatusConflict, err)
+		return
+	}
+
+	ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
+	redirectUrl := "http://localhost:3000/register?social=1"
+	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }
 
 func SocialRedirect(ctx *gin.Context) {
@@ -61,7 +87,6 @@ func SocialRedirect(ctx *gin.Context) {
 	}
 
 	loginUrl := social.GenerateSocialLink(provider, next)
-
 	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
 }
 
