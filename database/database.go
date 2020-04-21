@@ -46,6 +46,7 @@ func Migrate(db *gorm.DB) {
 	db.Model(&models.UserMeta{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.VelogConfig{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.SocialAccount{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
+	db.Model(&models.Post{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 
 	fmt.Println("Auto Migration has beed processed")
 }
