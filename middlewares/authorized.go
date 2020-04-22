@@ -6,7 +6,7 @@ import (
 )
 
 func Authorized(context *gin.Context) {
-	_, exists := context.Get("user")
+	_, exists := context.Get("id")
 	if !exists {
 		context.AbortWithStatus(http.StatusUnauthorized)
 		return
