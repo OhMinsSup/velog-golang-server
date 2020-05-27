@@ -39,7 +39,9 @@ func Migrate(db *gorm.DB) {
 		&models.UserProfile{},
 		&models.UserMeta{},
 		&models.VelogConfig{},
-		&models.SocialAccount{})
+		&models.SocialAccount{},
+		&models.Post{},
+		&models.Tag{})
 
 	db.Model(&models.AuthToken{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.UserProfile{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")

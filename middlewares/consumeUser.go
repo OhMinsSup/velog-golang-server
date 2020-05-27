@@ -86,7 +86,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		context.Set("id", payload["id"])
+		context.Set("id", payload["user_id"])
 		context.Next()
 		return
 	}

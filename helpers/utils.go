@@ -1,9 +1,9 @@
 package helpers
 
 import (
+	"fmt"
 	"math/rand"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -14,11 +14,10 @@ var seededRand *rand.Rand = rand.New(
 	rand.NewSource(time.Now().UnixNano()))
 
 func EscapeForUrl(text string) string {
-	var r1 = regexp.MustCompile(`/[^0-9a-zA-Zㄱ-힣.\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf -]/g`)
-	var r2 = regexp.MustCompile(`/ /g`)
-	var r3 = regexp.MustCompile(`/--+/g`)
-	var r4 = regexp.MustCompile(`/\.+$/`)
-	return r4.ReplaceAllString(r3.ReplaceAllString(r2.ReplaceAllString(strings.TrimSpace(r1.ReplaceAllString(text, "")), "-"), "-"), "")
+	re:= regexp.MustCompile("/[^0-9a-zA-Zㄱ-힣.\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf -]/g")
+	s := re.ReplaceAllString(text, "")
+	fmt.Println(s)
+	return s
 }
 
 func StringWithCharset(length int, charset string) string {
