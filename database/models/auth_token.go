@@ -3,11 +3,11 @@ package models
 import "time"
 
 type AuthToken struct {
-	ID        string `gorm:"primary_key;uuid"`
-	Disabled  bool   `gorm:"default:false"`
-	User      User   `gorm:"foreignkey:UserID"`
-	UserID    string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time `sql:"index"`
+	ID        string     `gorm:"primary_key;uuid",json:"id"`
+	Disabled  bool       `gorm:"default:false",json:"disabled"`
+	User      User       `gorm:"foreignkey:UserID"json:"user"`
+	UserID    string     `json:"user_id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `sql:"index", json:"deleted_at"`
 }

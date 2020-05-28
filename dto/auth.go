@@ -12,13 +12,13 @@ type LocalRegisterBody struct {
 }
 
 type RegisterTokenPayload struct {
-	Email string
-	ID    string
+	Email string `json:"email"`
+	ID    string `json:"id"`
 }
 
 type RegisterTokenType struct {
-	Exp     int64
-	Issuer  string
-	Payload RegisterTokenPayload
-	Subject string
+	Exp     int64 `json:"exp"`
+	Issuer  string `json:"issuer"`
+	Payload RegisterTokenPayload `json:"payload"`
+	Subject string `json:"subject"`
 }

@@ -8,8 +8,8 @@ import (
 var redirectPath = "http://localhost:4000/api/v1.0/auth/social/callback/"
 
 type State struct {
-	provider string
-	next     string
+	provider string `json:"provider"`
+	next     string `json:"next"`
 }
 
 type Action interface {

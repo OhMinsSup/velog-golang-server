@@ -6,11 +6,11 @@ import (
 )
 
 type Tag struct {
-	ID        string `gorm:"primary_key;uuid"`
-	Name      string `sql:"index"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time `sql:"index"`
+	ID        string `gorm:"primary_key;uuid", json:"id"`
+	Name      string `sql:"index", json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	DeletedAt *time.Time `sql:"index", json:"deleted_at"`
 }
 
 func TagFindOnCreate(name string, db *gorm.DB) Tag {
