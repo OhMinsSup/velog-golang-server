@@ -24,3 +24,22 @@ func WritePostController(ctx *gin.Context) {
 
 	ctx.JSON(code, result)
 }
+
+func GetPostController(ctx *gin.Context) {
+	postId := ctx.Param("post_id")
+	urlSlug := ctx.Param("url_slug")
+
+	if postId == "" || urlSlug == "" {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.GetPostService(postId, urlSlug, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}

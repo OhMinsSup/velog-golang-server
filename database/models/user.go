@@ -8,17 +8,17 @@ import (
 )
 
 type User struct {
-	ID          string `gorm:"primary_key;uuid", json:"id"`
-	Username    string `sql:"index", json:"username"`
-	Email       string `sql:"index", json:"email"`
-	IsCertified bool   `gorm:"default:false", json:"is_certified"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	DeletedAt   *time.Time  `sql:"index", json:"deleted_at"`
-	AuthTokens  []AuthToken `gorm:"foreignkey:UserID", json:"auth_tokens"`
-	UserProfile UserProfile `gorm:"foreignkey:UserID", json:"user_profile"`
-	UserMeta    UserMeta    `gorm:"foreignkey:UserID", json:"user_meta"`
-	VelogConfig VelogConfig `gorm:"foreignkey:UserID", json:"velog_config"`
+	ID          string      `gorm:"primary_key;uuid"json:"id"`
+	Username    string      `sql:"index"json:"username"`
+	Email       string      `sql:"index"json:"email"`
+	IsCertified bool        `gorm:"default:false"json:"is_certified"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	DeletedAt   *time.Time  `sql:"index"json:"deleted_at"`
+	AuthTokens  []AuthToken `gorm:"foreignkey:UserID"json:"auth_tokens"`
+	UserProfile UserProfile `gorm:"foreignkey:UserID"json:"user_profile"`
+	UserMeta    UserMeta    `gorm:"foreignkey:UserID"json:"user_meta"`
+	VelogConfig VelogConfig `gorm:"foreignkey:UserID"json:"velog_config"`
 }
 
 func (user *User) GenerateUserToken(db *gorm.DB) helpers.JSON {

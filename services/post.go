@@ -12,6 +12,34 @@ import (
 	"strings"
 )
 
+func GetPostService(postId, urlSlug string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	var postData dto.PostRawQueryResult
+	db.Raw(`
+		SELECT
+		p.*,
+		array_agg(t.name) AS tag FROM "posts" AS p
+		LEFT OUTER JOIN "posts_tags" AS pt ON pt.post_id = p.id
+		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
+		WHERE p.id = ? AND p.url_slug = ?
+		GROUP BY p.id, pt.post_id`, postId, urlSlug).Scan(&postData)
+
+	var userData dto.UserRawQueryResult
+	db.Raw(`
+       SELECT
+	   u.*,
+	   up.display_name,
+       up.short_bio,
+	   up.thumbnail
+	   FROM "users" AS u
+	   LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
+	   WHERE u.id = ?`, postData.UserID).Scan(&userData)
+
+	return helpers.JSON{
+		"post": postData,
+		"write_user": userData,
+	}, 200, nil
+}
+
 func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	processedUrlSlug := helpers.EscapeForUrl(body.UrlSlug)
