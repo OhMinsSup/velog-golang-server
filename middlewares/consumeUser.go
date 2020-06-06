@@ -43,27 +43,32 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 		if errAccess != nil {
 			// try reading HTTP Header
 			authorization := context.Request.Header.Get("Authorization")
-			if authorization == "" {
-				context.Next()
-				return
+			if authorization != "" {
+				sp := strings.Split(authorization, "Bearer ")
+				// invalid token
+				if len(sp) < 1 {
+					context.Next()
+					return
+				}
+				accessToken = sp[1]
 			}
-			sp := strings.Split(authorization, "Bearer ")
-			// invalid token
-			if len(sp) < 1 {
-				context.Next()
-				return
-			}
-			accessToken = sp[1]
-		}
-
-		decodeTokenData, errDecode := helpers.DecodeToken(accessToken)
-		if errDecode != nil {
-			context.Next()
-			return
 		}
 
 		refreshToken, errRefresh := context.Cookie("refresh_token")
 		if errRefresh != nil {
+			context.Next()
+			return
+		}
+
+		decodeTokenData, errDecode := helpers.DecodeToken(accessToken)
+		if errDecode != nil {
+			userId, err := refresh(db, context, refreshToken)
+			if err != nil {
+				context.Next()
+				return
+			}
+
+			context.Set("id", userId)
 			context.Next()
 			return
 		}
@@ -77,7 +82,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 			log.Println("refreshToken")
 			userId, err := refresh(db, context, refreshToken)
 			if err != nil {
-				panic(err)
+				context.Next()
 				return
 			}
 
