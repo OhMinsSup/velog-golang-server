@@ -7,6 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pborman/uuid"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -15,16 +16,18 @@ import (
 // Initialize 데이터베이스 초기화
 func Initialize() (*gorm.DB, error) {
 	dbConfig := os.Getenv("DB_CONFIG")
+	log.Println("config???", dbConfig)
 	db, err := gorm.Open("postgres", dbConfig)
+
+	if err != nil {
+		panic(err)
+	}
 
 	// Logs SQL
 	db.LogMode(true)
 	db.Set("gorm:table_options", "charset=utf8")
 	// created uuid
 	db.Callback().Create().Before("gorm:create").Register("my_plugin:before_create", BeforeCreateUUID)
-	if err != nil {
-		panic(err)
-	}
 	fmt.Println("Connected to database")
 	Migrate(db)
 

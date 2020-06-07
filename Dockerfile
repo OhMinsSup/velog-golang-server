@@ -5,26 +5,51 @@
 # -a : 모든(all) 의존 패키지를 cgo를 사용하지 않도록 재빌드합니다.
 # -ldflags '-s' : 바이너리를 조금 더 경량화하는 Linker 옵션입니다.
 
-### Builder
+# Start from golang base image
 FROM golang:1.13-alpine as builder
-RUN apk update && apk add git && apk add ca-certificates
 
-WORKDIR /usr/src/app
+# ENV GO111MODULE=on
 
-# 작업 공간에 go.mod 및 go.sum 파일 복사
-COPY . .
+# Install git.
+# Git is required for fetching the dependencies.
+#RUN apk update && apk add git && apk add ca-certificates
+RUN apk update && apk add --no-cache git
 
-#의존성 mod / sum을 변경하지 않으면 캐시됩니다.
+# Set the current working directory inside the container
+WORKDIR /app
+
+# Copy go mod and sum files 작업 공간에 go.mod 및 go.sum 파일 복사
+COPY go.mod go.sum ./
+
+# Download all dependencies. Dependencies will be cached if the go.mod and the go.sum files are not changed 의존성 mod / sum을 변경하지 않으면 캐시됩니다.
 RUN go mod download
 
-# binary 빌드
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s' -o main .
+# Copy the source from the current directory to the working Directory inside the container
+COPY . .
 
-# 이미지 크기를 작게
-FROM scratch
+# Build the Go app binary 빌드
+#RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-s' -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /usr/src/app/main /main
+# Start a new stage from scratch 이미지 크기를 작게
+# FROM scratch
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
 
-CMD [ "/main" ]
+WORKDIR /root/
+
+#COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#COPY --from=builder /etc/passwd /etc/passwd
+#COPY --from=builder /usr/src/app/main /main
+
+# Copy the Pre-built binary file from the previous stage. Observe we also copied the .env file
+COPY --from=builder /app/main .
+COPY --from=builder /app/.env .
+COPY --from=builder /app/.env.dev .
+COPY --from=builder /app/.env.prod .
+
+# Expose port 8080 to the outside world
+EXPOSE 4000
+
+#Command to run the executable
+CMD [ "./main" ]
