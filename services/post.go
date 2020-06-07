@@ -9,7 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"log"
+	"net/http"
 	"strings"
+	"time"
 )
 
 func GetPostService(postId, urlSlug string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
@@ -35,9 +37,85 @@ func GetPostService(postId, urlSlug string, db *gorm.DB, ctx *gin.Context) (help
 	   WHERE u.id = ?`, postData.UserID).Scan(&userData)
 
 	return helpers.JSON{
-		"post": postData,
+		"post":       postData,
 		"write_user": userData,
-	}, 200, nil
+	}, http.StatusOK, nil
+}
+
+func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
+	postId := ctx.Param("post_id")
+	urlSlug := ctx.Param("url_slug")
+
+	if postId == "" || urlSlug == "" {
+		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
+	}
+
+	var currentPost models.Post
+	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost); err != nil {
+		return nil, http.StatusNotFound, helpers.ErrorNotFound
+	}
+
+	if currentPost.UserID != userId {
+		return nil, http.StatusForbidden, helpers.ErrorPermission
+	}
+
+	db.Raw("DELETE FROM posts_tags pt WHERE pt.post_id = ?", postId)
+	db.Raw("DELETE FROM posts p WHERE p.id = ?", postId)
+
+	return helpers.JSON{
+		"post": true,
+	}, http.StatusOK, nil
+}
+
+func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
+	postId := ctx.Param("post_id")
+	urlSlug := ctx.Param("url_slug")
+
+	if postId == "" || urlSlug == "" {
+		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
+	}
+
+	var currentPost models.Post
+	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost); err != nil {
+		return nil, http.StatusNotFound, helpers.ErrorNotFound
+	}
+
+	if currentPost.UserID != userId {
+		return nil, http.StatusForbidden, helpers.ErrorPermission
+	}
+
+	editPost := models.Post{
+		Title:      body.Title,
+		Body:       body.Body,
+		Thumbnail:  body.Thumbnail,
+		IsMarkdown: body.IsMarkdown,
+		IsPrivate:  body.IsPrivate,
+		UserID:     userId,
+	}
+
+	if editPost.IsTemp && !body.IsTemp {
+		editPost.ReleasedAt = time.Now()
+	}
+
+	processedUrlSlug := helpers.EscapeForUrl(body.UrlSlug)
+
+	if urlSlugDuplicate := db.Where("fk_user_id = ? AND url_slug >= ?", userId, body.UrlSlug).First(&currentPost); urlSlugDuplicate != nil {
+		randomString := helpers.GenerateStringName(8)
+		processedUrlSlug += "-" + randomString
+	}
+
+	editPost.UrlSlug = processedUrlSlug
+
+	db.NewRecord(editPost)
+	db.Create(&editPost)
+
+	syncPostTags(body, editPost, db)
+
+	return helpers.JSON{
+		"post_id": editPost.ID,
+	}, http.StatusOK, nil
 }
 
 func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
@@ -64,6 +142,14 @@ func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (he
 	db.NewRecord(post)
 	db.Create(&post)
 
+	syncPostTags(body, post, db)
+
+	return helpers.JSON{
+		"post_id": post.ID,
+	}, http.StatusOK, nil
+}
+
+func syncPostTags(body dto.WritePostBody, post models.Post, db *gorm.DB) {
 	var tagIds []string
 	for iter := 0; iter < len(body.Tag); iter++ {
 		currentTag := body.Tag[iter]
@@ -131,8 +217,4 @@ func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (he
 			db.Create(&postsTags)
 		}
 	}
-
-	return helpers.JSON{
-		"post_id": post.ID,
-	}, 200, nil
 }

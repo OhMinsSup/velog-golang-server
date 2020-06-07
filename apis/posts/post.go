@@ -11,5 +11,7 @@ func ApplyRoutes(r *gin.RouterGroup) {
 	{
 		post.GET("/:post_id/:url_slug", middlewares.Authorized, controllers.GetPostController)
 		post.POST("/", middlewares.Authorized, controllers.WritePostController)
+		post.PUT("/:post_id/:url_slug", middlewares.Authorized, controllers.UpdatePostController)
+		post.DELETE("/:post_id/:url_slug", middlewares.Authorized, controllers.DeletePostController)
 	}
 }

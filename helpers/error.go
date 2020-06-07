@@ -2,17 +2,17 @@ package helpers
 
 import "errors"
 
-var ErrorGenerateToken = errors.New("Generate Token Error")
-var ErrorSigningMethod = errors.New("Unexpected signing method")
-var ErrorInvalidToken = errors.New("invalid token")
-
-var ErrorNotFoundEmailAuth = errors.New("Not Found Email Auth")
-var ErrorTokenAlreadyUse = errors.New("Token Already Use")
-var ErrorTokenExpiredCode = errors.New("Expireed Code")
-
-var ErrorUserProfileDefine = errors.New("User Profile Define")
-var ErrorAlreadyExists = errors.New("Already Exists")
-var ErrorUserIsMissing = errors.New("User is missing")
-var ErrorProviderValided = errors.New("Provider valid")
-var ErrorNotFound = errors.New("Not Found")
-var ErrorForbidden = errors.New("Forbidden")
+var ErrorGenerateToken = errors.New("GENERATE_TOKEN_ERROR")
+var ErrorSigningMethod = errors.New("UNEXPECTED_SIGNING_METHOD")
+var ErrorInvalidToken = errors.New("INVALID_TOKEN")
+var ErrorNotFoundEmailAuth = errors.New("NOT_FOUND_EMAIL_AUTH")
+var ErrorTokenAlreadyUse = errors.New("TOKEN_ALREADY_USE")
+var ErrorTokenExpiredCode = errors.New("EXPIRED_CODE")
+var ErrorUserProfileDefine = errors.New("USER_PROFILE_DEFINE")
+var ErrorAlreadyExists = errors.New("ALREADY_EXISTS")
+var ErrorUserIsMissing = errors.New("USER_IS_MISSING")
+var ErrorProviderValided = errors.New("PROVIDER_VALID")
+var ErrorNotFound = errors.New("NOT_FOUND")
+var ErrorForbidden = errors.New("FORBIDDEN")
+var ErrorPermission = errors.New("NO_PERMISSION")
+var ErrorParamRequired = errors.New("REQUIRED_DATA")

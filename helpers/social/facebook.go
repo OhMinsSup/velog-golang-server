@@ -36,9 +36,9 @@ type FacebookOAuthResult struct {
 
 type FacebookOAuthParams struct {
 	Code         string `url:"code",json:"code"`
-	ClientID     string `url:"client_id", json:"client_id"`
-	ClientSecret string `url:"client_secret", json:"client_secret"`
-	RedirectUri  string `url: "redirect_uri", json:"redirect_uri"`
+	ClientID     string `url:"client_id"json:"client_id"`
+	ClientSecret string `url:"client_secret"json:"client_secret"`
+	RedirectUri  string `url:"redirect_uri"json:"redirect_uri"`
 }
 
 func GetFacebookAccessToken(code, redirectUri string) string {

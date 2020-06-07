@@ -19,7 +19,8 @@ func main() {
 	db, _ := database.Initialize()
 
 	port := os.Getenv("PORT")
-	app := gin.Default() // create gin app
+	// create gin app
+	app := gin.Default()
 
 	app.Use(gin.Logger())
 	app.Use(gin.Recovery())
