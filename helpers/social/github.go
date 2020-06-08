@@ -8,12 +8,8 @@ import (
 	"golang.org/x/oauth2"
 	"log"
 	"net/http"
+	"os"
 	"time"
-)
-
-var (
-	github_clientId     = ""
-	github_clientSecret = ""
 )
 
 type GithubOAuthResult struct {
@@ -29,17 +25,20 @@ type GithubOAuthParams struct {
 }
 
 func GetGithubAccessToken(code string) string {
-	oauthParams := GithubOAuthParams{code, github_clientId, github_clientSecret}
+	id := os.Getenv("GITHUB_CLIENT_ID")
+	secret := os.Getenv("GITHUB_CLIENT_SECRET")
+
+	oauthParams := GithubOAuthParams{code, id, secret}
 	data, _ := json.Marshal(oauthParams)
 	buff := bytes.NewBuffer(data)
+	client := http.Client{Timeout: 10 * time.Second}
 
-	req, err := http.NewRequest("POST", "https: //github.com/login/oauth/access_token", buff)
+	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", buff)
+
 	if err != nil {
 		panic(err)
 	}
 
-	req.Header.Add("Content-Type", "application/json")
-	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)

@@ -3,13 +3,15 @@ package social
 import (
 	"encoding/json"
 	"golang.org/x/oauth2"
+	"log"
+	"os"
 )
 
-var redirectPath = "http://localhost:4000/api/v1.0/auth/social/callback/"
+var redirectPath = "http://localhost:8080/api/v1.0/auth/social/callback/"
 
 type State struct {
-	provider string `json:"provider"`
-	next     string `json:"next"`
+	Provider string `json:"provider"`
+	Next     string `json:"next"`
 }
 
 type Action interface {
@@ -18,9 +20,9 @@ type Action interface {
 	Google() string
 }
 
-func (s *State) Google() string {
+func (s State) Google() string {
 	callbackUri := redirectPath + "google"
-	state, _ := json.Marshal(s.next)
+	state, _ := json.Marshal(s.Next)
 	oauthConfig := &oauth2.Config{
 		ClientID:     "",
 		ClientSecret: "",
@@ -32,36 +34,37 @@ func (s *State) Google() string {
 	return oauthConfig.AuthCodeURL(string(state))
 }
 
-func (s *State) Facebook() string {
+func (s State) Facebook() string {
 	facebookId := "ID"
 	callbackUri := redirectPath + "facebook"
-	state, _ := json.Marshal(s.next)
+	state, _ := json.Marshal(s.Next)
 	return "https://www.facebook.com/v4.0/dialog/oauth?client_id=" + facebookId + "&redirect_uri=" + callbackUri + "&state=" + string(state) + "&scope=email,public_profile"
 }
 
-func (s *State) Github() string {
-	githubId := "ID"
-	redirectUriWithNext := redirectPath + "github?next=" + s.next
-	return "https://github.com/login/oauth/authorize?scope=user:email&client_id=" + githubId + "&redirect_uri=" + redirectUriWithNext
+func (s State) Github() string {
+	id := os.Getenv("GITHUB_CLIENT_ID")
+	redirectUriWithNext := redirectPath + "github?next=" + s.Next
+	return "https://github.com/login/oauth/authorize?scope=user:email&client_id=" + id + "&redirect_uri=" + redirectUriWithNext
 }
 
 func Social(provider, next string) Action {
 	state := State{
-		provider: provider,
-		next:     next,
+		Provider: provider,
+		Next:     next,
 	}
 	return &state
 }
 
 func GenerateSocialLink(provider, next string) string {
-	uri := Social(provider, next)
+	snapshot := Social(provider, next)
+	log.Println("github", provider, snapshot.Github())
 	switch provider {
 	case "facebook":
-		return uri.Facebook()
+		return snapshot.Facebook()
 	case "google":
-		return uri.Google()
+		return snapshot.Google()
 	case "github":
-		return uri.Github()
+		return snapshot.Github()
 	default:
 		return ""
 	}

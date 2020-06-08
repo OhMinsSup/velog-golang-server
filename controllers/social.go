@@ -12,6 +12,57 @@ import (
 	"strings"
 )
 
+func SocialRedirect(ctx *gin.Context) {
+	provider := ctx.Param("provider")
+	next := ctx.Query("next")
+
+	providerType := []string{
+		"facebook",
+		"github",
+		"google",
+	}
+
+	if !strings.Contains(strings.Join(providerType, ","), provider) {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValided)
+		return
+	}
+
+	loginUrl := social.GenerateSocialLink(provider, next)
+	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
+}
+
+func GithubCallback(ctx *gin.Context) {
+	code := ctx.Query("code")
+	if code == "" {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorNotFound)
+		return
+	}
+
+	provider := "github"
+	accessToken := social.GetGithubAccessToken(code)
+	profile := social.GetGithubProfile(accessToken)
+
+	db := ctx.MustGet("db").(*gorm.DB)
+
+	var data models.SocialAccount
+	if err := db.Where(&models.SocialAccount{
+		SocialId: fmt.Sprint(profile.ID),
+		Provider: provider,
+	}).First(&data).Error; err != nil {
+		panic(err)
+		return
+	}
+
+	ctx.Set("profile", profile)
+	ctx.Set("social", data)
+	ctx.Set("accessToken", accessToken)
+	ctx.Set("provider", provider)
+	ctx.Next()
+	return
+}
+
+
+
 func SocialCallback(ctx *gin.Context) {
 	profile := ctx.MustGet("profile").(*github.User)
 	social := ctx.MustGet("social").(*models.SocialAccount)
@@ -69,55 +120,6 @@ func SocialCallback(ctx *gin.Context) {
 	ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
 	redirectUrl := "http://localhost:3000/register?social=1"
 	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
-}
-
-func SocialRedirect(ctx *gin.Context) {
-	provider := ctx.Param("provider")
-	next := ctx.Query("next")
-
-	providerType := []string{
-		"facebook",
-		"github",
-		"google",
-	}
-
-	if !strings.Contains(strings.Join(providerType, ","), provider) {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValided)
-		return
-	}
-
-	loginUrl := social.GenerateSocialLink(provider, next)
-	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
-}
-
-func GithubCallback(ctx *gin.Context) {
-	code := ctx.Query("code")
-	if code == "" {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorNotFound)
-		return
-	}
-
-	provider := "github"
-	accessToken := social.GetGithubAccessToken(code)
-	profile := social.GetGithubProfile(accessToken)
-
-	db := ctx.MustGet("db").(*gorm.DB)
-
-	var data models.SocialAccount
-	if err := db.Where(&models.SocialAccount{
-		SocialId: fmt.Sprint(profile.ID),
-		Provider: provider,
-	}).First(&data).Error; err != nil {
-		panic(err)
-		return
-	}
-
-	ctx.Set("profile", profile)
-	ctx.Set("social", data)
-	ctx.Set("accessToken", accessToken)
-	ctx.Set("provider", provider)
-	ctx.Next()
-	return
 }
 
 func GoogleCallback(ctx *gin.Context) {

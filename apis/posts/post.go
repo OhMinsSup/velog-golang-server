@@ -9,8 +9,9 @@ import (
 func ApplyRoutes(r *gin.RouterGroup) {
 	post := r.Group("/post")
 	{
-		post.GET("/:post_id/:url_slug", middlewares.Authorized, controllers.GetPostController)
 		post.POST("/", middlewares.Authorized, controllers.WritePostController)
+
+		post.GET("/:post_id/:url_slug", middlewares.Authorized, controllers.GetPostController)
 		post.PUT("/:post_id/:url_slug", middlewares.Authorized, controllers.UpdatePostController)
 		post.DELETE("/:post_id/:url_slug", middlewares.Authorized, controllers.DeletePostController)
 	}

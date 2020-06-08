@@ -12,7 +12,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/jinzhu/gorm v1.9.12
-	github.com/joho/godotenv v1.3.0 // indirect
+	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/lib/pq v1.1.1
