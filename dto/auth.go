@@ -1,7 +1,7 @@
 package dto
 
 type SendEmailBody struct {
-	Email string `json:"email"binding:"exists,email,required"`
+	Email string `json:"email"binding:"email,required"`
 }
 
 type LocalRegisterBody struct {

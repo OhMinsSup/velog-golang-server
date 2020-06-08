@@ -16,7 +16,6 @@ import (
 // Initialize 데이터베이스 초기화
 func Initialize() (*gorm.DB, error) {
 	dbConfig := os.Getenv("DB_CONFIG")
-	log.Println("config???", dbConfig)
 	db, err := gorm.Open("postgres", dbConfig)
 
 	if err != nil {
@@ -28,7 +27,7 @@ func Initialize() (*gorm.DB, error) {
 	db.Set("gorm:table_options", "charset=utf8")
 	// created uuid
 	db.Callback().Create().Before("gorm:create").Register("my_plugin:before_create", BeforeCreateUUID)
-	fmt.Println("Connected to database")
+	log.Println("Connected to database")
 	Migrate(db)
 
 	return db, err

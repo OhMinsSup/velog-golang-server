@@ -190,14 +190,24 @@ func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	)
 
 	sender := emailService.NewEmailSender(&emailConfig, email)
-	// 해당 이슈를 참고 html 읽는중에 병목현상이 발생
-	// https://stackoverflow.com/questions/31361745/slow-performance-of-html-template-in-go-lang-any-workaround
-	if err := sender.ParseTemplate(filepath.Join(wd, "./statics/emailTemplate.html"), bindData); err != nil {
-		return exists, http.StatusConflict, err
-	}
 
-	if err := sender.Send(email); err != nil {
-		return exists, http.StatusConflict, err
+	c := make(chan bool)
+	go func() {
+		if err := sender.ParseTemplate(filepath.Join(wd, "./statics/emailTemplate.html"), bindData); err != nil {
+			c <- true
+		}
+		if err := sender.Send(email); err != nil {
+			c <- true
+		}
+	}()
+
+	select {
+	case snapshot := <-c:
+		if snapshot {
+			return exists, http.StatusConflict, err
+		}
+	default:
+		return exists, http.StatusOK, nil
 	}
 
 	return exists, http.StatusOK, nil

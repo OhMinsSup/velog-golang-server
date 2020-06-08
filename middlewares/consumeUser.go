@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"github.com/OhMinsSup/story-server/database/models"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/gin-gonic/gin"
@@ -27,8 +28,10 @@ func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error)
 	exp := int64(decodeTokenData["exp"].(float64))
 
 	tokens := user.RefreshUserToken(tokenId, exp, refreshToken)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+	accessT := fmt.Sprintf("%v", tokens["accessToken"])
+	refreshT := fmt.Sprintf("%v", tokens["refreshToken"])
+	ctx.SetCookie("access_token", accessT, 60*60*24, "/", "", false, true)
+	ctx.SetCookie("refresh_token", refreshT, 60*60*24*30, "/", "", false, true)
 	return payload["token_id"].(string), nil
 }
 
