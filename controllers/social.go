@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/github"
 	"github.com/jinzhu/gorm"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -41,31 +42,31 @@ func GithubCallback(ctx *gin.Context) {
 	provider := "github"
 	accessToken := social.GetGithubAccessToken(code)
 	profile := social.GetGithubProfile(accessToken)
-
+	log.Println("profile", profile)
 	db := ctx.MustGet("db").(*gorm.DB)
 
 	var data models.SocialAccount
 	if err := db.Where(&models.SocialAccount{
-		SocialId: fmt.Sprint(profile.ID),
+		SocialId: fmt.Sprintf("%v", profile.ID),
 		Provider: provider,
-	}).First(&data).Error; err != nil {
-		panic(err)
-		return
+	}).First(&data); err != nil {
+		ctx.Set("social", nil)
+		ctx.Set("isSocial", false)
+	} else {
+		ctx.Set("social", data)
+		ctx.Set("isSocial", true)
 	}
 
 	ctx.Set("profile", profile)
-	ctx.Set("social", data)
 	ctx.Set("accessToken", accessToken)
 	ctx.Set("provider", provider)
 	ctx.Next()
 	return
 }
 
-
-
 func SocialCallback(ctx *gin.Context) {
 	profile := ctx.MustGet("profile").(*github.User)
-	social := ctx.MustGet("social").(*models.SocialAccount)
+	isSocial := ctx.MustGet("isSocial").(bool)
 	accessToken := ctx.MustGet("accessToken").(string)
 	provider := ctx.MustGet("provider").(string)
 
@@ -76,7 +77,8 @@ func SocialCallback(ctx *gin.Context) {
 
 	db := ctx.MustGet("db").(*gorm.DB)
 	var user models.User
-	if social != nil {
+	if isSocial {
+		social := ctx.MustGet("social").(*models.SocialAccount)
 		if err := db.Where("user_id = ?", social.ID).First(&user).Error; err != nil {
 			ctx.AbortWithError(http.StatusNotFound, helpers.ErrorUserIsMissing)
 			return
@@ -92,33 +94,29 @@ func SocialCallback(ctx *gin.Context) {
 		return
 	}
 
-	if profile.Email != nil {
-		db.Where("email = ?", profile.Email).First(&user)
-	}
+	if err := db.Where("email = ?", profile.Email).First(&user).Error; err != nil {
+		payload := helpers.JSON{
+			"profile":     profile,
+			"provider":    provider,
+			"accessToken": accessToken,
+		}
 
-	if &user != nil {
-		tokens := user.GenerateUserToken(db)
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-		redirectUrl := "https://localhost:3000/"
+		registerToken, err := helpers.GenerateRegisterToken(payload, "")
+		if err != nil {
+			ctx.AbortWithError(http.StatusConflict, err)
+			return
+		}
+
+		ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
+		redirectUrl := "http://localhost:3000/register?social=1"
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 		return
 	}
 
-	payload := helpers.JSON{
-		"profile":     profile,
-		"provider":    provider,
-		"accessToken": accessToken,
-	}
-
-	registerToken, err := helpers.GenerateRegisterToken(payload, "")
-	if err != nil {
-		ctx.AbortWithError(http.StatusConflict, err)
-		return
-	}
-
-	ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
-	redirectUrl := "http://localhost:3000/register?social=1"
+	tokens := user.GenerateUserToken(db)
+	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
+	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+	redirectUrl := "https://localhost:3000/"
 	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }
 

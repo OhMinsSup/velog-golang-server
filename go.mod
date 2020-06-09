@@ -21,6 +21,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/octokit/go-octokit v0.4.0 // indirect
 	github.com/pborman/uuid v1.2.0
+	golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527 // indirect
 	google.golang.org/api v0.20.0 // indirect
