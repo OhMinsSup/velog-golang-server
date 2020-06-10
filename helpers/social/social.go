@@ -3,7 +3,6 @@ package social
 import (
 	"encoding/json"
 	"golang.org/x/oauth2"
-	"log"
 	"os"
 )
 
@@ -35,10 +34,10 @@ func (s State) Google() string {
 }
 
 func (s State) Facebook() string {
-	facebookId := "ID"
+	id := os.Getenv("FACEBOOK_CLIENT_ID")
 	callbackUri := redirectPath + "facebook"
 	state, _ := json.Marshal(s.Next)
-	return "https://www.facebook.com/v4.0/dialog/oauth?client_id=" + facebookId + "&redirect_uri=" + callbackUri + "&state=" + string(state) + "&scope=email,public_profile"
+	return "https://www.facebook.com/v4.0/dialog/oauth?client_id=" + id + "&redirect_uri=" + callbackUri + "&state=" + string(state) + "&scope=email,public_profile"
 }
 
 func (s State) Github() string {
@@ -57,7 +56,6 @@ func Social(provider, next string) Action {
 
 func GenerateSocialLink(provider, next string) string {
 	snapshot := Social(provider, next)
-	log.Println("github", provider, snapshot.Github())
 	switch provider {
 	case "facebook":
 		return snapshot.Facebook()
