@@ -11,13 +11,44 @@ import (
 	"time"
 )
 
+func ListPostService(querys dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
+	var posts []models.Post
+	query := db.Raw(`
+		SELECT * FROM "posts" AS p 
+		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
+		ORDER BY p.created_at, p.id DESC
+		LIMIT = ?`, querys.Limit)
+
+	if userId == "" {
+		query.Where("is_private = false")
+	} else {
+		query.Where("is_private = false OR post.user_id = ?", userId)
+	}
+
+	if querys.Cursor != "" {
+		var post models.Post
+		if err := db.Where("id = ?", querys.Cursor).Scan(&post).Error; err != nil {
+			return nil, http.StatusNotFound, helpers.ErrorInvalidCursor
+		}
+
+		query.Where("id = ? AND created_at < ?", post.ID, post.CreatedAt)
+		query.Where("created_at = ? AND id < ?", post.CreatedAt, post.ID)
+	}
+
+	query.Scan(&posts)
+	return helpers.JSON{
+		"posts": posts,
+	}, http.StatusOK, nil
+}
+
 func GetPostService(postId, urlSlug string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	var postData dto.PostRawQueryResult
 	db.Raw(`
 		SELECT
 		p.*,
 		array_agg(t.name) AS tag FROM "posts" AS p
-		LEFT OUTER JOIN "posts_tags" AS pt ON pt.post_id = p.id
+		LEFT OUTER JOIN "posts_tags" AS p  ON pt.post_id = p.id
 		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
 		WHERE p.id = ? AND p.url_slug = ?
 		GROUP BY p.id, pt.post_id`, postId, urlSlug).Scan(&postData)

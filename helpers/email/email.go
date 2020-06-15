@@ -6,7 +6,7 @@ import (
 	template2 "html/template"
 )
 
-type EmailBindData struct {
+type BindData struct {
 	Keyword string
 	Url     string
 }

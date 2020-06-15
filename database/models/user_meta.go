@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"github.com/OhMinsSup/story-server/helpers"
+	"time"
+)
 
 type UserMeta struct {
 	ID                string     `gorm:"primary_key;uuid"json:"id"`
@@ -10,4 +13,12 @@ type UserMeta struct {
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 	DeletedAt         *time.Time `sql:"index"json:"deleted_at"`
+}
+
+func (u UserMeta) Serialize() helpers.JSON {
+	return helpers.JSON{
+		"id":                 u.ID,
+		"email_notification": u.EmailNotification,
+		"email_promotion":    u.EmailPromotion,
+	}
 }

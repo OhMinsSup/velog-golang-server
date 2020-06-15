@@ -21,6 +21,18 @@ type User struct {
 	VelogConfig VelogConfig `gorm:"foreignkey:UserID"json:"velog_config"`
 }
 
+func (u User) Serialize() helpers.JSON {
+	return helpers.JSON{
+		"id":           u.ID,
+		"username":     u.Username,
+		"email":        u.Email,
+		"display_name": u.UserProfile.DisplayName,
+		"short_bio":    u.UserProfile.ShortBio,
+		"thumbnail":    u.UserProfile.Thumbnail,
+		"created_at":   u.CreatedAt,
+	}
+}
+
 func (user *User) GenerateUserToken(db *gorm.DB) helpers.JSON {
 	authToken := AuthToken{
 		UserID: user.ID,

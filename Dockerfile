@@ -1,10 +1,3 @@
-# Run command below to build binary.
-# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-w -s' -o main main.go
-# CGO_ENABLED=0 : cgo를 사용하지 않습니다. Scratch 이미지에는 C 바이너리조차 없기 때문에, 반드시 cgo를 비활성화 후 빌드해야합니다.
-# GOOS=linux GOARCH=amd64 : OS와 아키텍쳐 설정입니다.
-# -a : 모든(all) 의존 패키지를 cgo를 사용하지 않도록 재빌드합니다.
-# -ldflags '-s' : 바이너리를 조금 더 경량화하는 Linker 옵션입니다.
-
 # Start from golang base image
 FROM golang:1.13-alpine as builder
 
@@ -53,3 +46,9 @@ EXPOSE 8080
 
 #Command to run the executable
 CMD [ "./main" ]
+
+# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags '-w -s' -o main main.go
+# CGO_ENABLED=0 : cgo를 사용하지 않습니다. Scratch 이미지에는 C 바이너리조차 없기 때문에, 반드시 cgo를 비활성화 후 빌드해야합니다.
+# GOOS=linux GOARCH=amd64 : OS와 아키텍쳐 설정입니다.
+# -a : 모든(all) 의존 패키지를 cgo를 사용하지 않도록 재빌드합니다.
+# -ldflags '-s' : 바이너리를 조금 더 경량화하는 Linker 옵션입니다.

@@ -23,16 +23,12 @@ func SocialRedirect(ctx *gin.Context) {
 	}
 
 	if !strings.Contains(strings.Join(providerType, ","), provider) {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValided)
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValid)
 		return
 	}
 
 	loginUrl := social.GenerateSocialLink(provider, next)
 	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
-}
-
-func GoogleCallback(ctx *gin.Context) {
-	ctx.Next()
 }
 
 func FacebookCallback(ctx *gin.Context) {

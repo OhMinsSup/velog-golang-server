@@ -166,7 +166,7 @@ func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 		return exists, http.StatusConflict, err
 	}
 
-	var bindData emailService.EmailBindData
+	var bindData emailService.BindData
 	if exists {
 		bindData.Keyword = "로그인"
 		bindData.Url = "https://velog.io/email-login?code=" + emailAuth.Code

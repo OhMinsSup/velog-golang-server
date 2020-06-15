@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
+	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
+	"strconv"
 )
 
 func UpdatePostController(ctx *gin.Context) {
@@ -45,6 +47,36 @@ func WritePostController(ctx *gin.Context) {
 
 	db := ctx.MustGet("db").(*gorm.DB)
 	result, code, err := services.WritePostService(body, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
+func ListPostController(ctx *gin.Context) {
+	cursor := ctx.Param("cursor")
+	limit := ctx.Param("limit")
+
+	limited, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if limited > 100 {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		return
+	}
+
+	querys := dto.ListPostQuery{
+		Cursor: cursor,
+		Limit:  limit,
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.ListPostService(querys, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
 		return
