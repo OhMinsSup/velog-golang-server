@@ -16,6 +16,7 @@ func ApplyRoutes(r *gin.Engine) {
 				"message": "pong",
 			})
 		})
+
 		auth.ApplyRoutes(api)
 		post.ApplyRoutes(api)
 		posts.ApplyRoutes(api)

@@ -19,6 +19,9 @@ type User struct {
 	UserProfile UserProfile `gorm:"foreignkey:UserID"json:"user_profile"`
 	UserMeta    UserMeta    `gorm:"foreignkey:UserID"json:"user_meta"`
 	VelogConfig VelogConfig `gorm:"foreignkey:UserID"json:"velog_config"`
+	PostScore   []PostScore `gorm:"polymorphic:Owner;"`
+	PostRead    []PostRead  `gorm:"polymorphic:Owner;"`
+	PostLike    []PostLike  `gorm:"polymorphic:Owner;"`
 }
 
 func (u User) Serialize() helpers.JSON {

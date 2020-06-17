@@ -44,7 +44,11 @@ func Migrate(db *gorm.DB) {
 		&models.SocialAccount{},
 		&models.Post{},
 		&models.Tag{},
-		&models.PostsTags{})
+		&models.PostsTags{},
+		&models.PostScore{},
+		&models.PostRead{},
+		&models.PostHistory{},
+		&models.PostLike{})
 
 	db.Model(&models.AuthToken{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.UserProfile{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
@@ -52,8 +56,13 @@ func Migrate(db *gorm.DB) {
 	db.Model(&models.VelogConfig{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.SocialAccount{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.Post{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
-	db.Model(&models.PostsTags{}).AddForeignKey("tag_id", "tags(id)", "CASCADE","CASCADE")
-	db.Model(&models.PostsTags{}).AddForeignKey("post_id", "posts(id)", "CASCADE","CASCADE")
+	db.Model(&models.PostsTags{}).AddForeignKey("tag_id", "tags(id)", "CASCADE", "CASCADE")
+	db.Model(&models.PostsTags{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
+	db.Model(&models.PostRead{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
+	db.Model(&models.PostRead{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
+	db.Model(&models.PostHistory{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
+	db.Model(&models.PostLike{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
+	db.Model(&models.PostLike{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 
 	fmt.Println("Auto Migration has beed processed")
 }

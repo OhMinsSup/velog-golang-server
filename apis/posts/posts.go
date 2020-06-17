@@ -9,5 +9,6 @@ func ApplyRoutes(r *gin.RouterGroup) {
 	posts := r.Group("/posts")
 	{
 		posts.GET("/", controllers.ListPostController)
+		posts.GET("/trending", controllers.TrendingPostController)
 	}
 }
