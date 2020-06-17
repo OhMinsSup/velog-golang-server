@@ -17,9 +17,9 @@ func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) 
 
 	var queryIsPrivate string
 	if userId == "" {
-		queryIsPrivate = "WHERE p.is_private = true"
+		queryIsPrivate = "WHERE p.is_private = false"
 	} else {
-		queryIsPrivate = fmt.Sprintf("WHERE (p.is_private = true OR p.user_id = '%v')", userId)
+		queryIsPrivate = fmt.Sprintf("WHERE (p.is_private = false OR p.user_id = '%v')", userId)
 	}
 
 	queryUsername := ""
