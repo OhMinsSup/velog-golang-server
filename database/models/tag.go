@@ -9,9 +9,9 @@ import (
 type Tag struct {
 	ID        string     `gorm:"primary_key;uuid"json:"id"`
 	Name      string     `sql:"index"json:"name"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `sql:"index"json:"deleted_at"`
+	CreatedAt time.Time  `gorm:"type:time"json:"created_at"`
+	UpdatedAt time.Time  `gorm:"type:time"json:"updated_at"`
+	DeletedAt *time.Time `gorm:"type:time"sql:"index"json:"deleted_at"`
 }
 
 func (t Tag) Serialize() helpers.JSON {

@@ -147,7 +147,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	exists := false
 	var user models.User
-	if existsUser := db.Where("email = ?", strings.ToLower(email)).First(&user); existsUser != nil {
+	if err := db.Where("email = ?", strings.ToLower(email)).First(&user).Error; err == nil {
 		exists = true
 	}
 

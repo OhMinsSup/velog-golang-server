@@ -56,8 +56,9 @@ func WritePostController(ctx *gin.Context) {
 }
 
 func ListPostController(ctx *gin.Context) {
-	cursor := ctx.Param("cursor")
-	limit := ctx.Param("limit")
+	cursor := ctx.Query("cursor")
+	limit := ctx.Query("limit")
+	username := ctx.Query("username")
 
 	limited, err := strconv.ParseInt(limit, 10, 64)
 	if err != nil {
@@ -70,13 +71,14 @@ func ListPostController(ctx *gin.Context) {
 		return
 	}
 
-	querys := dto.ListPostQuery{
-		Cursor: cursor,
-		Limit:  limit,
+	queryObj := dto.ListPostQuery{
+		Cursor:   cursor,
+		Limit:    limited,
+		Username: username,
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.ListPostService(querys, db, ctx)
+	result, code, err := services.ListPostService(queryObj, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
 		return

@@ -1,4 +1,4 @@
-package posts
+package post
 
 import (
 	"github.com/OhMinsSup/story-server/controllers"
@@ -13,7 +13,5 @@ func ApplyRoutes(r *gin.RouterGroup) {
 		post.GET("/:post_id/:url_slug", middlewares.Authorized, controllers.GetPostController)
 		post.PUT("/:post_id/:url_slug", middlewares.Authorized, controllers.UpdatePostController)
 		post.DELETE("/:post_id/:url_slug", middlewares.Authorized, controllers.DeletePostController)
-
-		post.GET("/list/:cursor/:limit", middlewares.Authorized, controllers.ListPostController)
 	}
 }

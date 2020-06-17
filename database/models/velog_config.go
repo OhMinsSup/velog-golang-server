@@ -10,9 +10,9 @@ type VelogConfig struct {
 	Title     string     `json:"title"`
 	LogoImage string     `json:"logo_image"`
 	UserID    string     `json:"user_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `sql:"index"json:"deleted_at"`
+	CreatedAt time.Time  `gorm:"type:time"json:"created_at"`
+	UpdatedAt time.Time  `gorm:"type:time"json:"updated_at"`
+	DeletedAt *time.Time `gorm:"type:time"sql:"index"json:"deleted_at"`
 }
 
 func (v VelogConfig) Serialize() helpers.JSON {

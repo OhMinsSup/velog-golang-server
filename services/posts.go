@@ -11,30 +11,45 @@ import (
 	"time"
 )
 
-func ListPostService(querys dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
-	var posts []models.Post
-	query := db.Raw(`
-		SELECT * FROM "posts" AS p 
-		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
-		ORDER BY p.created_at, p.id DESC
-		LIMIT = ?`, querys.Limit)
+func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	id := ctx.MustGet("id")
+	userId := fmt.Sprintf("%v", id)
 
+	var queryIsPrivate string
 	if userId == "" {
-		query.Where("is_private = false")
+		queryIsPrivate = "WHERE p.is_private = true"
 	} else {
-		query.Where("is_private = false OR post.user_id = ?", userId)
+		queryIsPrivate = fmt.Sprintf("WHERE (p.is_private = true OR p.user_id = '%v')", userId)
 	}
 
-	if querys.Cursor != "" {
+	queryUsername := ""
+	if queryObj.Username != "" {
+		queryUsername = fmt.Sprintf(`AND u.username = '%v'`, queryObj.Username)
+	}
+
+	queryCursor := ""
+	if queryObj.Cursor != "" {
 		var post models.Post
-		if err := db.Where("id = ?", querys.Cursor).Scan(&post).Error; err != nil {
+		if err := db.Where("id = ?", queryObj.Cursor).First(&post).Error; err != nil {
 			return nil, http.StatusNotFound, helpers.ErrorInvalidCursor
 		}
 
-		query.Where("id = ? AND created_at < ?", post.ID, post.CreatedAt)
-		query.Where("created_at = ? AND id < ?", post.CreatedAt, post.ID)
+		queryCursor = fmt.Sprintf(`AND p.created_at > '%v'`, post.CreatedAt.Format(time.RFC3339Nano))
+		//queryCursor =
+		//fmt.Sprintf(`AND p.created_at > '%v' OR p.created_at = '%v' AND p.id = '%v'`,
+		//post.CreatedAt.Format(time.RFC3339Nano), post.CreatedAt.Format(time.RFC3339Nano), post.ID)
 	}
+
+	var posts []dto.PostsRawQueryResult
+	query := db.Raw(fmt.Sprintf(`
+		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail FROM "posts" AS p 
+		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
+		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
+		%v
+		%v
+		%v
+		ORDER BY p.created_at, p.id DESC
+		LIMIT ?`, queryIsPrivate, queryUsername, queryCursor), queryObj.Limit)
 
 	query.Scan(&posts)
 	return helpers.JSON{
@@ -121,10 +136,6 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 		IsMarkdown: body.IsMarkdown,
 		IsPrivate:  body.IsPrivate,
 		UserID:     userId,
-	}
-
-	if editPost.IsTemp && !body.IsTemp {
-		editPost.ReleasedAt = time.Now()
 	}
 
 	processedUrlSlug := helpers.EscapeForUrl(body.UrlSlug)

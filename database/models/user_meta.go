@@ -10,9 +10,9 @@ type UserMeta struct {
 	EmailNotification bool       `gorm:"default:false"json:"email_notification"`
 	EmailPromotion    bool       `gorm:"default:false"json:"email_promotion"`
 	UserID            string     `json:"user_id"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	DeletedAt         *time.Time `sql:"index"json:"deleted_at"`
+	CreatedAt         time.Time  `gorm:"type:time"json:"created_at"`
+	UpdatedAt         time.Time  `gorm:"type:time"json:"updated_at"`
+	DeletedAt         *time.Time `gorm:"type:time"sql:"index"json:"deleted_at"`
 }
 
 func (u UserMeta) Serialize() helpers.JSON {

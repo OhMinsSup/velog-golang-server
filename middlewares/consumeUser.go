@@ -67,6 +67,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 		if errDecode != nil {
 			userId, err := refresh(db, context, refreshToken)
 			if err != nil {
+				context.Set("id", "")
 				context.Next()
 				return
 			}
@@ -85,6 +86,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 			log.Println("refreshToken")
 			userId, err := refresh(db, context, refreshToken)
 			if err != nil {
+				context.Set("id", "")
 				context.Next()
 				return
 			}
