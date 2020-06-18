@@ -42,6 +42,8 @@ func UnLikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JS
 
 	db.Save(&postModel)
 
+	db.Exec(`DELETE from "post_scores" where post_id = ? AND user_id = ? AND type = 'LIKE'`, postId, userId)
+
 	return helpers.JSON{
 		"liked": postModel.Serialize(),
 	}, http.StatusOK, nil
@@ -85,6 +87,16 @@ func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON
 	postModel.Likes = count
 
 	db.Save(&postModel)
+
+	newPostScore := models.PostScore{
+		Type:   "LIKE",
+		PostId: postId,
+		UserId: userId,
+		Score:  5,
+	}
+
+	db.NewRecord(newPostScore)
+	db.Create(&newPostScore)
 
 	return helpers.JSON{
 		"liked": postModel.Serialize(),
