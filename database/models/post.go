@@ -31,15 +31,19 @@ type Post struct {
 // Serialize serializes post data
 func (p Post) Serialize() helpers.JSON {
 	return helpers.JSON{
-		"id":         p.ID,
-		"title":      p.Title,
-		"body":       p.Body,
-		"thumbnail":  p.Thumbnail,
-		"url_slug":   p.UrlSlug,
-		"likes":      p.Likes,
-		"views":      p.Views,
-		"is_temp":    p.IsTemp,
-		"is_private": p.IsPrivate,
-		"created_at": p.CreatedAt,
+		"id":          p.ID,
+		"user_id":     p.UserID,
+		"title":       p.Title,
+		"body":        p.Body,
+		"thumbnail":   p.Thumbnail,
+		"url_slug":    p.UrlSlug,
+		"likes":       p.Likes,
+		"views":       p.Views,
+		"is_markdown": p.IsMarkdown,
+		"is_temp":     p.IsTemp,
+		"is_private":  p.IsPrivate,
+		"created_at":  p.CreatedAt,
+		"updated_at":  p.UpdatedAt,
+		"deleted_at":  p.DeletedAt,
 	}
 }

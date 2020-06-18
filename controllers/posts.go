@@ -10,7 +10,37 @@ import (
 	"strconv"
 )
 
-func TrendingPostController(ctx *gin.Context) {}
+func TrendingPostController(ctx *gin.Context) {
+	limit := ctx.Query("limit")
+	offset := ctx.Query("offset")
+	timeframe := ctx.Query("time")
+
+	limited, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if limited > 100 {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		return
+	}
+
+	queryObj := dto.TrendingPostQuery{
+		Limit:     limited,
+		Timeframe: timeframe,
+		Offset:    offset,
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.TrendingPostService(queryObj, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
 
 func ListPostController(ctx *gin.Context) {
 	cursor := ctx.Query("cursor")
@@ -43,7 +73,6 @@ func ListPostController(ctx *gin.Context) {
 
 	ctx.JSON(code, result)
 }
-
 
 func UpdatePostController(ctx *gin.Context) {
 	var body dto.WritePostBody
@@ -91,16 +120,8 @@ func WritePostController(ctx *gin.Context) {
 }
 
 func GetPostController(ctx *gin.Context) {
-	postId := ctx.Param("post_id")
-	urlSlug := ctx.Param("url_slug")
-
-	if postId == "" || urlSlug == "" {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
 	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.GetPostService(postId, urlSlug, db, ctx)
+	result, code, err := services.GetPostService(db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
 		return

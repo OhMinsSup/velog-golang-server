@@ -11,6 +11,12 @@ type ListPostQuery struct {
 	Username string `json:"username"`
 }
 
+type TrendingPostQuery struct {
+	Limit     int64  `json:"limit"`
+	Timeframe string `json:"timeframe"`
+	Offset    string `json:"offset"`
+}
+
 type WritePostBody struct {
 	Title      string   `json:"title"binding:"required"`
 	Body       string   `json:"body"`

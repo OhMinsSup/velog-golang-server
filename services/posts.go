@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+func TrendingPostService(queryObj dto.TrendingPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	return helpers.JSON{}, http.StatusOK, nil
+}
+
 func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	id := ctx.MustGet("id")
 	userId := fmt.Sprintf("%v", id)
@@ -57,13 +61,20 @@ func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) 
 	}, http.StatusOK, nil
 }
 
-func GetPostService(postId, urlSlug string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	postId := ctx.Param("post_id")
+	urlSlug := ctx.Param("url_slug")
+
+	if postId == "" || urlSlug == "" {
+		return nil, http.StatusBadRequest, nil
+	}
+
 	var postData dto.PostRawQueryResult
 	db.Raw(`
 		SELECT
 		p.*,
 		array_agg(t.name) AS tag FROM "posts" AS p
-		LEFT OUTER JOIN "posts_tags" AS p  ON pt.post_id = p.id
+		LEFT OUTER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
 		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
 		WHERE p.id = ? AND p.url_slug = ?
 		GROUP BY p.id, pt.post_id`, postId, urlSlug).Scan(&postData)
