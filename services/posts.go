@@ -51,7 +51,7 @@ func ListPostService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (hel
 		%v
 		%v
 		%v
-		ORDER BY p.created_at, p.id DESC
+		ORDER BY p.created_at DESC
 		LIMIT ?`, queryIsPrivate, queryUsername, queryCursor), body.Limit)
 
 	query.Scan(&posts)
@@ -151,7 +151,9 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 
 	db.Model(&currentPost).Updates(editPost)
 
-	models.SyncPostTags(body, currentPost, db)
+	if len(body.Tag) > 0 {
+		models.SyncPostTags(body, currentPost, db)
+	}
 
 	return helpers.JSON{
 		"post_id": currentPost.ID,
@@ -173,7 +175,9 @@ func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (he
 	db.NewRecord(post)
 	db.Create(&post)
 
-	models.SyncPostTags(body, post, db)
+	if len(body.Tag) > 0 {
+		models.SyncPostTags(body, post, db)
+	}
 
 	return helpers.JSON{
 		"post_id": post.ID,
