@@ -37,7 +37,7 @@ func ListPostService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (hel
 			return nil, http.StatusNotFound, err
 		}
 
-		queryCursor = fmt.Sprintf(`AND p.created_at > '%v'`, post.CreatedAt.Format(time.RFC3339Nano))
+		queryCursor = fmt.Sprintf(`AND p.created_at < '%v'`, post.CreatedAt.Format(time.RFC3339Nano))
 		//queryCursor =
 		//fmt.Sprintf(`AND p.created_at > '%v' OR p.created_at = '%v' AND p.id = '%v'`,
 		//post.CreatedAt.Format(time.RFC3339Nano), post.CreatedAt.Format(time.RFC3339Nano), post.ID)
