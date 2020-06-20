@@ -12,7 +12,6 @@ type VelogConfig struct {
 	UserID    string     `json:"user_id"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `sql:"index"json:"deleted_at"`
 }
 
 func (v VelogConfig) Serialize() helpers.JSON {

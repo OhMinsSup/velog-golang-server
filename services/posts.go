@@ -191,38 +191,46 @@ func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (he
 		return nil, http.StatusForbidden, nil
 	}
 
-	var viewed models.PostRead
-	if err := db.Raw(`
-		SELECT * FROM "post_reads" AS pr
-		WHERE pr.ip_hash = ? AND pr.post_id = ? AND pr.created_at > (NOW() - INTERVAL '24 HOURS')`, body.Ip, body.PostId).Scan(&viewed).Error; err != nil {
-		return nil, http.StatusInternalServerError, err
+	var currentRead models.PostRead
+	if err := db.Where(`ip_hash = ? AND post_id = ?`, body.Ip, body.PostId).First(&currentRead).Error; err == nil {
+		if currentRead == (models.PostRead{}) {
+			return helpers.JSON{
+				"post": false,
+			}, http.StatusOK, nil
+		}
 	}
 
-	if viewed == (models.PostRead{}) {
-		postRead := models.PostRead{
-			PostId: body.PostId,
-			UserId: userId,
-			IpHash: body.Ip,
-		}
-
-		db.NewRecord(postRead)
-		db.Create(&postRead)
-
-		var postModel models.Post
-		if err := db.Where("id = ?", body.PostId).First(&postModel).Error; err != nil {
-			return nil, http.StatusNotFound, err
-		}
-
-		if err := db.Model(&postModel).Update("views", postModel.Views+1).Error; err != nil {
-			return nil, http.StatusNotModified, err
-		}
-
-		return helpers.JSON{
-			"post": true,
-		}, http.StatusOK, nil
+	postRead := models.PostRead{
+		PostId:    body.PostId,
+		UserId:    userId,
+		IpHash:    body.Ip,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
+
+	db.NewRecord(postRead)
+	db.Create(&postRead)
+
+	var updatePost models.Post
+	if err := db.Where("id = ?", body.PostId).First(&updatePost).Error; err != nil {
+		return nil, http.StatusNotFound, err
+	}
+
+	if err := db.Model(&updatePost).Update(map[string]interface{}{"views": updatePost.Views + 1, "updated_at": time.Now()}).Error; err != nil {
+		return nil, http.StatusNotModified, err
+	}
+
+	newPostScore := models.PostScore{
+		Type:   "READ",
+		PostId: body.PostId,
+		UserId: userId,
+		Score:  1.0,
+	}
+
+	db.NewRecord(newPostScore)
+	db.Create(&newPostScore)
 
 	return helpers.JSON{
-		"post": false,
+		"post": true,
 	}, http.StatusOK, nil
 }

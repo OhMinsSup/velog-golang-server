@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
+	"time"
 )
 
 func UnLikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
@@ -72,8 +73,10 @@ func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON
 	}
 
 	newPostLike := models.PostLike{
-		PostId: postId,
-		UserId: userId,
+		PostId:    postId,
+		UserId:    userId,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	db.NewRecord(newPostLike)

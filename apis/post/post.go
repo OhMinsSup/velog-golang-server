@@ -15,5 +15,8 @@ func ApplyRoutes(r *gin.RouterGroup) {
 		post.DELETE("/:post_id", middlewares.Authorized, controllers.DeletePostController)
 
 		post.GET("/:post_id/view", middlewares.Authorized, controllers.PostViewController)
+
+		post.POST("/:post_id/like", middlewares.Authorized, controllers.LikePostController)
+		post.DELETE("/:post_id/like", middlewares.Authorized, controllers.UnLikePostController)
 	}
 }

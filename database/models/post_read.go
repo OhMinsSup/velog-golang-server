@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type PostRead struct {
 	ID        string     `gorm:"primary_key;uuid"json:"id"`
@@ -9,5 +11,4 @@ type PostRead struct {
 	PostId    string     `sql:"index"json:"post_id"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
-	//DeletedAt *time.Time `sql:"index"json:"deleted_at"`
 }

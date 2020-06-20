@@ -14,7 +14,6 @@ type User struct {
 	IsCertified bool        `gorm:"default:false"json:"is_certified"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
-	//DeletedAt   *time.Time  `sql:"index"json:"deleted_at"`
 	AuthTokens  []AuthToken `gorm:"foreignkey:UserID"json:"auth_tokens"`
 	UserProfile UserProfile `gorm:"foreignkey:UserID"json:"user_profile"`
 	UserMeta    UserMeta    `gorm:"foreignkey:UserID"json:"user_meta"`
