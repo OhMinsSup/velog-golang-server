@@ -133,12 +133,10 @@ func GetPostController(ctx *gin.Context) {
 func PostViewController(ctx *gin.Context) {
 	ip := helpers.CreateHash(ctx.ClientIP())
 	postId := ctx.Param("post_id")
-	urlSlug := ctx.Param("url_slug")
 
 	params := dto.PostViewParams{
 		Ip:      ip,
 		PostId:  postId,
-		UrlSlug: urlSlug,
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)

@@ -6,21 +6,20 @@ import (
 )
 
 type Post struct {
-	ID          string        `gorm:"primary_key;uuid"json:"id"`
-	Title       string        `json:"title"`
-	Body        string        `gorm:"type:text"json:"body"`
-	Thumbnail   string        `json:"thumbnail"`
-	IsMarkdown  bool          `json:"is_markdown"`
-	IsTemp      bool          `json:"is_temp"`
-	IsPrivate   bool          `gorm:"default:true"json:"is_private"`
-	UrlSlug     string        `sql:"index"json:"url_slug"`
-	Likes       int           `gorm:"default:0"json:"likes"`
-	Views       int           `gorm:"default:0"json:"views"`
-	User        User          `gorm:"foreignkey:UserID"json:"user"`
-	UserID      string        `json:"user_id"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
-	DeletedAt   *time.Time    `sql:"index"json:"deleted_at"`
+	ID         string    `gorm:"primary_key;uuid"json:"id"`
+	Title      string    `json:"title"`
+	Body       string    `gorm:"type:text"json:"body"`
+	Thumbnail  string    `json:"thumbnail"`
+	IsMarkdown bool      `json:"is_markdown"`
+	IsTemp     bool      `json:"is_temp"`
+	IsPrivate  bool      `gorm:"default:true"json:"is_private"`
+	Likes      int       `gorm:"default:0"json:"likes"`
+	Views      int       `gorm:"default:0"json:"views"`
+	User       User      `gorm:"foreignkey:UserID"json:"user"`
+	UserID     string    `json:"user_id"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	//DeletedAt   *time.Time    `sql:"index"json:"deleted_at"`
 	Tags        []Tag         `gorm:"many2many:posts_tags;association_foreignkey:tag_id;foreignkey:post_id;"json:"tags"`
 	PostScore   []PostScore   `gorm:"polymorphic:Owner;"`
 	PostRead    []PostRead    `gorm:"polymorphic:Owner;"`
@@ -36,7 +35,6 @@ func (p Post) Serialize() helpers.JSON {
 		"title":       p.Title,
 		"body":        p.Body,
 		"thumbnail":   p.Thumbnail,
-		"url_slug":    p.UrlSlug,
 		"likes":       p.Likes,
 		"views":       p.Views,
 		"is_markdown": p.IsMarkdown,
@@ -44,6 +42,5 @@ func (p Post) Serialize() helpers.JSON {
 		"is_private":  p.IsPrivate,
 		"created_at":  p.CreatedAt,
 		"updated_at":  p.UpdatedAt,
-		"deleted_at":  p.DeletedAt,
 	}
 }

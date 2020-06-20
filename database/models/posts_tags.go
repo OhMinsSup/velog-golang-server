@@ -5,7 +5,6 @@ import (
 	"github.com/OhMinsSup/story-server/helpers/fx"
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
-	"log"
 	"time"
 )
 
@@ -15,7 +14,7 @@ type PostsTags struct {
 	PostId    string     `sql:"index"json:"post_id"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `sql:"index"json:"deleted_at"`
+	//DeletedAt *time.Time `sql:"index"json:"deleted_at"`
 }
 
 func SyncPostTags(body dto.WritePostBody, post Post, db *gorm.DB) {
@@ -64,9 +63,6 @@ func SyncPostTags(body dto.WritePostBody, post Post, db *gorm.DB) {
 		}
 	}
 
-	log.Println("prevTags", prevPostTag)
-	log.Println("missing", missing)
-	log.Println("adding", adding)
 	// remove tags
 	if len(missing) > 0 {
 		for _, missingTagId := range missing {

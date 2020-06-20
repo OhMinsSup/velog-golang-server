@@ -44,7 +44,7 @@ func ListPostService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (hel
 	}
 
 	var posts []dto.PostsRawQueryResult
-	 query := db.Raw(fmt.Sprintf(`
+	query := db.Raw(fmt.Sprintf(`
 		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail FROM "posts" AS p 
 		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
 		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
@@ -62,9 +62,8 @@ func ListPostService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (hel
 
 func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	postId := ctx.Param("post_id")
-	urlSlug := ctx.Param("url_slug")
 
-	if postId == "" || urlSlug == "" {
+	if postId == "" {
 		return nil, http.StatusBadRequest, nil
 	}
 
@@ -75,8 +74,8 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 		array_agg(t.name) AS tag FROM "posts" AS p
 		LEFT OUTER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
 		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
-		WHERE p.id = ? AND p.url_slug = ?
-		GROUP BY p.id, pt.post_id`, postId, urlSlug).Scan(&postData).Error; err != nil {
+		WHERE p.id = ?
+		GROUP BY p.id, pt.post_id`, postId).Scan(&postData).Error; err != nil {
 		return nil, http.StatusNotFound, err
 	}
 
@@ -102,14 +101,13 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	postId := ctx.Param("post_id")
-	urlSlug := ctx.Param("url_slug")
 
-	if postId == "" || urlSlug == "" {
+	if postId == "" {
 		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
 	}
 
 	var currentPost models.Post
-	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost).Error; err != nil {
+	if err := db.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		return nil, http.StatusNotFound, err
 	}
 
@@ -117,8 +115,8 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 		return nil, http.StatusForbidden, helpers.ErrorPermission
 	}
 
-	db.Raw("DELETE FROM posts_tags pt WHERE pt.post_id = ?", postId)
-	db.Raw("DELETE FROM posts p WHERE p.id = ?", postId)
+	db.Exec("DELETE FROM posts_tags pt WHERE pt.post_id = ?", postId)
+	db.Exec("DELETE FROM posts p WHERE p.id = ?", postId)
 
 	return helpers.JSON{
 		"post": true,
@@ -128,14 +126,13 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	postId := ctx.Param("post_id")
-	urlSlug := ctx.Param("url_slug")
 
-	if postId == "" || urlSlug == "" {
+	if postId == "" {
 		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
 	}
 
 	var currentPost models.Post
-	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost).Error; err != nil {
+	if err := db.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		return nil, http.StatusNotFound, err
 	}
 
@@ -152,15 +149,6 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 		UserID:     userId,
 	}
 
-	processedUrlSlug := helpers.EscapeForUrl(body.UrlSlug)
-
-	if urlSlugDuplicate := db.Where("fk_user_id = ? AND url_slug >= ?", userId, body.UrlSlug).First(&currentPost); urlSlugDuplicate != nil {
-		randomString := helpers.GenerateStringName(8)
-		processedUrlSlug += "-" + randomString
-	}
-
-	editPost.UrlSlug = processedUrlSlug
-
 	db.Model(&currentPost).Updates(editPost)
 
 	models.SyncPostTags(body, currentPost, db)
@@ -172,19 +160,10 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 
 func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
-	processedUrlSlug := helpers.EscapeForUrl(body.UrlSlug)
-
-	var postModel models.Post
-	if urlSlugDuplicate := db.Where("fk_user_id = ? AND url_slug >= ?", userId, body.UrlSlug).First(&postModel); urlSlugDuplicate != nil {
-		randomString := helpers.GenerateStringName(8)
-		processedUrlSlug += "-" + randomString
-	}
-
 	post := models.Post{
 		Title:      body.Title,
 		Body:       body.Body,
 		Thumbnail:  body.Thumbnail,
-		UrlSlug:    processedUrlSlug,
 		IsTemp:     body.IsTemp,
 		IsMarkdown: body.IsMarkdown,
 		IsPrivate:  body.IsPrivate,

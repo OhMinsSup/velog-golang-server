@@ -12,9 +12,8 @@ type ListPostQuery struct {
 }
 
 type PostViewParams struct {
-	Ip      string `json:"ip"`
-	PostId  string `json:"post_id"`
-	UrlSlug string `json:"url_slug"`
+	Ip     string `json:"ip"`
+	PostId string `json:"post_id"`
 }
 
 type TrendingPostQuery struct {
@@ -30,7 +29,6 @@ type WritePostBody struct {
 	IsMarkdown bool     `json:"is_markdown"`
 	IsTemp     bool     `json:"is_temp"`
 	IsPrivate  bool     `json:"is_private"`
-	UrlSlug    string   `json:"url_slug"`
 	Tag        []string `json:"tag"`
 }
 
@@ -42,7 +40,6 @@ type PostRawQueryResult struct {
 	IsMarkdown bool           `json:"is_markdown"`
 	IsTemp     bool           `json:"is_temp"`
 	IsPrivate  bool           `json:"is_private"`
-	UrlSlug    string         `json:"url_slug"`
 	Likes      int            `json:"likes"`
 	Views      int            `json:"views"`
 	UserID     string         `json:"user_id"`
@@ -60,7 +57,6 @@ type PostsRawQueryResult struct {
 	IsMarkdown    bool           `json:"is_markdown"`
 	IsTemp        bool           `json:"is_temp"`
 	IsPrivate     bool           `json:"is_private"`
-	UrlSlug       string         `json:"url_slug"`
 	Likes         int            `json:"likes"`
 	Views         int            `json:"views"`
 	UserID        string         `json:"user_id"`
