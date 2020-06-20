@@ -8,3 +8,7 @@ import (
 func WriteCommentController(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "")
 }
+
+func ReplyWriteCommentController(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, "")
+}

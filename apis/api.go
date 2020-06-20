@@ -2,7 +2,6 @@ package apis
 
 import (
 	"github.com/OhMinsSup/story-server/apis/auth"
-	"github.com/OhMinsSup/story-server/apis/comment"
 	"github.com/OhMinsSup/story-server/apis/post"
 	"github.com/OhMinsSup/story-server/apis/posts"
 	"github.com/gin-gonic/gin"
@@ -22,6 +21,5 @@ func ApplyRoutes(r *gin.Engine) {
 		auth.ApplyRoutes(api)
 		post.ApplyRoutes(api)
 		posts.ApplyRoutes(api)
-		comment.ApplyRoutes(api)
 	}
 }
