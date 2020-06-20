@@ -4,8 +4,8 @@ import (
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers/fx"
 	"github.com/jinzhu/gorm"
+	"github.com/lib/pq"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -13,9 +13,9 @@ type PostsTags struct {
 	ID        string     `gorm:"primary_key;uuid",json:"id"`
 	TagId     string     `sql:"index"json:"tag_id"`
 	PostId    string     `sql:"index"json:"post_id"`
-	CreatedAt time.Time  `gorm:"type:time"json:"created_at"`
-	UpdatedAt time.Time  `gorm:"type:time"json:"updated_at"`
-	DeletedAt *time.Time `gorm:"type:time"sql:"index"json:"deleted_at"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `sql:"index"json:"deleted_at"`
 }
 
 func SyncPostTags(body dto.WritePostBody, post Post, db *gorm.DB) {
@@ -36,41 +36,43 @@ func SyncPostTags(body dto.WritePostBody, post Post, db *gorm.DB) {
 		}
 	}
 
-	type PrevPostTags struct {
-		TagId string `json:"tag_id"`
+	var prevPostTag struct{
+		TagIds pq.StringArray `json:"tag_ids"`
 	}
-
-	var prevPostTags []PrevPostTags
-	// 현재 포스트에 등록된 태그 정보
-	db.Raw("SELECT DISTINCT pt.tag_id FROM posts p INNER JOIN posts_tags pt ON pt.post_id = p.id WHERE pt.post_id = ?", post.ID).Find(&prevPostTags)
+	// current posts tags info
+	if err := db.Raw(`
+		SELECT DISTINCT array_agg(pt.tag_id) AS tag_ids FROM posts p
+		INNER JOIN posts_tags pt ON pt.post_id = p.id
+		WHERE pt.post_id = ?
+		GROUP BY p.id, pt.post_id`, post.ID).Find(&prevPostTag).Error; err != nil {
+		panic(err)
+	}
 
 	// get deleted posts_tags Item
 	var missing []string
-	for _, pt := range prevPostTags {
-		if id, prefix := fx.ContainSelector(tagIds, pt.TagId); prefix {
-			log.Println("missing", id)
-			missing = append(missing, id)
+	for i, prevTagId := range prevPostTag.TagIds {
+		if _, prefix := fx.ContainSelector(tagIds, prevTagId); !prefix {
+			missing = append(missing, prevPostTag.TagIds[i])
 		}
 	}
 
 	// get add posts_tags Item
 	var adding []string
-	for _, t := range tagIds {
-		if len(prevPostTags) > 0 {
-			for _, pt := range prevPostTags {
-				if !strings.Contains(t, pt.TagId) {
-					adding = append(adding, t)
-				}
-			}
-		} else {
-			adding = append(adding, t)
+	for i, tagId := range tagIds {
+		if _, prefix := fx.ContainSelector(prevPostTag.TagIds, tagId); !prefix {
+			adding = append(adding, tagIds[i])
 		}
 	}
 
+	log.Println("prevTags", prevPostTag)
+	log.Println("missing", missing)
+	log.Println("adding", adding)
 	// remove tags
 	if len(missing) > 0 {
 		for _, missingTagId := range missing {
-			db.Raw("DELETE FROM posts_tags pt WHERE pt.tag_id = ? AND pt.post_id = ?", missingTagId, post.ID)
+			if err := db.Raw("DELETE FROM posts_tags pt WHERE pt.tag_id = ? AND pt.post_id = ?", missingTagId, post.ID).Error; err != nil {
+				panic(err)
+			}
 		}
 	}
 

@@ -12,9 +12,9 @@ type User struct {
 	Username    string      `sql:"index"json:"username"`
 	Email       string      `sql:"index"json:"email"`
 	IsCertified bool        `gorm:"default:false"json:"is_certified"`
-	CreatedAt   time.Time   `gorm:"type:time"json:"created_at"`
-	UpdatedAt   time.Time   `gorm:"type:time"json:"updated_at"`
-	DeletedAt   *time.Time  `gorm:"type:time"sql:"index"json:"deleted_at"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	DeletedAt   *time.Time  `sql:"index"json:"deleted_at"`
 	AuthTokens  []AuthToken `gorm:"foreignkey:UserID"json:"auth_tokens"`
 	UserProfile UserProfile `gorm:"foreignkey:UserID"json:"user_profile"`
 	UserMeta    UserMeta    `gorm:"foreignkey:UserID"json:"user_meta"`

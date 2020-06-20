@@ -18,9 +18,9 @@ type Post struct {
 	Views       int           `gorm:"default:0"json:"views"`
 	User        User          `gorm:"foreignkey:UserID"json:"user"`
 	UserID      string        `json:"user_id"`
-	CreatedAt   time.Time     `gorm:"type:time"json:"created_at"`
-	UpdatedAt   time.Time     `gorm:"type:time"json:"updated_at"`
-	DeletedAt   *time.Time    `gorm:"type:time"sql:"index";json:"deleted_at"`
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+	DeletedAt   *time.Time    `sql:"index"json:"deleted_at"`
 	Tags        []Tag         `gorm:"many2many:posts_tags;association_foreignkey:tag_id;foreignkey:post_id;"json:"tags"`
 	PostScore   []PostScore   `gorm:"polymorphic:Owner;"`
 	PostRead    []PostRead    `gorm:"polymorphic:Owner;"`

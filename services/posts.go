@@ -15,9 +15,8 @@ func TrendingPostService(queryObj dto.TrendingPostQuery, db *gorm.DB, ctx *gin.C
 	return helpers.JSON{}, http.StatusOK, nil
 }
 
-func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	id := ctx.MustGet("id")
-	userId := fmt.Sprintf("%v", id)
+func ListPostService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 
 	var queryIsPrivate string
 	if userId == "" {
@@ -27,15 +26,15 @@ func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) 
 	}
 
 	queryUsername := ""
-	if queryObj.Username != "" {
-		queryUsername = fmt.Sprintf(`AND u.username = '%v'`, queryObj.Username)
+	if body.Username != "" {
+		queryUsername = fmt.Sprintf(`AND u.username = '%v'`, body.Username)
 	}
 
 	queryCursor := ""
-	if queryObj.Cursor != "" {
+	if body.Cursor != "" {
 		var post models.Post
-		if err := db.Where("id = ?", queryObj.Cursor).First(&post).Error; err != nil {
-			return nil, http.StatusNotFound, helpers.ErrorInvalidCursor
+		if err := db.Where("id = ?", body.Cursor).First(&post).Error; err != nil {
+			return nil, http.StatusNotFound, err
 		}
 
 		queryCursor = fmt.Sprintf(`AND p.created_at > '%v'`, post.CreatedAt.Format(time.RFC3339Nano))
@@ -45,7 +44,7 @@ func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) 
 	}
 
 	var posts []dto.PostsRawQueryResult
-	query := db.Raw(fmt.Sprintf(`
+	 query := db.Raw(fmt.Sprintf(`
 		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail FROM "posts" AS p 
 		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
 		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
@@ -53,7 +52,7 @@ func ListPostService(queryObj dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) 
 		%v
 		%v
 		ORDER BY p.created_at, p.id DESC
-		LIMIT ?`, queryIsPrivate, queryUsername, queryCursor), queryObj.Limit)
+		LIMIT ?`, queryIsPrivate, queryUsername, queryCursor), body.Limit)
 
 	query.Scan(&posts)
 	return helpers.JSON{
@@ -70,17 +69,19 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	}
 
 	var postData dto.PostRawQueryResult
-	db.Raw(`
+	if err := db.Raw(`
 		SELECT
 		p.*,
 		array_agg(t.name) AS tag FROM "posts" AS p
 		LEFT OUTER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
 		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
 		WHERE p.id = ? AND p.url_slug = ?
-		GROUP BY p.id, pt.post_id`, postId, urlSlug).Scan(&postData)
+		GROUP BY p.id, pt.post_id`, postId, urlSlug).Scan(&postData).Error; err != nil {
+		return nil, http.StatusNotFound, err
+	}
 
 	var userData dto.UserRawQueryResult
-	db.Raw(`
+	if err := db.Raw(`
        SELECT
 	   u.*,
 	   up.display_name,
@@ -88,7 +89,9 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	   up.thumbnail
 	   FROM "users" AS u
 	   LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
-	   WHERE u.id = ?`, postData.UserID).Scan(&userData)
+	   WHERE u.id = ?`, postData.UserID).Scan(&userData).Error; err != nil {
+		return nil, http.StatusNotFound, err
+	}
 
 	return helpers.JSON{
 		"post":       postData,
@@ -106,8 +109,8 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 	}
 
 	var currentPost models.Post
-	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost); err != nil {
-		return nil, http.StatusNotFound, helpers.ErrorNotFound
+	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost).Error; err != nil {
+		return nil, http.StatusNotFound, err
 	}
 
 	if currentPost.UserID != userId {
@@ -132,8 +135,8 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 	}
 
 	var currentPost models.Post
-	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost); err != nil {
-		return nil, http.StatusNotFound, helpers.ErrorNotFound
+	if err := db.Where("id = ? AND url_slug = ?", postId, urlSlug).First(&currentPost).Error; err != nil {
+		return nil, http.StatusNotFound, err
 	}
 
 	if currentPost.UserID != userId {
@@ -158,13 +161,12 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 
 	editPost.UrlSlug = processedUrlSlug
 
-	db.NewRecord(editPost)
-	db.Create(&editPost)
+	db.Model(&currentPost).Updates(editPost)
 
-	models.SyncPostTags(body, editPost, db)
+	models.SyncPostTags(body, currentPost, db)
 
 	return helpers.JSON{
-		"post_id": editPost.ID,
+		"post_id": currentPost.ID,
 	}, http.StatusOK, nil
 }
 
@@ -196,5 +198,48 @@ func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (he
 
 	return helpers.JSON{
 		"post_id": post.ID,
+	}, http.StatusOK, nil
+}
+
+func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
+
+	if userId == "" {
+		return nil, http.StatusForbidden, nil
+	}
+
+	var viewed models.PostRead
+	if err := db.Raw(`
+		SELECT * FROM "post_reads" AS pr
+		WHERE pr.ip_hash = ? AND pr.post_id = ? AND pr.created_at > (NOW() - INTERVAL '24 HOURS')`, body.Ip, body.PostId).Scan(&viewed).Error; err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	if viewed == (models.PostRead{}) {
+		postRead := models.PostRead{
+			PostId: body.PostId,
+			UserId: userId,
+			IpHash: body.Ip,
+		}
+
+		db.NewRecord(postRead)
+		db.Create(&postRead)
+
+		var postModel models.Post
+		if err := db.Where("id = ?", body.PostId).First(&postModel).Error; err != nil {
+			return nil, http.StatusNotFound, err
+		}
+
+		if err := db.Model(&postModel).Update("views", postModel.Views+1).Error; err != nil {
+			return nil, http.StatusNotModified, err
+		}
+
+		return helpers.JSON{
+			"post": true,
+		}, http.StatusOK, nil
+	}
+
+	return helpers.JSON{
+		"post": false,
 	}, http.StatusOK, nil
 }

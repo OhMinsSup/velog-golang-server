@@ -11,6 +11,12 @@ type ListPostQuery struct {
 	Username string `json:"username"`
 }
 
+type PostViewParams struct {
+	Ip      string `json:"ip"`
+	PostId  string `json:"post_id"`
+	UrlSlug string `json:"url_slug"`
+}
+
 type TrendingPostQuery struct {
 	Limit     int64  `json:"limit"`
 	Timeframe string `json:"timeframe"`

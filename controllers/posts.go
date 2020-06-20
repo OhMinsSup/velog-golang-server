@@ -129,3 +129,24 @@ func GetPostController(ctx *gin.Context) {
 
 	ctx.JSON(code, result)
 }
+
+func PostViewController(ctx *gin.Context) {
+	ip := helpers.CreateHash(ctx.ClientIP())
+	postId := ctx.Param("post_id")
+	urlSlug := ctx.Param("url_slug")
+
+	params := dto.PostViewParams{
+		Ip:      ip,
+		PostId:  postId,
+		UrlSlug: urlSlug,
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.PostViewService(params, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
