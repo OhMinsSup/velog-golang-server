@@ -21,6 +21,7 @@ type User struct {
 	PostScore   []PostScore `gorm:"polymorphic:Owner;"`
 	PostRead    []PostRead  `gorm:"polymorphic:Owner;"`
 	PostLike    []PostLike  `gorm:"polymorphic:Owner;"`
+	PostComment []Comment   `gorm:"polymorphic:Owner;"`
 }
 
 func (u User) Serialize() helpers.JSON {

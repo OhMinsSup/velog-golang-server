@@ -48,7 +48,8 @@ func Migrate(db *gorm.DB) {
 		&models.PostScore{},
 		&models.PostRead{},
 		&models.PostHistory{},
-		&models.PostLike{})
+		&models.PostLike{},
+		&models.Comment{})
 
 	db.Model(&models.AuthToken{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 	db.Model(&models.UserProfile{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
@@ -63,6 +64,8 @@ func Migrate(db *gorm.DB) {
 	db.Model(&models.PostHistory{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
 	db.Model(&models.PostLike{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
 	db.Model(&models.PostLike{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
+	db.Model(&models.Comment{}).AddForeignKey("post_id", "posts(id)", "CASCADE", "CASCADE")
+	db.Model(&models.Comment{}).AddForeignKey("user_id", "users(id)", "CASCADE", "CASCADE")
 
 	fmt.Println("Auto Migration has beed processed")
 }
