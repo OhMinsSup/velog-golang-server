@@ -9,19 +9,20 @@ import (
 )
 
 func WriteCommentController(ctx *gin.Context) {
-	type WriteCommentBody struct {
+	type CommentBody struct {
 		Text string `json:"text"`
 	}
 
-	var body WriteCommentBody
+	var body CommentBody
 	if err := ctx.BindJSON(&body); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	params := dto.WriteCommentParams{
-		PostId: ctx.Param("post_id"),
-		Text: body.Text,
+	params := dto.CommentParams{
+		Text:      body.Text,
+		PostId:    ctx.Param("post_id"),
+		CommentId: ctx.Query("comment_id"),
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
@@ -34,6 +35,45 @@ func WriteCommentController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
-func ReplyWriteCommentController(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, "")
+func EditCommentController(ctx *gin.Context) {
+	type CommentBody struct {
+		Text string `json:"text"`
+	}
+
+	var body CommentBody
+	if err := ctx.BindJSON(&body); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	params := dto.CommentParams{
+		Text:      body.Text,
+		PostId:    ctx.Param("post_id"),
+		CommentId: ctx.Param("comment_id"),
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.EditCommentService(params, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
+func RemoveCommentController(ctx *gin.Context) {
+	params := dto.CommentParams{
+		PostId:    ctx.Param("post_id"),
+		CommentId: ctx.Param("comment_id"),
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.RemoveCommentService(params, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
 }

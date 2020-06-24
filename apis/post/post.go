@@ -20,6 +20,7 @@ func ApplyRoutes(r *gin.RouterGroup) {
 		post.DELETE("/:post_id/like", middlewares.Authorized, controllers.UnLikePostController)
 
 		post.POST("/:post_id/comment", middlewares.Authorized, controllers.WriteCommentController)
-		post.POST("/:post_id/comment/:comment_id", middlewares.Authorized, controllers.ReplyWriteCommentController)
+		post.PUT("/:post_id/comment/:comment_id", middlewares.Authorized, controllers.EditCommentController)
+		post.DELETE("/:post_id/comment/:comment_id", middlewares.Authorized, controllers.RemoveCommentController)
 	}
 }
