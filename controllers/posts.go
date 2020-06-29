@@ -11,23 +11,27 @@ import (
 )
 
 func TrendingPostController(ctx *gin.Context) {
-	limit := ctx.Query("limit")
-	offset := ctx.Query("offset")
 	timeframe := ctx.Query("time")
 
-	limited, err := strconv.ParseInt(limit, 10, 64)
+	limit, err := strconv.ParseInt(ctx.Query("limit"), 10, 64)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	if limited > 100 {
+	offset, err := strconv.ParseInt(ctx.Query("offset"), 10, 64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if limit > 100 {
 		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
 		return
 	}
 
 	queryObj := dto.TrendingPostQuery{
-		Limit:     limited,
+		Limit:     limit,
 		Timeframe: timeframe,
 		Offset:    offset,
 	}
@@ -135,8 +139,8 @@ func PostViewController(ctx *gin.Context) {
 	postId := ctx.Param("post_id")
 
 	params := dto.PostViewParams{
-		Ip:      ip,
-		PostId:  postId,
+		Ip:     ip,
+		PostId: postId,
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)

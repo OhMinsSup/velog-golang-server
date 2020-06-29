@@ -14,7 +14,7 @@ func WriteCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context) 
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	var postData dto.PostRawQueryUserProfileResult
 	if err := db.Raw(`
-		SELECT p.*, u.id, u.username, u.email, up.display_name FROM "posts" AS p
+		SELECT p.*, u.id, u.username, u.email, up.display_name, up.thumbnail as user_thumbnail FROM "posts" AS p
 		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
 		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
 		WHERE p.id = ?`, body.PostId).Scan(&postData).Error; err != nil {

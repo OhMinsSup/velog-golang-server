@@ -25,7 +25,7 @@ type PostViewParams struct {
 type TrendingPostQuery struct {
 	Limit     int64  `json:"limit"`
 	Timeframe string `json:"timeframe"`
-	Offset    string `json:"offset"`
+	Offset    int64  `json:"offset"`
 }
 
 type WritePostBody struct {
@@ -55,21 +55,22 @@ type PostRawQueryResult struct {
 }
 
 type PostRawQueryUserProfileResult struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Body        string    `json:"body"`
-	Thumbnail   string    `json:"thumbnail"`
-	IsMarkdown  bool      `json:"is_markdown"`
-	IsTemp      bool      `json:"is_temp"`
-	IsPrivate   bool      `json:"is_private"`
-	Likes       int       `json:"likes"`
-	Views       int       `json:"views"`
-	UserID      string    `json:"user_id"`
-	Email       string    `json:"email"`
-	Username    string    `json:"username"`
-	DisplayName string    `json:"display_name"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	Title         string    `json:"title"`
+	Body          string    `json:"body"`
+	Thumbnail     string    `json:"thumbnail"`
+	IsMarkdown    bool      `json:"is_markdown"`
+	IsTemp        bool      `json:"is_temp"`
+	IsPrivate     bool      `json:"is_private"`
+	Likes         int       `json:"likes"`
+	Views         int       `json:"views"`
+	UserID        string    `json:"user_id"`
+	UserThumbnail string    `json:"user_thumbnail"`
+	Email         string    `json:"email"`
+	Username      string    `json:"username"`
+	DisplayName   string    `json:"display_name"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type PostsRawQueryResult struct {
