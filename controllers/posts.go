@@ -10,7 +10,11 @@ import (
 	"strconv"
 )
 
-func TrendingPostController(ctx *gin.Context) {
+func LikePostsController(ctx *gin.Context) {}
+
+func ReadingPostsController(ctx *gin.Context) {}
+
+func TrendingPostsController(ctx *gin.Context) {
 	timeframe := ctx.Query("time")
 
 	limit, err := strconv.ParseInt(ctx.Query("limit"), 10, 64)
@@ -37,7 +41,7 @@ func TrendingPostController(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.TrendingPostService(queryObj, db, ctx)
+	result, code, err := services.TrendingPostsService(queryObj, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
 		return
@@ -46,7 +50,7 @@ func TrendingPostController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
-func ListPostController(ctx *gin.Context) {
+func ListPostsController(ctx *gin.Context) {
 	cursor := ctx.Query("cursor")
 	limit := ctx.Query("limit")
 	username := ctx.Query("username")
@@ -69,82 +73,7 @@ func ListPostController(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.ListPostService(queryObj, db, ctx)
-	if err != nil {
-		ctx.AbortWithError(code, err)
-		return
-	}
-
-	ctx.JSON(code, result)
-}
-
-func UpdatePostController(ctx *gin.Context) {
-	var body dto.WritePostBody
-	if err := ctx.BindJSON(&body); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.UpdatePostService(body, db, ctx)
-	if err != nil {
-		ctx.AbortWithError(code, err)
-		return
-	}
-
-	ctx.JSON(code, result)
-}
-
-func DeletePostController(ctx *gin.Context) {
-	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.DeletePostService(db, ctx)
-	if err != nil {
-		ctx.AbortWithError(code, err)
-		return
-	}
-
-	ctx.JSON(code, result)
-}
-
-func WritePostController(ctx *gin.Context) {
-	var body dto.WritePostBody
-	if err := ctx.BindJSON(&body); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.WritePostService(body, db, ctx)
-	if err != nil {
-		ctx.AbortWithError(code, err)
-		return
-	}
-
-	ctx.JSON(code, result)
-}
-
-func GetPostController(ctx *gin.Context) {
-	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.GetPostService(db, ctx)
-	if err != nil {
-		ctx.AbortWithError(code, err)
-		return
-	}
-
-	ctx.JSON(code, result)
-}
-
-func PostViewController(ctx *gin.Context) {
-	ip := helpers.CreateHash(ctx.ClientIP())
-	postId := ctx.Param("post_id")
-
-	params := dto.PostViewParams{
-		Ip:     ip,
-		PostId: postId,
-	}
-
-	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.PostViewService(params, db, ctx)
+	result, code, err := services.ListPostsService(queryObj, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
 		return

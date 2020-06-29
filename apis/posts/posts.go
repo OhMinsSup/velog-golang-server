@@ -8,7 +8,9 @@ import (
 func ApplyRoutes(r *gin.RouterGroup) {
 	posts := r.Group("/posts")
 	{
-		posts.GET("/", controllers.ListPostController)
-		posts.GET("/trending", controllers.TrendingPostController)
+		posts.GET("/", controllers.ListPostsController)
+		posts.GET("/trending", controllers.TrendingPostsController)
+		posts.GET("/reading", controllers.ReadingPostsController)
+		posts.GET("/likes", controllers.LikePostsController)
 	}
 }
