@@ -266,3 +266,101 @@ func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost model
 
 	return nil
 }
+
+func (p *PostRepository) Like(postId, userId string) (bool, error) {
+	tx := p.db.Begin()
+	var currentPost models.Post
+	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
+		tx.Rollback()
+		return false, helpers.ErrorNotFound
+	}
+
+	var alreadyLiked models.PostLike
+	tx.Raw(`
+		SELECT * FROM "post_likes" AS pl
+		WHERE pl.post_id = ? AND pl.user_id = ? ORDER BY pl.id ASC LIMIT 1`, postId, userId).Scan(&alreadyLiked)
+
+	if alreadyLiked != (models.PostLike{}) {
+		return true, nil
+	}
+
+	newPostLike := models.PostLike{
+		PostId: postId,
+		UserId: userId,
+	}
+
+	if err := tx.Create(&newPostLike).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	var count int64
+	if err := tx.Model(&models.PostLike{}).Where("post_id = ?", postId).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return false, helpers.ErrorNotFound
+	}
+
+	currentPost.Likes = count
+
+	if err := tx.Model(&currentPost).Updates(map[string]interface{}{"likes": count}).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	newPostScore := models.PostScore{
+		Type:   "LIKE",
+		PostId: postId,
+		UserId: userId,
+		Score:  5,
+	}
+
+	if err := tx.Create(&newPostScore).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	return true, tx.Commit().Error
+}
+
+func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
+	tx := p.db.Begin()
+	var currentPost models.Post
+	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
+		tx.Rollback()
+		return false, helpers.ErrorNotFound
+	}
+
+	var postLike models.PostLike
+	tx.Raw(`
+		SELECT * FROM "post_likes" AS pl
+		WHERE pl.post_id = ? AND pl.user_id = ? ORDER BY pl.id ASC LIMIT 1`, postId, userId).Scan(&postLike)
+
+	if postLike == (models.PostLike{}) {
+		return true, nil
+	}
+
+	if err := tx.Delete(&postLike).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	var count int64
+	if err := tx.Model(&models.PostLike{}).Where("post_id = ?", postId).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return false, helpers.ErrorNotFound
+	}
+
+	currentPost.Likes = count
+
+	if err := tx.Model(&currentPost).Updates(map[string]interface{}{"likes": count}).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	if err := tx.Exec(`DELETE from "post_scores" where post_id = ? AND user_id = ? AND type = 'LIKE'`, postId, userId).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	return true, tx.Commit().Error
+}

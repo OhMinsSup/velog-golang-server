@@ -13,8 +13,8 @@ type Post struct {
 	IsMarkdown  bool          `json:"is_markdown"`
 	IsTemp      bool          `json:"is_temp"`
 	IsPrivate   bool          `gorm:"default:true"json:"is_private"`
-	Likes       int           `gorm:"default:0"json:"likes"`
-	Views       int           `gorm:"default:0"json:"views"`
+	Likes       int64           `gorm:"default:0"json:"likes"`
+	Views       int64           `gorm:"default:0"json:"views"`
 	User        User          `gorm:"foreignkey:UserID"json:"user"`
 	UserID      string        `json:"user_id"`
 	CreatedAt   time.Time     `json:"created_at"`
