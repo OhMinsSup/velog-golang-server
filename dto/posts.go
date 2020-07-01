@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type PostsQuery struct {
+	Cursor string `json:"cursor"`
+	Limit  int64  `json:"limit"`
+}
+
 type ListPostQuery struct {
 	Cursor   string `json:"cursor"`
 	Limit    int64  `json:"limit"`
@@ -38,20 +43,32 @@ type WritePostBody struct {
 	Tag        []string `json:"tag"`
 }
 
+type UserRawQueryResult struct {
+	ID          string    `json:"id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	ShortBio    string    `json:"short_bio"`
+	Thumbnail   string    `json:"thumbnail"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type PostRawQueryResult struct {
-	ID         string         `json:"id"`
-	Title      string         `json:"title"`
-	Body       string         `json:"body"`
-	Thumbnail  string         `json:"thumbnail"`
-	IsMarkdown bool           `json:"is_markdown"`
-	IsTemp     bool           `json:"is_temp"`
-	IsPrivate  bool           `json:"is_private"`
-	Likes      int            `json:"likes"`
-	Views      int            `json:"views"`
-	UserID     string         `json:"user_id"`
-	Tag        pq.StringArray `json:"tag"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	ID         string             `json:"id"`
+	Title      string             `json:"title"`
+	Body       string             `json:"body"`
+	Thumbnail  string             `json:"thumbnail"`
+	IsMarkdown bool               `json:"is_markdown"`
+	IsTemp     bool               `json:"is_temp"`
+	IsPrivate  bool               `json:"is_private"`
+	Likes      int                `json:"likes"`
+	Views      int                `json:"views"`
+	UserID     string             `json:"user_id"`
+	User       UserRawQueryResult `json:"user"`
+	Tag        pq.StringArray     `json:"tag"`
+	CreatedAt  time.Time          `json:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at"`
 }
 
 type PostRawQueryUserProfileResult struct {

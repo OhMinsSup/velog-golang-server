@@ -10,9 +10,63 @@ import (
 	"strconv"
 )
 
-func LikePostsController(ctx *gin.Context) {}
+func LikePostsController(ctx *gin.Context) {
+	cursor := ctx.Query("cursor")
 
-func ReadingPostsController(ctx *gin.Context) {}
+	limit, err := strconv.ParseInt(ctx.Query("limit"), 10, 64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if limit > 100 {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		return
+	}
+
+	queryObj := dto.PostsQuery{
+		Cursor: cursor,
+		Limit:  limit,
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.LikePostsService(queryObj, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
+func ReadingPostsController(ctx *gin.Context) {
+	cursor := ctx.Query("cursor")
+
+	limit, err := strconv.ParseInt(ctx.Query("limit"), 10, 64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if limit > 100 {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		return
+	}
+
+	queryObj := dto.PostsQuery{
+		Cursor: cursor,
+		Limit:  limit,
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.ReadingPostsService(queryObj, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
 
 func TrendingPostsController(ctx *gin.Context) {
 	timeframe := ctx.Query("time")
@@ -52,23 +106,22 @@ func TrendingPostsController(ctx *gin.Context) {
 
 func ListPostsController(ctx *gin.Context) {
 	cursor := ctx.Query("cursor")
-	limit := ctx.Query("limit")
 	username := ctx.Query("username")
 
-	limited, err := strconv.ParseInt(limit, 10, 64)
+	limit, err := strconv.ParseInt(ctx.Query("limit"), 10, 64)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	if limited > 100 {
+	if limit > 100 {
 		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
 		return
 	}
 
 	queryObj := dto.ListPostQuery{
 		Cursor:   cursor,
-		Limit:    limited,
+		Limit:    limit,
 		Username: username,
 	}
 

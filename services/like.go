@@ -92,10 +92,12 @@ func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON
 	db.Save(&postModel)
 
 	newPostScore := models.PostScore{
-		Type:   "LIKE",
-		PostId: postId,
-		UserId: userId,
-		Score:  5,
+		Type:      "LIKE",
+		PostId:    postId,
+		UserId:    userId,
+		Score:     5,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	db.NewRecord(newPostScore)

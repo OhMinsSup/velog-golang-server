@@ -2,13 +2,12 @@ package services
 
 import (
 	"fmt"
-	"github.com/OhMinsSup/story-server/database/models"
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
-	"time"
 )
 
 func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
@@ -18,35 +17,13 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 		return nil, http.StatusBadRequest, nil
 	}
 
-	var postData dto.PostRawQueryResult
-	if err := db.Raw(`
-		SELECT
-		p.*,
-		array_agg(t.name) AS tag FROM "posts" AS p
-		LEFT OUTER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
-		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
-		WHERE p.id = ?
-		GROUP BY p.id, pt.post_id`, postId).Scan(&postData).Error; err != nil {
-		return nil, http.StatusNotFound, err
+	postRepository := repository.NewPostRepository(db)
+	post, err := postRepository.GetPost(postId)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
 	}
 
-	var userData dto.UserRawQueryResult
-	if err := db.Raw(`
-       SELECT
-	   u.*,
-	   up.display_name,
-       up.short_bio,
-	   up.thumbnail
-	   FROM "users" AS u
-	   LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
-	   WHERE u.id = ?`, postData.UserID).Scan(&userData).Error; err != nil {
-		return nil, http.StatusNotFound, err
-	}
-
-	return helpers.JSON{
-		"post":       postData,
-		"write_user": userData,
-	}, http.StatusOK, nil
+	return post, http.StatusOK, nil
 }
 
 func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
@@ -57,20 +34,15 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
 	}
 
-	var currentPost models.Post
-	if err := db.Where("id = ?", postId).First(&currentPost).Error; err != nil {
-		return nil, http.StatusNotFound, err
-	}
+	postRepository := repository.NewPostRepository(db)
 
-	if currentPost.UserID != userId {
-		return nil, http.StatusForbidden, helpers.ErrorPermission
+	isDeleted, err := postRepository.DeletePost(userId, postId)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
 	}
-
-	db.Exec("DELETE FROM posts_tags pt WHERE pt.post_id = ?", postId)
-	db.Exec("DELETE FROM posts p WHERE p.id = ?", postId)
 
 	return helpers.JSON{
-		"post": true,
+		"post": isDeleted,
 	}, http.StatusOK, nil
 }
 
@@ -82,56 +54,29 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
 	}
 
-	var currentPost models.Post
-	if err := db.Where("id = ?", postId).First(&currentPost).Error; err != nil {
-		return nil, http.StatusNotFound, err
-	}
+	postRepository := repository.NewPostRepository(db)
 
-	if currentPost.UserID != userId {
-		return nil, http.StatusForbidden, helpers.ErrorPermission
-	}
-
-	editPost := models.Post{
-		Title:      body.Title,
-		Body:       body.Body,
-		Thumbnail:  body.Thumbnail,
-		IsMarkdown: body.IsMarkdown,
-		IsPrivate:  body.IsPrivate,
-		UserID:     userId,
-	}
-
-	db.Model(&currentPost).Updates(editPost)
-
-	if len(body.Tag) > 0 {
-		models.SyncPostTags(body, currentPost, db)
+	postId, err := postRepository.UpdatePost(body, userId, postId)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
 	}
 
 	return helpers.JSON{
-		"post_id": currentPost.ID,
+		"post_id": postId,
 	}, http.StatusOK, nil
 }
 
 func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
-	post := models.Post{
-		Title:      body.Title,
-		Body:       body.Body,
-		Thumbnail:  body.Thumbnail,
-		IsTemp:     body.IsTemp,
-		IsMarkdown: body.IsMarkdown,
-		IsPrivate:  body.IsPrivate,
-		UserID:     userId,
-	}
+	postRepository := repository.NewPostRepository(db)
 
-	db.NewRecord(post)
-	db.Create(&post)
-
-	if len(body.Tag) > 0 {
-		models.SyncPostTags(body, post, db)
+	postId, err := postRepository.CreatePost(body, userId)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
 	}
 
 	return helpers.JSON{
-		"post_id": post.ID,
+		"post_id": postId,
 	}, http.StatusOK, nil
 }
 
@@ -142,44 +87,11 @@ func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (he
 		return nil, http.StatusForbidden, nil
 	}
 
-	var currentRead models.PostRead
-	if err := db.Where(`ip_hash = ? AND post_id = ?`, body.Ip, body.PostId).First(&currentRead).Error; err == nil {
-		if currentRead == (models.PostRead{}) {
-			return helpers.JSON{
-				"post": false,
-			}, http.StatusOK, nil
-		}
+	postRepository := repository.NewPostRepository(db)
+
+	if err := postRepository.View(body, userId); err != nil {
+		return nil, http.StatusInternalServerError, err
 	}
-
-	postRead := models.PostRead{
-		PostId:    body.PostId,
-		UserId:    userId,
-		IpHash:    body.Ip,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	db.NewRecord(postRead)
-	db.Create(&postRead)
-
-	var updatePost models.Post
-	if err := db.Where("id = ?", body.PostId).First(&updatePost).Error; err != nil {
-		return nil, http.StatusNotFound, err
-	}
-
-	if err := db.Model(&updatePost).Update(map[string]interface{}{"views": updatePost.Views + 1, "updated_at": time.Now()}).Error; err != nil {
-		return nil, http.StatusNotModified, err
-	}
-
-	newPostScore := models.PostScore{
-		Type:   "READ",
-		PostId: body.PostId,
-		UserId: userId,
-		Score:  1.0,
-	}
-
-	db.NewRecord(newPostScore)
-	db.Create(&newPostScore)
 
 	return helpers.JSON{
 		"post": true,
