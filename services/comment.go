@@ -45,3 +45,21 @@ func RemoveCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context)
 		"comment": true,
 	}, http.StatusOK, nil
 }
+
+func GetCommentListService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	commentRepository := repository.NewCommentRepository(db)
+	comments, err := commentRepository.CommentList(postId)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	return helpers.JSON{
+		"comments": comments,
+	}, http.StatusOK, nil
+}
+
+func GetSubCommentListService(postId, commentId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	return helpers.JSON{
+		"comments": true,
+	}, http.StatusOK, nil
+}

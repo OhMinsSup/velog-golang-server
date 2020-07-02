@@ -17,7 +17,20 @@ func NewCommentRepository(db *gorm.DB) *CommentRepository {
 	}
 }
 
-func (c *CommentRepository) CommentList() {}
+func (c *CommentRepository) CommentList(postId string) ([]models.Comment, error) {
+	var comments []models.Comment
+	if err := c.db.Raw(`
+		SELECT comments.* FROM "posts"
+		LEFT JOIN comments ON comments.post_id = posts.id
+		WHERE comments.post_id IN (?)
+		AND comments.level = 0
+		AND (comments.deleted = FALSE OR comments.has_replies = true)
+		ORDER BY comments.created_at ASC`, postId).Scan(&comments).Error; err != nil {
+		return nil, nil
+	}
+
+	return comments, nil
+}
 
 func (c *CommentRepository) SubCommentList() {}
 

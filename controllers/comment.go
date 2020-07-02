@@ -8,6 +8,33 @@ import (
 	"net/http"
 )
 
+func GetCommentController(ctx *gin.Context) {
+	postId := ctx.Param("post_id")
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.GetCommentListService(postId, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
+func GetSubCommentController(ctx *gin.Context) {
+	postId := ctx.Param("post_id")
+	commentId := ctx.Param("comment_id")
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.GetSubCommentListService(postId, commentId, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
 func WriteCommentController(ctx *gin.Context) {
 	type CommentBody struct {
 		Text string `json:"text"`
