@@ -4,6 +4,7 @@ import (
 	"github.com/OhMinsSup/story-server/apis/auth"
 	"github.com/OhMinsSup/story-server/apis/post"
 	"github.com/OhMinsSup/story-server/apis/posts"
+	"github.com/OhMinsSup/story-server/apis/tag"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -21,5 +22,6 @@ func ApplyRoutes(r *gin.Engine) {
 		auth.ApplyRoutes(api)
 		post.ApplyRoutes(api)
 		posts.ApplyRoutes(api)
+		tag.ApplyRoutes(api)
 	}
 }

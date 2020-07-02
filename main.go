@@ -6,6 +6,8 @@ import (
 	"github.com/OhMinsSup/story-server/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
 	"os"
 )
 
@@ -28,6 +30,6 @@ func main() {
 	app.Use(middlewares.ConsumeUser(db))
 
 	apis.ApplyRoutes(app)
-
+	app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	app.Run(":" + port)
 }

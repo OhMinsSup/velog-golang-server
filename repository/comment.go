@@ -17,6 +17,10 @@ func NewCommentRepository(db *gorm.DB) *CommentRepository {
 	}
 }
 
+func (c *CommentRepository) CommentList() {}
+
+func (c *CommentRepository) SubCommentList() {}
+
 func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string) error {
 	var postData dto.PostRawQueryUserProfileResult
 	if err := c.db.Raw(`
