@@ -52,9 +52,51 @@ func (t *TagRepository) GetPostsCount(tagId string) (int64, error) {
 	return count[0].PostsCount, nil
 }
 
-func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.TrendingTags, error) {
+func (t *TagRepository) GetTagList(cursor string, limit int64) ([]dto.Tags, error) {
 	if cursor == "" {
-		var tags []dto.TrendingTags
+		var tags []dto.Tags
+		if err := t.db.Raw(`
+		SELECT tags.id, tags.name, tags.created_at, posts_count FROM (
+			SELECT count(post_id) AS posts_count, posts_tags.tag_id AS tag_id FROM posts_tags 
+			INNER JOIN posts ON posts.id = post_id
+			WHERE posts.is_private = FALSE
+			AND posts.is_temp = FALSE
+			GROUP BY tag_id
+		) AS q1
+		INNER JOIN tags ON q1.tag_id = tags.id
+		ORDER BY tags.name
+		LIMIT ?`, limit).Scan(&tags).Error; err != nil {
+			return nil, err
+		}
+		return tags, nil
+	}
+
+	var cursorTag models.Tag
+	if err := t.db.Where("id = ?", cursor).First(&cursorTag).Error; err != nil {
+		return nil, err
+	}
+
+	var tags []dto.Tags
+	if err := t.db.Raw(`
+		SELECT tags.id, tags.name, tags.created_at, posts_count FROM (
+			SELECT count(post_id) AS posts_count, posts_tags.tag_id AS tag_id FROM posts_tags
+			INNER JOIN posts ON posts.id = post_id
+			WHERE posts.is_private = FALSE
+			AND posts.is_temp = FALSE
+			GROUP BY tag_id
+		) AS q1
+		INNER JOIN tags ON q1.tag_id = tags.id
+		where tags.name > ?
+		ORDER BY tags.name
+		LIMIT ?`, cursorTag.Name, limit).Scan(&tags).Error; err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.Tags, error) {
+	if cursor == "" {
+		var tags []dto.Tags
 		if err := t.db.Raw(`
 		SELECT tags.id, tags.name, tags.created_at, posts_count FROM (
 			SELECT count(post_id) AS posts_count, posts_tags.tag_id AS tag_id FROM posts_tags
@@ -76,7 +118,7 @@ func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.Trend
 		return nil, err
 	}
 
-	var tags []dto.TrendingTags
+	var tags []dto.Tags
 	if err := t.db.Raw(`
 		SELECT tags.id, tags.name, tags.created_at, posts_count FROM (
 			SELECT count(post_id) AS posts_count, posts_tags.tag_id AS tag_id FROM posts_tags

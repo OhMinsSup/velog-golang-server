@@ -11,6 +11,29 @@ import (
 	"strings"
 )
 
+func GetTagListController(ctx *gin.Context) {
+	cursor := ctx.Query("cursor")
+	limit, err := strconv.ParseInt(ctx.Query("limit"), 10, 64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	queryObj := dto.TagListQuery{
+		Cursor: cursor,
+		Limit:  limit,
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.GetTagListService(queryObj, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
 func TrendingTagListController(ctx *gin.Context) {
 	sort := ctx.Query("sort")
 	cursor := ctx.Query("cursor")
@@ -31,7 +54,7 @@ func TrendingTagListController(ctx *gin.Context) {
 		return
 	}
 
-	queryObj := dto.SortingTagListQuery{
+	queryObj := dto.TagListQuery{
 		Cursor: cursor,
 		Sort:   sort,
 		Limit:  limit,

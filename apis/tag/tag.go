@@ -8,6 +8,7 @@ import (
 func ApplyRoutes(r *gin.RouterGroup) {
 	tag := r.Group("/tag")
 	{
+		tag.GET("/", controllers.GetTagListController)
 		tag.GET("/trending", controllers.TrendingTagListController)
 	}
 }
