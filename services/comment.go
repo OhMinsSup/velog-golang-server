@@ -59,7 +59,13 @@ func GetCommentListService(postId string, db *gorm.DB, ctx *gin.Context) (helper
 }
 
 func GetSubCommentListService(postId, commentId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	commentRepository := repository.NewCommentRepository(db)
+	comments, err := commentRepository.SubCommentList(commentId, postId)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
 	return helpers.JSON{
-		"comments": true,
+		"comments": comments,
 	}, http.StatusOK, nil
 }

@@ -32,7 +32,14 @@ func (c *CommentRepository) CommentList(postId string) ([]models.Comment, error)
 	return comments, nil
 }
 
-func (c *CommentRepository) SubCommentList() {}
+func (c *CommentRepository) SubCommentList(commentId, postId string) ([]models.Comment, error) {
+	var comments []models.Comment
+	if err := c.db.Where("reply_to = ? AND post_id", commentId, postId).Order("created_at asc").Find(&comments).Error; err != nil {
+		return nil, err
+	}
+
+	return comments, nil
+}
 
 func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string) error {
 	var postData dto.PostRawQueryUserProfileResult
