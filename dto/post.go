@@ -91,22 +91,22 @@ type PostRawQueryUserProfileResult struct {
 }
 
 type PostsRawQueryResult struct {
-	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	Body          string         `json:"body"`
-	Thumbnail     string         `json:"thumbnail"`
-	IsMarkdown    bool           `json:"is_markdown"`
-	IsTemp        bool           `json:"is_temp"`
-	IsPrivate     bool           `json:"is_private"`
-	Likes         int            `json:"likes"`
-	Views         int            `json:"views"`
-	UserID        string         `json:"user_id"`
-	Email         string         `json:"email"`
-	Username      string         `json:"username"`
-	DisplayName   string         `json:"display_name"`
-	ShortBio      string         `json:"short_bio"`
-	UserThumbnail string         `json:"user_thumbnail"`
-	Tag           pq.StringArray `json:"tag"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
+	ID            string    `json:"id"`
+	Title         string    `json:"title"`
+	Body          string    `json:"body"`
+	Thumbnail     string    `json:"thumbnail"`
+	IsMarkdown    bool      `json:"is_markdown"`
+	IsTemp        bool      `json:"is_temp"`
+	IsPrivate     bool      `json:"is_private"`
+	Likes         int       `json:"likes"`
+	Views         int       `json:"views"`
+	UserID        string    `json:"user_id"`
+	Email         string    `json:"email"`
+	Username      string    `json:"username"`
+	DisplayName   string    `json:"display_name"`
+	ShortBio      string    `json:"short_bio"`
+	UserThumbnail string    `json:"user_thumbnail"`
+	CommentCount  int64     `json:"comment_count"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }

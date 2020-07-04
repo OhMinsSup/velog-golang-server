@@ -5,6 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/models"
+	"github.com/OhMinsSup/story-server/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"log"
@@ -96,42 +97,11 @@ func TrendingPostsService(queryObj dto.TrendingPostQuery, db *gorm.DB, ctx *gin.
 }
 
 func ListPostsService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
-
-	var queryIsPrivate string
-	if userId == "" {
-		queryIsPrivate = "WHERE p.is_private = false"
-	} else {
-		queryIsPrivate = fmt.Sprintf("WHERE (p.is_private = false OR p.user_id = '%v')", userId)
+	postRepository := repository.NewPostRepository(db)
+	posts, err := postRepository.ListPost(fmt.Sprintf("%v", ctx.MustGet("id")), body)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
 	}
-
-	queryUsername := ""
-	if body.Username != "" {
-		queryUsername = fmt.Sprintf(`AND u.username = '%v'`, body.Username)
-	}
-
-	queryCursor := ""
-	if body.Cursor != "" {
-		var post models.Post
-		if err := db.Where("id = ?", body.Cursor).First(&post).Error; err != nil {
-			return nil, http.StatusNotFound, err
-		}
-
-		queryCursor = fmt.Sprintf(`AND p.created_at < '%v'`, post.CreatedAt.Format(time.RFC3339Nano))
-	}
-
-	var posts []dto.PostsRawQueryResult
-	query := db.Raw(fmt.Sprintf(`
-		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail FROM "posts" AS p 
-		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
-		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
-		%v
-		%v
-		%v
-		ORDER BY p.created_at DESC
-		LIMIT ?`, queryIsPrivate, queryUsername, queryCursor), body.Limit)
-
-	query.Scan(&posts)
 	return helpers.JSON{
 		"posts": posts,
 	}, http.StatusOK, nil

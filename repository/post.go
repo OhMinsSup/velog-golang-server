@@ -1,12 +1,14 @@
 package repository
 
 import (
+	"fmt"
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/helpers/fx"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
+	"time"
 )
 
 type PostRepository struct {
@@ -25,8 +27,8 @@ func (p *PostRepository) GetPost(postId string) (helpers.JSON, error) {
 		SELECT
 		p.*,
 		array_agg(t.name) AS tag FROM "posts" AS p
-		LEFT OUTER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
-		LEFT OUTER JOIN "tags" AS t ON t.id = pt.tag_id
+		INNER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
+		INNER JOIN "tags" AS t ON t.id = pt.tag_id
 		WHERE p.id = ?
 		GROUP BY p.id, pt.post_id`, postId).Scan(&post).Error; err != nil {
 		return nil, err
@@ -40,15 +42,21 @@ func (p *PostRepository) GetPost(postId string) (helpers.JSON, error) {
        up.short_bio,
 	   up.thumbnail
 	   FROM "users" AS u
-	   LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
+	   INNER JOIN "user_profiles" AS up ON up.user_id = u.id
 	   WHERE u.id = ?`, post.UserID).Scan(&user).Error; err != nil {
 		return nil, err
 	}
 
 	post.User = user
 
+	var commentCount int64
+	if err := p.db.Model(&models.Comment{}).Where("post_id AND deleted = false", postId).Count(&commentCount).Error; err != nil {
+		return nil, err
+	}
+
 	return helpers.JSON{
-		"post": post,
+		"post":          post,
+		"comment_count": commentCount,
 	}, nil
 }
 
@@ -363,4 +371,45 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
 	}
 
 	return true, tx.Commit().Error
+}
+
+func (p *PostRepository) ListPost(userId string, body dto.ListPostQuery) ([]dto.PostsRawQueryResult, error) {
+	queryIsPrivate := ""
+	if userId == "" {
+		queryIsPrivate = "WHERE (p.is_private = false)"
+	} else {
+		queryIsPrivate = fmt.Sprintf("WHERE (p.is_private = false OR p.user_id = '%v')", userId)
+	}
+
+	queryUser := ""
+	if body.Username != "" {
+		queryUser = fmt.Sprintf("AND (u.username = '%v')", body.Username)
+	}
+
+	queryCursor := ""
+	if body.Cursor != "" {
+		var post models.Post
+		if err := p.db.Where("id = ?", body.Cursor).First(&post).Error; err != nil {
+			return nil, err
+		}
+		createdAt := post.CreatedAt.Format(time.RFC3339Nano)
+		queryCursor = fmt.Sprintf(`AND (p.created_at < '%v')`, createdAt)
+	}
+
+	queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)
+
+	var posts []dto.PostsRawQueryResult
+	if err := p.db.Raw(fmt.Sprintf(`
+		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail, %v FROM "posts" AS p
+		INNER JOIN "users" AS u ON u.id = p.user_id
+		INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+		%v
+		%v
+		%v
+		ORDER BY p.created_at desc, p.id desc
+		LIMIT ?`, queryCommentCount, queryIsPrivate, queryUser, queryCursor), body.Limit).Scan(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }

@@ -17,6 +17,14 @@ func NewCommentRepository(db *gorm.DB) *CommentRepository {
 	}
 }
 
+func (c *CommentRepository) CommentCount(postId string) (int64, error) {
+	var commentCount int64
+	if err := c.db.Model(&models.Comment{}).Where("post_id AND deleted = false", postId).Count(&commentCount).Error; err != nil {
+		return 0, err
+	}
+	return commentCount, nil
+}
+
 func (c *CommentRepository) CommentList(postId string) ([]models.Comment, error) {
 	var comments []models.Comment
 	if err := c.db.Raw(`
