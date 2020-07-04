@@ -147,7 +147,7 @@ func (p *PostRepository) DeletePost(userId, postId string) (bool, error) {
 
 func (p *PostRepository) View(body dto.PostViewParams, userId string) error {
 	var currentRead models.PostRead
-	if err := p.db.Where(`ip_hash = ? AND post_id = ?`, body.Ip, body.PostId).First(&currentRead).Error; err == nil {
+	if err := p.db.Where(`ip_hash = ? AND post_id = ? AND created_at > now() - INTERVAL '24 hours'`, body.Ip, body.PostId).First(&currentRead).Error; err == nil {
 		if currentRead == (models.PostRead{}) {
 			return nil
 		}
@@ -167,12 +167,14 @@ func (p *PostRepository) View(body dto.PostViewParams, userId string) error {
 	}
 
 	var updatePost models.Post
-	if err := tx.Where("id = ? AND created_at > (NOW() - INTERVAL '24 HOURS')", body.PostId).First(&updatePost).Error; err != nil {
+	if err := tx.Where("id = ?", body.PostId).First(&updatePost).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if err := tx.Model(&updatePost).Update(map[string]interface{}{"views": updatePost.Views + 1}).Error; err != nil {
+	if err := tx.Model(&updatePost).Updates(models.Post{
+		Views: updatePost.Views + 1,
+	}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -373,6 +375,27 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
 	return true, tx.Commit().Error
 }
 
+func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
+	queryCursor := ""
+	if queryCursor != "" {
+		var postRead models.PostRead
+		if err := p.db.Where("user_id = ? AND post_id = ?", userId, query.Cursor).First(&postRead).Error; err != nil {
+			return nil, err
+		}
+
+		createdAt := postRead.CreatedAt.Format(time.RFC3339Nano)
+		queryCursor = fmt.Sprintf(`AND (ps.updated_at < '%v' AND ps.id != '%v')`, createdAt, postRead.ID)
+	}
+
+	//queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)
+	//var posts []dto.PostsRawQueryResult
+	//if err := p.db.Raw(``).Scan(&posts).Error; err != nil {
+	//	return nil, err
+	//}
+	//return posts, nil
+	return nil, nil
+}
+
 func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
 	queryCursor := ""
 	if query.Cursor != "" {
@@ -382,7 +405,7 @@ func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dt
 		}
 
 		createdAt := postLike.CreatedAt.Format(time.RFC3339Nano)
-		queryCursor = fmt.Sprintf(`AND ps.updated_at < '%v' AND ps.id != '%v'`, createdAt, postLike.ID)
+		queryCursor = fmt.Sprintf(`AND (ps.updated_at < '%v' AND ps.id != '%v')`, createdAt, postLike.ID)
 	}
 
 	queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)

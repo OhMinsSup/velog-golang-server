@@ -11,8 +11,19 @@ import (
 )
 
 func ReadingPostsService(queryObj dto.PostsQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
+	if userId == "" {
+		return nil, http.StatusForbidden, nil
+	}
+
+	postRepository := repository.NewPostRepository(db)
+	posts, err := postRepository.ReadingPostList(userId, queryObj)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
 	return helpers.JSON{
-		"readings": true,
+		"posts": posts,
 	}, http.StatusOK, nil
 }
 
