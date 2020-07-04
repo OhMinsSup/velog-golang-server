@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"github.com/OhMinsSup/story-server/database/models"
 	"github.com/OhMinsSup/story-server/dto"
+	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
 )
 

@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"github.com/OhMinsSup/story-server/database/models"
+	"github.com/OhMinsSup/story-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"

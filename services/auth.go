@@ -1,10 +1,10 @@
 package services
 
 import (
-	"github.com/OhMinsSup/story-server/database/models"
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
+	"github.com/OhMinsSup/story-server/models"
 	"github.com/SKAhack/go-shortid"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"

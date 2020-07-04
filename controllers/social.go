@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/OhMinsSup/story-server/database/models"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/helpers/social"
+	"github.com/OhMinsSup/story-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/github"
 	"github.com/jinzhu/gorm"
