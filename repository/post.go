@@ -373,7 +373,47 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
 	return true, tx.Commit().Error
 }
 
-func (p *PostRepository) ListPost(userId string, body dto.ListPostQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) TrendingPost(query dto.TrendingPostQuery) ([]dto.PostsRawQueryResult, error) {
+	var trendingPosts []struct {
+		ID    string  `json:"id"`
+		Score float64 `json:"score"`
+	}
+	if err := p.db.Raw(`
+		SELECT p.id, p.title, SUM(score) AS score  FROM post_scores AS ps
+		INNER JOIN posts AS p ON ps.post_id = p.id
+		WHERE p.created_at > now() - INTERVAL '14 days'
+		AND p.created_at > now() - INTERVAL '3 months'
+		GROUP BY p.id
+		ORDER BY score, p.id DESC
+		OFFSET ?
+		LIMIT ?`, query.Offset, query.Limit).Scan(&trendingPosts).Error; err != nil {
+		return nil, err
+	}
+
+	if len(trendingPosts) == 0 {
+		return nil, nil
+	}
+
+	var ids []string
+	for _, postData := range trendingPosts {
+		ids = append(ids, postData.ID)
+	}
+
+	queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)
+
+	var ordered []dto.PostsRawQueryResult
+	if err := p.db.Raw(fmt.Sprintf(`
+		SELECT p.*, u.id, u.username, u.email, up.display_name, up.thumbnail as user_thumbnail, %v FROM "posts" AS p
+		INNER JOIN "users" AS u ON u.id = p.user_id
+		INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+		WHERE p.id IN (?)`, queryCommentCount), ids).Scan(&ordered).Error; err != nil {
+		return nil, err
+	}
+
+	return ordered, nil
+}
+
+func (p *PostRepository) ListPost(userId string, query dto.ListPostQuery) ([]dto.PostsRawQueryResult, error) {
 	queryIsPrivate := ""
 	if userId == "" {
 		queryIsPrivate = "WHERE (p.is_private = false)"
@@ -382,14 +422,14 @@ func (p *PostRepository) ListPost(userId string, body dto.ListPostQuery) ([]dto.
 	}
 
 	queryUser := ""
-	if body.Username != "" {
-		queryUser = fmt.Sprintf("AND (u.username = '%v')", body.Username)
+	if query.Username != "" {
+		queryUser = fmt.Sprintf("AND (u.username = '%v')", query.Username)
 	}
 
 	queryCursor := ""
-	if body.Cursor != "" {
+	if query.Cursor != "" {
 		var post models.Post
-		if err := p.db.Where("id = ?", body.Cursor).First(&post).Error; err != nil {
+		if err := p.db.Where("id = ?", query.Cursor).First(&post).Error; err != nil {
 			return nil, err
 		}
 		createdAt := post.CreatedAt.Format(time.RFC3339Nano)
@@ -407,7 +447,7 @@ func (p *PostRepository) ListPost(userId string, body dto.ListPostQuery) ([]dto.
 		%v
 		%v
 		ORDER BY p.created_at desc, p.id desc
-		LIMIT ?`, queryCommentCount, queryIsPrivate, queryUser, queryCursor), body.Limit).Scan(&posts).Error; err != nil {
+		LIMIT ?`, queryCommentCount, queryIsPrivate, queryUser, queryCursor), query.Limit).Scan(&posts).Error; err != nil {
 		return nil, err
 	}
 
