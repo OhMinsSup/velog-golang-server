@@ -84,7 +84,7 @@ func TrendingPostsController(ctx *gin.Context) {
 	}
 
 	if limit > 100 {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		_ = ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
 		return
 	}
 

@@ -373,7 +373,36 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
 	return true, tx.Commit().Error
 }
 
-func (p *PostRepository) TrendingPost(query dto.TrendingPostQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
+	queryCursor := ""
+	if query.Cursor != "" {
+		var postLike models.PostLike
+		if err := p.db.Where("user_id = ? AND post_id = ?", userId, query.Cursor).First(&postLike).Error; err != nil {
+			return nil, err
+		}
+
+		createdAt := postLike.CreatedAt.Format(time.RFC3339Nano)
+		queryCursor = fmt.Sprintf(`AND ps.updated_at < '%v' AND ps.id != '%v'`, createdAt, postLike.ID)
+	}
+
+	queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)
+	var posts []dto.PostsRawQueryResult
+	if err := p.db.Raw(fmt.Sprintf(`
+		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail, %v FROM "post_likes" as ps
+		INNER JOIN posts as p ON ps.post_id = p.id
+		INNER JOIN "users" AS u ON u.id = ps.user_id
+		INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+		WHERE ps.user_id = '%v'
+		%v
+		ORDER BY ps.id ASC, ps.updated_at DESC
+		LIMIT %v`, queryCommentCount, userId, queryCursor, query.Limit)).Scan(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
+
+func (p *PostRepository) TrendingPostList(query dto.TrendingPostQuery) ([]dto.PostsRawQueryResult, error) {
 	var trendingPosts []struct {
 		ID    string  `json:"id"`
 		Score float64 `json:"score"`
@@ -413,7 +442,7 @@ func (p *PostRepository) TrendingPost(query dto.TrendingPostQuery) ([]dto.PostsR
 	return ordered, nil
 }
 
-func (p *PostRepository) ListPost(userId string, query dto.ListPostQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) PostList(userId string, query dto.ListPostQuery) ([]dto.PostsRawQueryResult, error) {
 	queryIsPrivate := ""
 	if userId == "" {
 		queryIsPrivate = "WHERE (p.is_private = false)"
