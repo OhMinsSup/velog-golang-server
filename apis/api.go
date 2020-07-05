@@ -5,11 +5,11 @@ import (
 	"github.com/OhMinsSup/story-server/apis/post"
 	"github.com/OhMinsSup/story-server/apis/posts"
 	"github.com/OhMinsSup/story-server/apis/tag"
+	"github.com/OhMinsSup/story-server/apis/user"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-// ApplyRoutes applies router to gin Router
 func ApplyRoutes(r *gin.Engine) {
 	api := r.Group("/api/v1.0")
 	{
@@ -20,6 +20,7 @@ func ApplyRoutes(r *gin.Engine) {
 		})
 
 		auth.ApplyRoutes(api)
+		user.ApplyRoutes(api)
 		post.ApplyRoutes(api)
 		posts.ApplyRoutes(api)
 		tag.ApplyRoutes(api)

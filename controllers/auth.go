@@ -9,7 +9,6 @@ import (
 	"net/http"
 )
 
-// LocalRegisterController Post API user register
 func LocalRegisterController(ctx *gin.Context) {
 	var body dto.LocalRegisterBody
 	if err := ctx.BindJSON(&body); err != nil {
@@ -27,7 +26,6 @@ func LocalRegisterController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
-// SendEmailController Post API email send
 func SendEmailController(ctx *gin.Context) {
 	var body dto.SendEmailBody
 	if err := ctx.BindJSON(&body); err != nil {
@@ -47,7 +45,6 @@ func SendEmailController(ctx *gin.Context) {
 	})
 }
 
-// CodeController Get API code exists and login
 func CodeController(ctx *gin.Context) {
 	db := ctx.MustGet("db").(*gorm.DB)
 	result, code, err := services.CodeService(ctx.Param("code"), db, ctx)
