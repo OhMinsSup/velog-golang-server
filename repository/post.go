@@ -179,16 +179,18 @@ func (p *PostRepository) View(body dto.PostViewParams, userId string) error {
 		return err
 	}
 
-	newPostScore := models.PostScore{
-		Type:   "READ",
-		PostId: body.PostId,
-		UserId: userId,
-		Score:  1.0,
-	}
+	if updatePost.Views%10 == 0 {
+		newPostScore := models.PostScore{
+			Type:   "READ",
+			PostId: body.PostId,
+			UserId: userId,
+			Score:  1.0,
+		}
 
-	if err := tx.Create(&newPostScore).Error; err != nil {
-		tx.Rollback()
-		return err
+		if err := tx.Create(&newPostScore).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	return tx.Commit().Error
@@ -377,7 +379,7 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
 
 func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
 	queryCursor := ""
-	if queryCursor != "" {
+	if query.Cursor != "" {
 		var postRead models.PostRead
 		if err := p.db.Where("user_id = ? AND post_id = ?", userId, query.Cursor).First(&postRead).Error; err != nil {
 			return nil, err
@@ -387,13 +389,21 @@ func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([
 		queryCursor = fmt.Sprintf(`AND (ps.updated_at < '%v' AND ps.id != '%v')`, createdAt, postRead.ID)
 	}
 
-	//queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)
-	//var posts []dto.PostsRawQueryResult
-	//if err := p.db.Raw(``).Scan(&posts).Error; err != nil {
-	//	return nil, err
-	//}
-	//return posts, nil
-	return nil, nil
+	queryCommentCount := fmt.Sprintf(`(SELECT COUNT(*) FROM "comments" as c WHERE c.post_id = p.id GROUP BY c.post_id) AS comment_count`)
+	var posts []dto.PostsRawQueryResult
+	if err := p.db.Raw(fmt.Sprintf(`
+		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail, %v FROM "post_reads" as ps
+		INNER JOIN "posts" as p ON ps.post_id = p.id
+		INNER JOIN "users" AS u ON u.id = ps.user_id
+		INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+		WHERE ps.user_id = '%v'
+		%v
+		ORDER BY ps.id ASC, ps.updated_at DESC
+		LIMIT %v`, queryCommentCount, userId, queryCursor, query.Limit)).Scan(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
 
 func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
@@ -412,7 +422,7 @@ func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dt
 	var posts []dto.PostsRawQueryResult
 	if err := p.db.Raw(fmt.Sprintf(`
 		SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail, %v FROM "post_likes" as ps
-		INNER JOIN posts as p ON ps.post_id = p.id
+		INNER JOIN "posts" as p ON ps.post_id = p.id
 		INNER JOIN "users" AS u ON u.id = ps.user_id
 		INNER JOIN "user_profiles" AS up ON up.user_id = u.id
 		WHERE ps.user_id = '%v'
