@@ -29,7 +29,7 @@ func LocalRegisterController(ctx *gin.Context) {
 func SendEmailController(ctx *gin.Context) {
 	var body dto.SendEmailBody
 	if err := ctx.BindJSON(&body); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+		ctx.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 

@@ -5,7 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/helpers"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/OhMinsSup/story-server/models"
-	"github.com/SKAhack/go-shortid"
+	"github.com/OhMinsSup/story-server/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
@@ -145,25 +145,21 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 }
 
 func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
-	exists := false
-	var user models.User
-	if err := db.Where("email = ?", strings.ToLower(email)).First(&user).Error; err == nil {
-		exists = true
+	authRepository := repository.NewAuthRepository(db)
+
+	exists, ExistsCode, ExistsErr := authRepository.ExistEmail(email)
+	if ExistsErr != nil {
+		return false, ExistsCode, ExistsErr
 	}
 
-	shortId := shortid.Generator()
-
-	emailAuth := models.EmailAuth{
-		Email: strings.ToLower(email),
-		Code:  shortId.Generate(),
+	emailAuth, CreateCode, CreateErr := authRepository.CreateEmailAuth(email)
+	if CreateErr != nil {
+		return false, CreateCode, CreateErr
 	}
-
-	db.NewRecord(emailAuth)
-	db.Create(&emailAuth)
 
 	wd, err := os.Getwd()
 	if err != nil {
-		return exists, http.StatusConflict, err
+		return exists, http.StatusNotFound, err
 	}
 
 	var bindData emailService.BindData
@@ -191,24 +187,17 @@ func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 
 	sender := emailService.NewEmailSender(&emailConfig, email)
 
+	// create send Email Template
 	c := make(chan bool)
 	go func() {
 		if err := sender.ParseTemplate(filepath.Join(wd, "./statics/emailTemplate.html"), bindData); err != nil {
 			c <- true
 		}
+
 		if err := sender.Send(email); err != nil {
 			c <- true
 		}
 	}()
-
-	select {
-	case snapshot := <-c:
-		if snapshot {
-			return exists, http.StatusConflict, err
-		}
-	default:
-		return exists, http.StatusOK, nil
-	}
 
 	return exists, http.StatusOK, nil
 }
