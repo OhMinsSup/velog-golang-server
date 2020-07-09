@@ -42,5 +42,5 @@ func (a *AuthRepository) CreateEmailAuth(email string) (*models.EmailAuth, int, 
 		return nil, http.StatusInternalServerError, err
 	}
 
-	return &emailAuth, http.StatusOK, nil
+	return &emailAuth, http.StatusOK, tx.Commit().Error
 }
