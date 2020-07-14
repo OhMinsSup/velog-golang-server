@@ -2,6 +2,7 @@ package apis
 
 import (
 	"github.com/OhMinsSup/story-server/apis/auth"
+	"github.com/OhMinsSup/story-server/apis/file"
 	"github.com/OhMinsSup/story-server/apis/post"
 	"github.com/OhMinsSup/story-server/apis/posts"
 	"github.com/OhMinsSup/story-server/apis/tag"
@@ -24,5 +25,6 @@ func ApplyRoutes(r *gin.Engine) {
 		post.ApplyRoutes(api)
 		posts.ApplyRoutes(api)
 		tag.ApplyRoutes(api)
+		file.ApplyRoutes(api)
 	}
 }
