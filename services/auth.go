@@ -16,59 +16,44 @@ import (
 )
 
 func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	authRepository := repository.NewAuthRepository(db)
+	// email register token deocoded
 	decoded, err := helpers.DecodeToken(body.RegisterToken)
 	if err != nil {
-		return nil, http.StatusForbidden, helpers.ErrorInvalidToken
+		return nil, http.StatusForbidden, err
 	}
 
 	if decoded["subject"] != "email-register" {
 		return nil, http.StatusForbidden, helpers.ErrorInvalidToken
 	}
 
+	// decoded data (email, id)
 	payload := decoded["payload"].(helpers.JSON)
 
-	var userModel models.User
-	if err := db.Where("email = ?", strings.ToLower(payload["email"].(string))).Or("username = ?", body.UserName).First(&userModel).Error; err == nil {
-		return nil, http.StatusConflict, helpers.ErrorAlreadyExists
-	}
-
-	var emailAuthModel models.EmailAuth
-	if existsEmailAuth := db.Where("id = ?", payload["id"].(string)).First(&emailAuthModel); existsEmailAuth != nil {
-		emailAuthModel.Logged = true
-		db.Save(&emailAuthModel)
-	}
-
-	user := models.User{
+	userData := repository.CreateUserParams{
 		Email:       strings.ToLower(payload["email"].(string)),
-		IsCertified: true,
 		Username:    body.UserName,
-	}
-
-	db.NewRecord(user)
-	db.Create(&user)
-
-	userProfile := models.UserProfile{
+		UserID:      payload["id"].(string),
 		DisplayName: body.DisplayName,
 		ShortBio:    body.ShortBio,
-		UserID:      user.ID,
 	}
 
-	db.NewRecord(userProfile)
-	db.Create(&userProfile)
-
-	velogConfig := models.VelogConfig{
-		UserID: user.ID,
+	// username, email 이미 존재하는지 체크
+	_, existsCode, existsError := authRepository.ExistsByEmailAndUsername(userData.Username, userData.Email)
+	if existsError != nil {
+		return nil, existsCode, existsError
 	}
 
-	db.NewRecord(velogConfig)
-	db.Create(&velogConfig)
-
-	userMeta := models.UserMeta{
-		UserID: user.ID,
+	var emailAuth models.EmailAuth
+	if existsEmailAuth := db.Where("id = ?", payload["id"].(string)).First(&emailAuth); existsEmailAuth != nil {
+		emailAuth.Logged = true
+		db.Save(&emailAuth)
 	}
 
-	db.NewRecord(userMeta)
-	db.Create(&userMeta)
+	user, userProfile, userCode, userError := authRepository.CreateUser(userData)
+	if userError != nil {
+		return nil, userCode, userError
+	}
 
 	tokens := user.GenerateUserToken(db)
 	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
@@ -87,29 +72,31 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 }
 
 func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	var emailAuth models.EmailAuth
-	if existsEmail := db.Where("code = ?", code).First(&emailAuth); existsEmail == nil {
-		return nil, http.StatusNotFound, helpers.ErrorNotFoundEmailAuth
+	authRepository := repository.NewAuthRepository(db)
+
+	existsCode, ExistsCode, ExistsErr := authRepository.ExistsCode(code)
+	if ExistsErr != nil {
+		return nil, ExistsCode, ExistsErr
 	}
 
-	if emailAuth.Logged {
+	if existsCode.Logged {
 		return nil, http.StatusForbidden, helpers.ErrorTokenAlreadyUse
 	}
 
-	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
+	expireTime := existsCode.CreatedAt.AddDate(0, 0, 1).Unix()
 	currentTime := time.Now().Unix()
-	if currentTime > expireTime || emailAuth.Logged {
+	if currentTime > expireTime || existsCode.Logged {
 		return nil, http.StatusForbidden, helpers.ErrorTokenExpiredCode
 	}
 
 	// check user with code
 	var user models.User
-	if err := db.Where("email = ?", strings.ToLower(emailAuth.Email)).First(&user).Error; err != nil {
+	if err := db.Where("email = ?", strings.ToLower(existsCode.Email)).First(&user).Error; err != nil {
 		// 해당 이메일로 등록한 유저가 없는 경우
 		subject := "email-register"
 		payload := helpers.JSON{
-			"email": emailAuth.Email,
-			"id":    emailAuth.ID,
+			"email": existsCode.Email,
+			"id":    existsCode.ID,
 		}
 
 		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
@@ -118,7 +105,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 		}
 
 		return helpers.JSON{
-			"email":          emailAuth.Email,
+			"email":          existsCode.Email,
 			"register_token": registerToken,
 		}, http.StatusOK, nil
 	}

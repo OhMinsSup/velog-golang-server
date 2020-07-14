@@ -52,5 +52,6 @@ func CodeController(ctx *gin.Context) {
 		ctx.AbortWithError(code, err)
 		return
 	}
+
 	ctx.JSON(code, result)
 }
