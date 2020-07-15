@@ -11,24 +11,24 @@ import (
 
 func TrendingTagListService(body dto.TagListQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	tagRepository := repository.NewTagRepository(db)
-	tags, err := tagRepository.TrendingTagList(body.Cursor, body.Limit)
+	tags, code, err := tagRepository.TrendingTagList(body.Cursor, body.Limit)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
 		"tags": tags,
-	}, 0, nil
+	}, http.StatusOK, nil
 }
 
 func GetTagListService(body dto.TagListQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	tagRepository := repository.NewTagRepository(db)
-	tags, err := tagRepository.GetTagList(body.Cursor, body.Limit)
+	tags, code, err := tagRepository.GetTagList(body.Cursor, body.Limit)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
 		"tags": tags,
-	}, 0, nil
+	}, http.StatusOK, nil
 }

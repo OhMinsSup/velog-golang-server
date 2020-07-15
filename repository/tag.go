@@ -4,6 +4,7 @@ import (
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
+	"net/http"
 )
 
 type TagRepository struct {
@@ -52,7 +53,7 @@ func (t *TagRepository) GetPostsCount(tagId string) (int64, error) {
 	return count[0].PostsCount, nil
 }
 
-func (t *TagRepository) GetTagList(cursor string, limit int64) ([]dto.Tags, error) {
+func (t *TagRepository) GetTagList(cursor string, limit int64) ([]dto.Tags, int, error) {
 	if cursor == "" {
 		var tags []dto.Tags
 		if err := t.db.Raw(`
@@ -66,14 +67,14 @@ func (t *TagRepository) GetTagList(cursor string, limit int64) ([]dto.Tags, erro
 		INNER JOIN tags ON q1.tag_id = tags.id
 		ORDER BY tags.name
 		LIMIT ?`, limit).Scan(&tags).Error; err != nil {
-			return nil, err
+			return nil, http.StatusNotFound, err
 		}
-		return tags, nil
+		return tags, http.StatusOK, nil
 	}
 
 	var cursorTag models.Tag
 	if err := t.db.Where("id = ?", cursor).First(&cursorTag).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
 	var tags []dto.Tags
@@ -89,12 +90,12 @@ func (t *TagRepository) GetTagList(cursor string, limit int64) ([]dto.Tags, erro
 		where tags.name > ?
 		ORDER BY tags.name
 		LIMIT ?`, cursorTag.Name, limit).Scan(&tags).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
-	return tags, nil
+	return tags, http.StatusOK, nil
 }
 
-func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.Tags, error) {
+func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.Tags, int, error) {
 	if cursor == "" {
 		var tags []dto.Tags
 		if err := t.db.Raw(`
@@ -108,14 +109,14 @@ func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.Tags,
 		INNER JOIN tags ON q1.tag_id = tags.id
 		ORDER BY posts_count desc, tags.id
 		LIMIT ?`, limit).Scan(&tags).Error; err != nil {
-			return nil, err
+			return nil, http.StatusNotFound, err
 		}
-		return tags, nil
+		return tags, http.StatusOK, nil
 	}
 
 	cursorPostsCount, err := t.GetPostsCount(cursor)
 	if err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
 	var tags []dto.Tags
@@ -133,7 +134,7 @@ func (t *TagRepository) TrendingTagList(cursor string, limit int64) ([]dto.Tags,
         AND NOT (id < ? AND posts_count = ?)
 		ORDER BY posts_count desc, tags.id
 		LIMIT ?`, cursorPostsCount, cursor, cursor, cursorPostsCount, limit).Scan(&tags).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
-	return tags, nil
+	return tags, http.StatusOK, nil
 }
