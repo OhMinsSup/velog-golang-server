@@ -16,9 +16,9 @@ func UnLikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JS
 	}
 
 	postRepository := repository.NewPostRepository(db)
-	isLiked, err := postRepository.UnLike(postId, userId)
+	isLiked, code, err := postRepository.UnLike(postId, userId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -32,11 +32,10 @@ func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON
 		return nil, http.StatusForbidden, nil
 	}
 
-
 	postRepository := repository.NewPostRepository(db)
-	isLiked, err := postRepository.Like(postId, userId)
+	isLiked, code, err := postRepository.Like(postId, userId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{

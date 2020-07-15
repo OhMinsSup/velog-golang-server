@@ -8,6 +8,7 @@ import (
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
+	"net/http"
 	"time"
 )
 
@@ -279,12 +280,12 @@ func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost model
 	return nil
 }
 
-func (p *PostRepository) Like(postId, userId string) (bool, error) {
+func (p *PostRepository) Like(postId, userId string) (bool, int, error) {
 	tx := p.db.Begin()
 	var currentPost models.Post
 	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		tx.Rollback()
-		return false, helpers.ErrorNotFound
+		return false, http.StatusNotFound, helpers.ErrorNotFound
 	}
 
 	var alreadyLiked models.PostLike
@@ -293,7 +294,7 @@ func (p *PostRepository) Like(postId, userId string) (bool, error) {
 		WHERE pl.post_id = ? AND pl.user_id = ? ORDER BY pl.id ASC LIMIT 1`, postId, userId).Scan(&alreadyLiked)
 
 	if alreadyLiked != (models.PostLike{}) {
-		return true, nil
+		return true, http.StatusBadRequest, nil
 	}
 
 	newPostLike := models.PostLike{
@@ -303,20 +304,20 @@ func (p *PostRepository) Like(postId, userId string) (bool, error) {
 
 	if err := tx.Create(&newPostLike).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
 	var count int64
 	if err := tx.Model(&models.PostLike{}).Where("post_id = ?", postId).Count(&count).Error; err != nil {
 		tx.Rollback()
-		return false, helpers.ErrorNotFound
+		return false, http.StatusNotFound, helpers.ErrorNotFound
 	}
 
 	currentPost.Likes = count
 
 	if err := tx.Model(&currentPost).Updates(map[string]interface{}{"likes": count}).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
 	newPostScore := models.PostScore{
@@ -328,18 +329,18 @@ func (p *PostRepository) Like(postId, userId string) (bool, error) {
 
 	if err := tx.Create(&newPostScore).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
-	return true, tx.Commit().Error
+	return true, http.StatusOK, tx.Commit().Error
 }
 
-func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
+func (p *PostRepository) UnLike(postId, userId string) (bool, int, error) {
 	tx := p.db.Begin()
 	var currentPost models.Post
 	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		tx.Rollback()
-		return false, helpers.ErrorNotFound
+		return false, http.StatusNotFound, helpers.ErrorNotFound
 	}
 
 	var postLike models.PostLike
@@ -348,33 +349,33 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, error) {
 		WHERE pl.post_id = ? AND pl.user_id = ? ORDER BY pl.id ASC LIMIT 1`, postId, userId).Scan(&postLike)
 
 	if postLike == (models.PostLike{}) {
-		return true, nil
+		return true, http.StatusBadRequest, nil
 	}
 
 	if err := tx.Delete(&postLike).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
 	var count int64
 	if err := tx.Model(&models.PostLike{}).Where("post_id = ?", postId).Count(&count).Error; err != nil {
 		tx.Rollback()
-		return false, helpers.ErrorNotFound
+		return false, http.StatusNotFound, helpers.ErrorNotFound
 	}
 
 	currentPost.Likes = count
 
 	if err := tx.Model(&currentPost).Updates(map[string]interface{}{"likes": count}).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
 	if err := tx.Exec(`DELETE from "post_scores" where post_id = ? AND user_id = ? AND type = 'LIKE'`, postId, userId).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
-	return true, tx.Commit().Error
+	return true, http.StatusOK, tx.Commit().Error
 }
 
 func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
