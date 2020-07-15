@@ -378,12 +378,12 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, int, error) {
 	return true, http.StatusOK, tx.Commit().Error
 }
 
-func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, int, error) {
 	queryCursor := ""
 	if query.Cursor != "" {
 		var postRead models.PostRead
 		if err := p.db.Where("user_id = ? AND post_id = ?", userId, query.Cursor).First(&postRead).Error; err != nil {
-			return nil, err
+			return nil, http.StatusNotFound, err
 		}
 
 		createdAt := postRead.CreatedAt.Format(time.RFC3339Nano)
@@ -401,18 +401,18 @@ func (p *PostRepository) ReadingPostList(userId string, query dto.PostsQuery) ([
 		%v
 		ORDER BY ps.id ASC, ps.updated_at DESC
 		LIMIT %v`, queryCommentCount, userId, queryCursor, query.Limit)).Scan(&posts).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
-	return posts, nil
+	return posts, http.StatusOK, nil
 }
 
-func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dto.PostsRawQueryResult, int, error) {
 	queryCursor := ""
 	if query.Cursor != "" {
 		var postLike models.PostLike
 		if err := p.db.Where("user_id = ? AND post_id = ?", userId, query.Cursor).First(&postLike).Error; err != nil {
-			return nil, err
+			return nil, http.StatusNotFound, err
 		}
 
 		createdAt := postLike.CreatedAt.Format(time.RFC3339Nano)
@@ -430,13 +430,13 @@ func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dt
 		%v
 		ORDER BY ps.id ASC, ps.updated_at DESC
 		LIMIT %v`, queryCommentCount, userId, queryCursor, query.Limit)).Scan(&posts).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
-	return posts, nil
+	return posts, http.StatusOK, nil
 }
 
-func (p *PostRepository) TrendingPostList(query dto.TrendingPostQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) TrendingPostList(query dto.TrendingPostQuery) ([]dto.PostsRawQueryResult, int, error) {
 	var trendingPosts []struct {
 		ID    string  `json:"id"`
 		Score float64 `json:"score"`
@@ -450,11 +450,11 @@ func (p *PostRepository) TrendingPostList(query dto.TrendingPostQuery) ([]dto.Po
 		ORDER BY score, p.id DESC
 		OFFSET ?
 		LIMIT ?`, query.Offset, query.Limit).Scan(&trendingPosts).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
 	if len(trendingPosts) == 0 {
-		return nil, nil
+		return nil, http.StatusOK, nil
 	}
 
 	var ids []string
@@ -470,13 +470,13 @@ func (p *PostRepository) TrendingPostList(query dto.TrendingPostQuery) ([]dto.Po
 		INNER JOIN "users" AS u ON u.id = p.user_id
 		INNER JOIN "user_profiles" AS up ON up.user_id = u.id
 		WHERE p.id IN (?)`, queryCommentCount), ids).Scan(&ordered).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
-	return ordered, nil
+	return ordered, http.StatusOK, nil
 }
 
-func (p *PostRepository) PostList(userId string, query dto.ListPostQuery) ([]dto.PostsRawQueryResult, error) {
+func (p *PostRepository) PostList(userId string, query dto.ListPostQuery) ([]dto.PostsRawQueryResult, int, error) {
 	queryIsPrivate := ""
 	if userId == "" {
 		queryIsPrivate = "WHERE (p.is_private = false)"
@@ -493,7 +493,7 @@ func (p *PostRepository) PostList(userId string, query dto.ListPostQuery) ([]dto
 	if query.Cursor != "" {
 		var post models.Post
 		if err := p.db.Where("id = ?", query.Cursor).First(&post).Error; err != nil {
-			return nil, err
+			return nil, http.StatusNotFound, err
 		}
 		createdAt := post.CreatedAt.Format(time.RFC3339Nano)
 		queryCursor = fmt.Sprintf(`AND (p.created_at < '%v')`, createdAt)
@@ -511,8 +511,8 @@ func (p *PostRepository) PostList(userId string, query dto.ListPostQuery) ([]dto
 		%v
 		ORDER BY p.created_at desc, p.id desc
 		LIMIT ?`, queryCommentCount, queryIsPrivate, queryUser, queryCursor), query.Limit).Scan(&posts).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
-	return posts, nil
+	return posts, http.StatusOK, nil
 }

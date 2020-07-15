@@ -17,9 +17,9 @@ func ReadingPostsService(queryObj dto.PostsQuery, db *gorm.DB, ctx *gin.Context)
 	}
 
 	postRepository := repository.NewPostRepository(db)
-	posts, err := postRepository.ReadingPostList(userId, queryObj)
+	posts, code, err := postRepository.ReadingPostList(userId, queryObj)
 	if err != nil {
-		return nil, http.StatusBadRequest, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -34,9 +34,9 @@ func LikePostsService(queryObj dto.PostsQuery, db *gorm.DB, ctx *gin.Context) (h
 	}
 
 	postRepository := repository.NewPostRepository(db)
-	posts, err := postRepository.LikePostList(userId, queryObj)
+	posts, code, err := postRepository.LikePostList(userId, queryObj)
 	if err != nil {
-		return nil, http.StatusBadRequest, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -46,9 +46,9 @@ func LikePostsService(queryObj dto.PostsQuery, db *gorm.DB, ctx *gin.Context) (h
 
 func TrendingPostsService(queryObj dto.TrendingPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	postRepository := repository.NewPostRepository(db)
-	posts, err := postRepository.TrendingPostList(queryObj)
+	posts, code, err := postRepository.TrendingPostList(queryObj)
 	if err != nil {
-		return nil, http.StatusBadRequest, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -58,9 +58,9 @@ func TrendingPostsService(queryObj dto.TrendingPostQuery, db *gorm.DB, ctx *gin.
 
 func ListPostsService(body dto.ListPostQuery, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	postRepository := repository.NewPostRepository(db)
-	posts, err := postRepository.PostList(fmt.Sprintf("%v", ctx.MustGet("id")), body)
+	posts, code, err := postRepository.PostList(fmt.Sprintf("%v", ctx.MustGet("id")), body)
 	if err != nil {
-		return nil, http.StatusBadRequest, err
+		return nil, code, err
 	}
 	return helpers.JSON{
 		"posts": posts,
