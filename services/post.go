@@ -18,9 +18,9 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	}
 
 	postRepository := repository.NewPostRepository(db)
-	post, err := postRepository.GetPost(postId)
+	post, code, err := postRepository.GetPost(postId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return post, http.StatusOK, nil
@@ -36,9 +36,9 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 
 	postRepository := repository.NewPostRepository(db)
 
-	isDeleted, err := postRepository.DeletePost(userId, postId)
+	isDeleted, code, err := postRepository.DeletePost(userId, postId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -56,9 +56,9 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 
 	postRepository := repository.NewPostRepository(db)
 
-	postId, err := postRepository.UpdatePost(body, userId, postId)
+	postId, code, err := postRepository.UpdatePost(body, userId, postId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -70,9 +70,9 @@ func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (he
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	postRepository := repository.NewPostRepository(db)
 
-	postId, err := postRepository.CreatePost(body, userId)
+	postId, code, err := postRepository.CreatePost(body, userId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -89,8 +89,8 @@ func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (he
 
 	postRepository := repository.NewPostRepository(db)
 
-	if err := postRepository.View(body, userId); err != nil {
-		return nil, http.StatusInternalServerError, err
+	if code, err := postRepository.View(body, userId); err != nil {
+		return nil, code, err
 	}
 
 	return helpers.JSON{

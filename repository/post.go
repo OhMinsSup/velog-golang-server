@@ -22,7 +22,7 @@ func NewPostRepository(db *gorm.DB) *PostRepository {
 	}
 }
 
-func (p *PostRepository) GetPost(postId string) (helpers.JSON, error) {
+func (p *PostRepository) GetPost(postId string) (helpers.JSON, int, error) {
 	var post dto.PostRawQueryResult
 	if err := p.db.Raw(`
 		SELECT
@@ -32,7 +32,7 @@ func (p *PostRepository) GetPost(postId string) (helpers.JSON, error) {
 		INNER JOIN "tags" AS t ON t.id = pt.tag_id
 		WHERE p.id = ?
 		GROUP BY p.id, pt.post_id`, postId).Scan(&post).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
 	var user dto.UserRawQueryResult
@@ -45,23 +45,23 @@ func (p *PostRepository) GetPost(postId string) (helpers.JSON, error) {
 	   FROM "users" AS u
 	   INNER JOIN "user_profiles" AS up ON up.user_id = u.id
 	   WHERE u.id = ?`, post.UserID).Scan(&user).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
 	post.User = user
 
 	var commentCount int64
 	if err := p.db.Model(&models.Comment{}).Where("post_id AND deleted = false", postId).Count(&commentCount).Error; err != nil {
-		return nil, err
+		return nil, http.StatusNotFound, err
 	}
 
 	return helpers.JSON{
 		"post":          post,
 		"comment_count": commentCount,
-	}, nil
+	}, http.StatusOK, nil
 }
 
-func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (string, error) {
+func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (string, int, error) {
 	newPost := models.Post{
 		Title:      body.Title,
 		Body:       body.Body,
@@ -75,28 +75,28 @@ func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (stri
 	tx := p.db.Begin()
 	if err := tx.Create(&newPost).Error; err != nil {
 		tx.Rollback()
-		return "", err
+		return "", http.StatusInternalServerError, err
 	}
 
-	if err := p.SyncPostTags(body.Tag, newPost.ID, newPost); err != nil {
+	if code, err := p.SyncPostTags(body.Tag, newPost.ID, newPost); err != nil {
 		tx.Rollback()
-		return "", err
+		return "", code, err
 	}
 
-	return newPost.ID, tx.Commit().Error
+	return newPost.ID, http.StatusOK, tx.Commit().Error
 }
 
-func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId string) (string, error) {
+func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId string) (string, int, error) {
 	tx := p.db.Begin()
 
 	var currentPost models.Post
 	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		tx.Rollback()
-		return "", err
+		return "", http.StatusNotFound, err
 	}
 
 	if currentPost.UserID != userId {
-		return "", helpers.ErrorPermission
+		return "", http.StatusUnauthorized, helpers.ErrorPermission
 	}
 
 	if err := tx.Model(&currentPost).Updates(models.Post{
@@ -108,49 +108,52 @@ func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId strin
 		UserID:     userId,
 	}).Error; err != nil {
 		tx.Rollback()
-		return "", err
+		return "", http.StatusInternalServerError, err
 	}
 
 	if len(body.Tag) > 0 {
-		if err := p.SyncPostTags(body.Tag, postId, currentPost); err != nil {
+		if code, err := p.SyncPostTags(body.Tag, postId, currentPost); err != nil {
 			tx.Rollback()
-			return "", err
+			return "", code, err
 		}
 	}
 
-	return postId, tx.Commit().Error
+	return postId, http.StatusOK, tx.Commit().Error
 }
 
-func (p *PostRepository) DeletePost(userId, postId string) (bool, error) {
+func (p *PostRepository) DeletePost(userId, postId string) (bool, int, error) {
 	var currentPost models.Post
 	if err := p.db.Where("id = ?", postId).Preload("Tags").First(&currentPost).Error; err != nil {
-		return false, err
+		return false, http.StatusNotFound, err
 	}
 
 	if currentPost.UserID != userId {
-		return false, helpers.ErrorPermission
+		return false, http.StatusUnauthorized, helpers.ErrorPermission
 	}
 
 	tx := p.db.Begin()
 
 	if err := tx.Model(&currentPost).Association("Tags").Delete(&currentPost.Tags).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
 	if err := tx.Delete(&currentPost).Error; err != nil {
 		tx.Rollback()
-		return false, err
+		return false, http.StatusInternalServerError, err
 	}
 
-	return true, tx.Commit().Error
+	return true, http.StatusOK, tx.Commit().Error
 }
 
-func (p *PostRepository) View(body dto.PostViewParams, userId string) error {
+func (p *PostRepository) View(body dto.PostViewParams, userId string) (int, error) {
 	var currentRead models.PostRead
-	if err := p.db.Where(`ip_hash = ? AND post_id = ? AND created_at > now() - INTERVAL '24 hours'`, body.Ip, body.PostId).First(&currentRead).Error; err == nil {
+	if err := p.db.
+		Where(`ip_hash = ? AND post_id = ? AND created_at > now() - INTERVAL '24 hours'`, body.Ip, body.PostId).
+		First(&currentRead).
+		Error; err == nil {
 		if currentRead == (models.PostRead{}) {
-			return nil
+			return http.StatusNotFound, nil
 		}
 	}
 
@@ -164,20 +167,20 @@ func (p *PostRepository) View(body dto.PostViewParams, userId string) error {
 
 	if err := tx.Create(&postRead).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	var updatePost models.Post
 	if err := tx.Where("id = ?", body.PostId).First(&updatePost).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusNotFound, err
 	}
 
 	if err := tx.Model(&updatePost).Updates(models.Post{
 		Views: updatePost.Views + 1,
 	}).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	if updatePost.Views%10 == 0 {
@@ -190,21 +193,21 @@ func (p *PostRepository) View(body dto.PostViewParams, userId string) error {
 
 		if err := tx.Create(&newPostScore).Error; err != nil {
 			tx.Rollback()
-			return err
+			return http.StatusInternalServerError, err
 		}
 	}
 
-	return tx.Commit().Error
+	return http.StatusOK, tx.Commit().Error
 }
 
-func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost models.Post) error {
+func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost models.Post) (int, error) {
 	tagRepository := NewTagRepository(p.db)
 
 	var tagIds []string
 	for _, tag := range tags {
 		tagId, err := tagRepository.FindTagAndCreate(tag)
 		if err != nil {
-			return err
+			return http.StatusInternalServerError, err
 		}
 
 		tagIds = append(tagIds, tagId)
@@ -230,7 +233,7 @@ func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost model
 		INNER JOIN posts_tags pt ON pt.post_id = p.id
 		WHERE pt.post_id = ?
 		GROUP BY p.id, pt.post_id`, postId).Find(&prevPostTag).Error; err != nil && !gorm.IsRecordNotFoundError(err) {
-		return err
+		return http.StatusNotFound, err
 	}
 
 	// get deleted posts_tags Item
@@ -254,11 +257,11 @@ func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost model
 		for _, missingTagId := range missing {
 			var prevTag models.Tag
 			if err := p.db.Where("id = ?", missingTagId).First(&prevTag).Error; err != nil {
-				return err
+				return http.StatusNotFound, err
 			}
 
 			if err := p.db.Model(&txPost).Association("Tags").Delete(prevTag).Error; err != nil {
-				return err
+				return http.StatusInternalServerError, err
 			}
 		}
 	}
@@ -268,16 +271,16 @@ func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost model
 		for _, addingTagId := range adding {
 			var newTag models.Tag
 			if err := p.db.Where("id = ?", addingTagId).First(&newTag).Error; err != nil {
-				return err
+				return http.StatusNotFound, err
 			}
 
 			if err := p.db.Model(&txPost).Association("Tags").Append(newTag).Error; err != nil {
-				return err
+				return http.StatusInternalServerError, err
 			}
 		}
 	}
 
-	return nil
+	return http.StatusOK, nil
 }
 
 func (p *PostRepository) Like(postId, userId string) (bool, int, error) {
