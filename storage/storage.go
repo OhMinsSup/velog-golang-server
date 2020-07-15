@@ -5,7 +5,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gin-gonic/gin"
+	"time"
 )
 
 var (
@@ -40,4 +42,36 @@ func Inject(sess *session.Session) gin.HandlerFunc {
 		c.Set("sess", sess)
 		c.Next()
 	}
+}
+
+type StorageRepository struct {
+	sess *session.Session
+}
+
+func NewStorageRepository(sess *session.Session) *StorageRepository {
+	return &StorageRepository{
+		sess: sess,
+	}
+}
+
+func (s *StorageRepository) GetS3PresignedUrl(bucket, key string, expiration time.Duration) (string, error) {
+	// Create S3 service client
+	svc := s3.New(s.sess)
+
+	// Construct a GetObjectRequest request
+	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+
+	// presignedUrl with expiration time
+	presignedUrl, err := req.Presign(expiration * time.Minute)
+
+	// Check if it can be signed or not
+	if err != nil {
+		return "", err
+	}
+
+	// Return the presigned url
+	return presignedUrl, nil
 }

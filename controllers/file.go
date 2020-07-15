@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/storage"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -10,6 +11,30 @@ import (
 )
 
 func CreateUrlController(ctx *gin.Context) {
+	// Source
+	_, header, err := ctx.Request.FormFile("file")
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	filename := header.Filename
+	bucket := helpers.GetEnvWithKey("BUCKET_NAME")
+	sess := ctx.MustGet("sess").(*session.Session)
+
+	storageRepository := storage.NewStorageRepository(sess)
+
+	presignedUrl, err := storageRepository.GetS3PresignedUrl(bucket, filename, 15)
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, helpers.JSON{
+		"presignedUrl": presignedUrl,
+	})
+}
+
+func S3ImageUploadController(ctx *gin.Context) {
 	// Source
 	file, header, err := ctx.Request.FormFile("file")
 	if err != nil {
