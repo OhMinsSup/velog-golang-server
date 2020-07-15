@@ -3,6 +3,7 @@ package helpers
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 )
 
 func CreateHash(data string) string {
@@ -13,4 +14,8 @@ func CreateHash(data string) string {
 	mdStr := hex.EncodeToString(md)
 
 	return mdStr
+}
+
+func GetEnvWithKey(key string) string {
+	return os.Getenv(key)
 }

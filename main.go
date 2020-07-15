@@ -5,6 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/apis"
 	"github.com/OhMinsSup/story-server/database"
 	"github.com/OhMinsSup/story-server/middlewares"
+	"github.com/OhMinsSup/story-server/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"log"
@@ -23,13 +24,16 @@ func main() {
 
 	// initializes database
 	db, _ := database.Initialize()
+	sess := storage.ConnectionByAws()
 
 	port := os.Getenv("PORT")
 	// create gin app
 	app := gin.Default()
+	app.MaxMultipartMemory = 8 << 20  // 8 MiB
 
 	app.Use(gin.Logger())
 	app.Use(gin.Recovery())
+	app.Use(storage.Inject(sess))
 	app.Use(database.Inject(db))
 	app.Use(middlewares.ConsumeUser(db))
 

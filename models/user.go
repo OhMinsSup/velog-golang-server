@@ -18,6 +18,7 @@ type User struct {
 	UserProfile UserProfile `gorm:"foreignkey:UserID"json:"user_profile"`
 	UserMeta    UserMeta    `gorm:"foreignkey:UserID"json:"user_meta"`
 	VelogConfig VelogConfig `gorm:"foreignkey:UserID"json:"velog_config"`
+	UserImage   []UserImage `gorm:"polymorphic:Owner"json:"user_image"`
 	PostScore   []PostScore `gorm:"polymorphic:Owner;"json:"post_score"`
 	PostRead    []PostRead  `gorm:"polymorphic:Owner;"json:"post_read"`
 	PostLike    []PostLike  `gorm:"polymorphic:Owner;"json:"post_like"`
@@ -115,6 +116,17 @@ func (u UserProfile) Serialize() helpers.JSON {
 		"short_bio":    u.ShortBio,
 		"thumbnail":    u.Thumbnail,
 	}
+}
+
+type UserImage struct {
+	ID        string    `gorm:"primary_key;uuid"json:"id"`
+	UserID    string    `json:"user_id"`
+	Type      string    `json:"type"`
+	FileSize  float64   `json:"file_size"`
+	Path      string    `json:"path"`
+	RefId     string    `json:"ref_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type UserMeta struct {

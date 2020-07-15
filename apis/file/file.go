@@ -1,10 +1,13 @@
 package file
 
 import (
+	"github.com/OhMinsSup/story-server/controllers"
 	"github.com/gin-gonic/gin"
-	"log"
 )
 
 func ApplyRoutes(r *gin.RouterGroup) {
-	log.Println("?")
+	file := r.Group("/file")
+	{
+		file.POST("/create-url", controllers.CreateUrlController)
+	}
 }
