@@ -107,8 +107,8 @@ func GithubSocialCallback(ctx *gin.Context) {
 	db := ctx.MustGet("db").(*gorm.DB)
 	var user models.User
 	if isSocial {
-		social := ctx.MustGet("social").(*models.SocialAccount)
-		if err := db.Where("user_id = ?", social.ID).First(&user).Error; err != nil {
+		socialData := ctx.MustGet("social").(*models.SocialAccount)
+		if err := db.Where("user_id = ?", socialData.ID).First(&user).Error; err != nil {
 			ctx.AbortWithError(http.StatusNotFound, helpers.ErrorUserIsMissing)
 			return
 		}
@@ -163,8 +163,8 @@ func FacebookSocialCallback(ctx *gin.Context) {
 	db := ctx.MustGet("db").(*gorm.DB)
 	var user models.User
 	if isSocial {
-		social := ctx.MustGet("social").(*models.SocialAccount)
-		if err := db.Where("user_id = ?", social.ID).First(&user).Error; err != nil {
+		socialData := ctx.MustGet("social").(*models.SocialAccount)
+		if err := db.Where("user_id = ?", socialData.ID).First(&user).Error; err != nil {
 			ctx.AbortWithError(http.StatusNotFound, helpers.ErrorUserIsMissing)
 			return
 		}

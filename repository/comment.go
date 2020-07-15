@@ -5,6 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
+	"net/http"
 )
 
 type CommentRepository struct {
@@ -25,7 +26,7 @@ func (c *CommentRepository) CommentCount(postId string) (int64, error) {
 	return commentCount, nil
 }
 
-func (c *CommentRepository) CommentList(postId string) ([]models.Comment, error) {
+func (c *CommentRepository) CommentList(postId string) ([]models.Comment, int, error) {
 	var comments []models.Comment
 	if err := c.db.Raw(`
 		SELECT comments.* FROM "posts"
@@ -34,29 +35,32 @@ func (c *CommentRepository) CommentList(postId string) ([]models.Comment, error)
 		AND comments.level = 0
 		AND (comments.deleted = FALSE OR comments.has_replies = true)
 		ORDER BY comments.created_at ASC`, postId).Scan(&comments).Error; err != nil {
-		return nil, nil
+		return nil, http.StatusNotFound, nil
 	}
 
-	return comments, nil
+	return comments, http.StatusOK, nil
 }
 
-func (c *CommentRepository) SubCommentList(commentId, postId string) ([]models.Comment, error) {
+func (c *CommentRepository) SubCommentList(commentId, postId string) ([]models.Comment, int, error) {
 	var comments []models.Comment
-	if err := c.db.Where("reply_to = ? AND post_id", commentId, postId).Order("created_at asc").Find(&comments).Error; err != nil {
-		return nil, err
+	if err := c.db.
+		Where("reply_to = ? AND post_id", commentId, postId).
+		Order("created_at asc").
+		Find(&comments).Error; err != nil {
+		return nil, http.StatusNotFound, err
 	}
 
-	return comments, nil
+	return comments, http.StatusOK, nil
 }
 
-func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string) error {
+func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string) (int, error) {
 	var postData dto.PostRawQueryUserProfileResult
 	if err := c.db.Raw(`
 		SELECT p.*, u.id, u.username, u.email, up.display_name, up.thumbnail as user_thumbnail FROM "posts" AS p
 		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
 		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
 		WHERE p.id = ?`, body.PostId).Scan(&postData).Error; err != nil {
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	tx := c.db.Begin()
@@ -66,7 +70,7 @@ func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string)
 		var commentTarget models.Comment
 		if err := tx.Where("id = ?", body.CommentId).First(&commentTarget).Error; err != nil {
 			tx.Rollback()
-			return err
+			return http.StatusNotFound, err
 		}
 
 		comment.Level = commentTarget.Level + 1
@@ -74,7 +78,7 @@ func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string)
 
 		if commentTarget.Level > 3 {
 			tx.Rollback()
-			return helpers.ErrorMaxCommentLevel
+			return http.StatusBadRequest, helpers.ErrorMaxCommentLevel
 		}
 
 		commentTarget.HasReplies = true
@@ -82,7 +86,7 @@ func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string)
 			"has_replies": true,
 		}).Error; err != nil {
 			tx.Rollback()
-			return err
+			return http.StatusInternalServerError, err
 		}
 	}
 
@@ -92,7 +96,7 @@ func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string)
 
 	if err := tx.Create(&comment).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusInternalServerError, err
 	}
 
 	newPostScore := models.PostScore{
@@ -104,44 +108,44 @@ func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string)
 
 	if err := tx.Create(&newPostScore).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusInternalServerError, err
 	}
 
-	return tx.Commit().Error
+	return http.StatusOK, tx.Commit().Error
 }
 
-func (c *CommentRepository) UpdateComment(body dto.CommentParams, userId string) error {
+func (c *CommentRepository) UpdateComment(body dto.CommentParams, userId string) (int, error) {
 	tx := c.db.Begin()
 
 	var comment models.Comment
 	if err := tx.Where("id = ?", body.CommentId).First(&comment).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusNotFound, err
 	}
 
 	if userId != comment.UserId {
 		tx.Rollback()
-		return helpers.ErrorPermission
+		return http.StatusUnauthorized, helpers.ErrorPermission
 	}
 
 	if err := tx.Model(&comment).Updates(map[string]interface{}{
 		"text": body.Text,
 	}).Error; err != nil {
 		tx.Rollback()
-		return err
+		return http.StatusInternalServerError, err
 	}
 
-	return tx.Commit().Error
+	return http.StatusOK, tx.Commit().Error
 }
 
-func (c *CommentRepository) DeleteComment(body dto.CommentParams, userId string) error {
+func (c *CommentRepository) DeleteComment(body dto.CommentParams, userId string) (int, error) {
 	var comment models.Comment
 	if err := c.db.Where("id = ?", body.CommentId).First(&comment).Error; err != nil {
-		return err
+		return http.StatusNotFound, err
 	}
 
 	if userId != comment.UserId {
-		return helpers.ErrorPermission
+		return http.StatusUnauthorized, helpers.ErrorPermission
 	}
 
 	var postData dto.PostRawQueryUserProfileResult
@@ -150,7 +154,7 @@ func (c *CommentRepository) DeleteComment(body dto.CommentParams, userId string)
 		LEFT OUTER JOIN "users" AS u ON u.id = p.user_id
 		LEFT OUTER JOIN "user_profiles" AS up ON up.user_id = u.id
 		WHERE p.id = ?`, body.PostId).Scan(&postData).Error; err != nil {
-		return err
+		return http.StatusNotFound, err
 	}
 
 	tx := c.db.Begin()
@@ -158,20 +162,25 @@ func (c *CommentRepository) DeleteComment(body dto.CommentParams, userId string)
 	if err := tx.Model(&comment).Updates(map[string]interface{}{
 		"deleted": true,
 	}).Error; err != nil {
-		return err
+		tx.Rollback()
+		return http.StatusInternalServerError, err
 	}
 
 	var score models.PostScore
-	if err := c.db.Raw(`
+	if err := tx.Raw(`
 		SELECT * FROM "post_scores" AS ps 
 		WHERE ps.post_id = ?
 		AND ps.user_id = ?
 		AND ps.type = 'COMMENT'
 		ORDER BY ps.created_at DESC
 	`, body.PostId, userId).Scan(&score).Error; err != nil {
-		return err
+		tx.Rollback()
+		return http.StatusNotFound, err
 	}
 
-	tx.Delete(&score)
-	return tx.Commit().Error
+	if err := tx.Delete(&score).Error; err != nil {
+		tx.Rollback()
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, tx.Commit().Error
 }

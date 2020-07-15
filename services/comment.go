@@ -13,8 +13,9 @@ import (
 func WriteCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	commentRepository := repository.NewCommentRepository(db)
-	if err := commentRepository.CreateComment(body, userId); err != nil {
-		return nil, http.StatusInternalServerError, err
+	code, err := commentRepository.CreateComment(body, userId)
+	if err != nil {
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -25,8 +26,9 @@ func WriteCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context) 
 func EditCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	commentRepository := repository.NewCommentRepository(db)
-	if err := commentRepository.UpdateComment(body, userId); err != nil {
-		return nil, http.StatusInternalServerError, err
+	code, err := commentRepository.UpdateComment(body, userId)
+	if err != nil {
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -37,8 +39,9 @@ func EditCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context) (
 func RemoveCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	commentRepository := repository.NewCommentRepository(db)
-	if err := commentRepository.DeleteComment(body, userId); err != nil {
-		return nil, http.StatusInternalServerError, err
+	code, err := commentRepository.DeleteComment(body, userId)
+	if err != nil {
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -48,9 +51,9 @@ func RemoveCommentService(body dto.CommentParams, db *gorm.DB, ctx *gin.Context)
 
 func GetCommentListService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	commentRepository := repository.NewCommentRepository(db)
-	comments, err := commentRepository.CommentList(postId)
+	comments, code, err := commentRepository.CommentList(postId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
@@ -60,9 +63,9 @@ func GetCommentListService(postId string, db *gorm.DB, ctx *gin.Context) (helper
 
 func GetSubCommentListService(postId, commentId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	commentRepository := repository.NewCommentRepository(db)
-	comments, err := commentRepository.SubCommentList(commentId, postId)
+	comments, code, err := commentRepository.SubCommentList(commentId, postId)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, code, err
 	}
 
 	return helpers.JSON{
