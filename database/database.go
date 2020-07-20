@@ -2,20 +2,28 @@ package database
 
 import (
 	"fmt"
+	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pborman/uuid"
 	"log"
-	"os"
 	"reflect"
 	"strings"
 )
 
 // Initialize 데이터베이스 초기화
 func Initialize() (*gorm.DB, error) {
-	dbConfig := os.Getenv("DB_CONFIG")
+	// viper package read .env
+	dbUser := helpers.GetEnvWithKey("POSTGRES_USER")
+	dbPassword := helpers.GetEnvWithKey("POSTGRES_PASSWORD")
+	dbName := helpers.GetEnvWithKey("POSTGRES_DB")
+	dbHost := helpers.GetEnvWithKey("POSTGRES_HOST")
+	dbPort := helpers.GetEnvWithKey("POSTGRES_PORT")
+	// https://gobyexample.com/string-formatting
+	dbConfig := fmt.Sprintf("host=%v port=%v user=%v dbname=%v password=%v sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
+
 	db, err := gorm.Open("postgres", dbConfig)
 
 	if err != nil {

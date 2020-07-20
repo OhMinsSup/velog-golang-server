@@ -1,57 +1,39 @@
-version: '3.1'
+version: "3.7"
 
 services:
-  app:
-    container_name: full_app
-    build: .
-    ports:
-      - 8080:8080
-    restart: on-failure
-    env_file:
-      - .env.dev
-    volumes:
-      - api:/usr/src/app/
-    depends_on:
-      - fullstack-postgres
+  database:
+    image: postgres:12.3-alpine
+    restart: always
+    container_name: story-db
+    hostname: database
     networks:
-      - fullstack
-
-
-  fullstack-postgres:
-    image: postgres:latest
-    container_name: full_db_postgres
+      - internal_network
     environment:
-      - AUTOMIGRATE=true
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=user
-      - DATABASE_HOST=user_db
-    ports:
-      - '5432:5432'
+      - "POSTGRES_USER=${POSTGRES_USER}"
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+      - "POSTGRES_DB=${POSTGRES_DB}"
+    command: ["-p", "${POSTGRES_PORT}"]
     volumes:
-      - database_postgres:/var/lib/postgresql/data
-    networks:
-      - fullstack
+      - pgsql-data:/var/lib/postgresql/data
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin_container
-    environment:
-      PGADMIN_DEFAULT_EMAIL: veloss@admin.com
-      PGADMIN_DEFAULT_PASSWORD: 1q2w3e4r
-    depends_on:
-      - fullstack-postgres
-    ports:
-      - "5050:80"
+  server:
+    build: "."
+    restart: always
+    privileged: false
+    container_name: story-server
     networks:
-      - fullstack
-    restart: unless-stopped
+      - internal_network
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    environment:
+      - DB_HOST=database
+    volumes:
+      - .env.dev:/app/.env.dev
+
+networks:
+  internal_network:
 
 volumes:
-  api:
-  database_postgres:
-
-# Networks to be created to facilitate communication between containers
-networks:
-  fullstack:
-    driver: bridge
+  pgsql-data:

@@ -13,8 +13,4 @@ export LDFLAGS="-w -s"
 - build-static:
 	CGO_ENABLED=0 go build -race -v -o $(APP) -a -installsuffix cgo -ldflags $(LDFLAGS) .
 
-- build-start:
-	@docker-compose up
 
-- build-down:
-	@docker-compose down
