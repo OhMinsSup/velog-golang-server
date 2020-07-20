@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/helpers"
-	"github.com/OhMinsSup/story-server/storage"
+	"github.com/OhMinsSup/story-server/services"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func CreateUrlController(ctx *gin.Context) {
+func GeneratePresignedUrlController(ctx *gin.Context) {
 	// Source
 	_, header, err := ctx.Request.FormFile("file")
 	if err != nil {
@@ -18,20 +18,22 @@ func CreateUrlController(ctx *gin.Context) {
 		return
 	}
 
-	filename := header.Filename
-	bucket := helpers.GetEnvWithKey("BUCKET_NAME")
-	sess := ctx.MustGet("sess").(*session.Session)
+	refId := ctx.Request.FormValue("refId")
+	fileType := ctx.Request.FormValue("fileType")
 
-	storageRepository := storage.NewStorageRepository(sess)
-
-	presignedUrl, err := storageRepository.GetS3PresignedUrl(bucket, filename, 15)
-	if err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
+	if fileType == "" {
+		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorInvalidData)
 		return
 	}
-	ctx.JSON(http.StatusOK, helpers.JSON{
-		"presignedUrl": presignedUrl,
-	})
+
+	filename := header.Filename
+	result, code, err := services.GeneratePresignedUrlService(filename, fileType, refId, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
 }
 
 func S3ImageUploadController(ctx *gin.Context) {
