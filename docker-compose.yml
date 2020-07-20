@@ -29,9 +29,9 @@ services:
     depends_on:
       - database
     environment:
-      - DB_HOST=database
+      - DB_HOST=host.docker.internal
     volumes:
-      - .env.dev:/app/.env.dev
+      - .env:/app/.env.dev
 
 networks:
   internal_network:
