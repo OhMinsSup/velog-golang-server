@@ -27,6 +27,6 @@ FROM alpine:3.12
 WORKDIR /app
 
 COPY --from=build /app/.env .
-COPY --from=build /app/main .
+COPY --from=build /app/story-server .
 
 CMD ["./story-server"]
