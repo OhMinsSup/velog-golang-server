@@ -16,7 +16,7 @@ var (
 	Region          string
 )
 
-func ConnectionByAws() *session.Session {
+func Initialize() *session.Session {
 	AccessKeyID = helpers.GetEnvWithKey("AWS_ACCESS_KEY_ID")
 	SecretAccessKey = helpers.GetEnvWithKey("AWS_SECRET_ACCESS_KEY")
 	Region = helpers.GetEnvWithKey("AWS_REGION")

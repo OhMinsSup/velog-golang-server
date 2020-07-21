@@ -16,15 +16,31 @@ import (
 	"time"
 )
 
-func main() {
-	err := godotenv.Load(".env.dev")
+func loadEnv(filename string) {
+	err := godotenv.Load(filename)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func main() {
+	env := os.Getenv("APP_ENV")
+
+	switch env {
+	case "production":
+		loadEnv(".env.prod")
+		break
+	case "development":
+		loadEnv(".env.dev")
+		break
+	default:
+		loadEnv(".env.prod")
+		break
 	}
 
 	// initializes database
 	db, _ := database.Initialize()
-	sess := storage.ConnectionByAws()
+	sess := storage.Initialize()
 
 	port := os.Getenv("PORT")
 	// create gin app
@@ -35,6 +51,7 @@ func main() {
 	app.Use(gin.Recovery())
 	app.Use(storage.Inject(sess))
 	app.Use(database.Inject(db))
+	app.Use(middlewares.CORSMiddleware())
 	app.Use(middlewares.ConsumeUser(db))
 
 	apis.ApplyRoutes(app)
