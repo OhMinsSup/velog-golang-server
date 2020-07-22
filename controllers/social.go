@@ -117,7 +117,7 @@ func GithubSocialCallback(ctx *gin.Context) {
 		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
 		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
 
-		redirectUrl := "http://localhost:3000"
+		redirectUrl := "http://localhost:5000"
 		next := ""
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl+next)
 		return
@@ -137,7 +137,7 @@ func GithubSocialCallback(ctx *gin.Context) {
 		}
 
 		ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
-		redirectUrl := "http://localhost:3000/register?social=1"
+		redirectUrl := "http://localhost:5000/register?social=1"
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 		return
 	}
@@ -145,7 +145,7 @@ func GithubSocialCallback(ctx *gin.Context) {
 	tokens := user.GenerateUserToken(db)
 	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
 	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-	redirectUrl := "https://localhost:3000/"
+	redirectUrl := "https://localhost:5000/"
 	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }
 
@@ -173,7 +173,7 @@ func FacebookSocialCallback(ctx *gin.Context) {
 		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
 		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
 
-		redirectUrl := "http://localhost:3000"
+		redirectUrl := "http://localhost:5000"
 		next := ""
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl+next)
 		return
@@ -193,7 +193,7 @@ func FacebookSocialCallback(ctx *gin.Context) {
 		}
 
 		ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
-		redirectUrl := "http://localhost:3000/register?social=1"
+		redirectUrl := "http://localhost:5000/register?social=1"
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 		return
 	}
@@ -201,6 +201,6 @@ func FacebookSocialCallback(ctx *gin.Context) {
 	tokens := user.GenerateUserToken(db)
 	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
 	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-	redirectUrl := "https://localhost:3000/"
+	redirectUrl := "https://localhost:5000/"
 	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }
