@@ -6,6 +6,7 @@ require (
 	github.com/SKAhack/go-shortid v0.0.0-20140827050853-24d054c393fe
 	github.com/aws/aws-sdk-go v1.33.5
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/gin-contrib/cors v1.3.1 // indirect
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-openapi/spec v0.19.8 // indirect
 	github.com/go-openapi/swag v0.19.9 // indirect

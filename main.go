@@ -6,6 +6,7 @@ import (
 	"github.com/OhMinsSup/story-server/database"
 	"github.com/OhMinsSup/story-server/middlewares"
 	"github.com/OhMinsSup/story-server/storage"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"log"
@@ -25,12 +26,13 @@ func loadEnv(filename string) {
 
 func main() {
 	env := os.Getenv("APP_ENV")
-
+	allowOrigins := []string{"https://velog.io"}
 	switch env {
 	case "production":
 		loadEnv(".env.prod")
 		break
 	case "development":
+		allowOrigins = append(allowOrigins, "http://localhost:5000")
 		loadEnv(".env.dev")
 		break
 	default:
@@ -51,7 +53,14 @@ func main() {
 	app.Use(gin.Recovery())
 	app.Use(storage.Inject(sess))
 	app.Use(database.Inject(db))
-	app.Use(middlewares.CORSMiddleware())
+
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AddAllowHeaders("X-Requested-With")
+	corsConfig.AllowOrigins = allowOrigins
+	corsConfig.AllowCredentials = true
+	corsConfig.AllowMethods = []string{"POST, OPTIONS, GET, PUT, PATCH, DELETE"}
+
+	app.Use(cors.New(corsConfig))
 	app.Use(middlewares.ConsumeUser(db))
 
 	apis.ApplyRoutes(app)

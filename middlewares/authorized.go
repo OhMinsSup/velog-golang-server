@@ -5,10 +5,10 @@ import (
 	"net/http"
 )
 
-func Authorized(context *gin.Context) {
-	_, exists := context.Get("id")
+func Authorized(ctx *gin.Context) {
+	_, exists := ctx.Get("id")
 	if !exists {
-		context.AbortWithStatus(http.StatusUnauthorized)
+		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 }

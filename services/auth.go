@@ -56,8 +56,8 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	}
 
 	tokens := user.GenerateUserToken(db)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
 
 	return helpers.JSON{
 		"id":           user.ID,
@@ -106,7 +106,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 
 		return helpers.JSON{
 			"email":          existsCode.Email,
-			"register_token": registerToken,
+			"registerToken": registerToken,
 		}, http.StatusOK, nil
 	}
 
@@ -116,8 +116,8 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 	}
 
 	tokens := user.GenerateUserToken(db)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
+	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
 	// 해당 이메일로 등록한 유저가 있는 경우
 	return helpers.JSON{
 		"id":           user.ID,
