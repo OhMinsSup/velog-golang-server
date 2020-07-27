@@ -12,7 +12,7 @@ func generateToken(payload JSON, subject string, expire time.Duration) (string, 
 	// Create the Claims
 	claims := &jwt.MapClaims{
 		"exp":     time.Now().Add(expire).Unix(),
-		"issuer":  "velog.io",
+		"issuer":  "storeis.vercel.app",
 		"subject": subject,
 		"payload": payload,
 	}

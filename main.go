@@ -26,7 +26,7 @@ func loadEnv(filename string) {
 
 func main() {
 	env := os.Getenv("APP_ENV")
-	allowOrigins := []string{"https://velog.io"}
+	allowOrigins := []string{"https://storeis.vercel.app"}
 	switch env {
 	case "production":
 		loadEnv(".env.prod")
@@ -55,7 +55,6 @@ func main() {
 	app.Use(database.Inject(db))
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AddAllowHeaders("X-Requested-With")
 	corsConfig.AllowOrigins = allowOrigins
 	corsConfig.AllowCredentials = true
 	corsConfig.AllowMethods = []string{"POST, OPTIONS, GET, PUT, PATCH, DELETE"}

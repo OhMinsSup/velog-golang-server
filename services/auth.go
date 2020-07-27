@@ -56,8 +56,19 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	}
 
 	tokens := user.GenerateUserToken(db)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+	env := helpers.GetEnvWithKey("APP_ENV")
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+		break
+	case "development":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+		break
+	default:
+		break
+	}
 
 	return helpers.JSON{
 		"id":           user.ID,
@@ -116,8 +127,19 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 	}
 
 	tokens := user.GenerateUserToken(db)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+	env := helpers.GetEnvWithKey("APP_ENV")
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+		break
+	case "development":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+		break
+	default:
+		break
+	}
 	// 해당 이메일로 등록한 유저가 있는 경우
 	return helpers.JSON{
 		"id":           user.ID,
@@ -152,10 +174,10 @@ func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	var bindData emailService.BindData
 	if exists {
 		bindData.Keyword = "로그인"
-		bindData.Url = "https://velog.io/email-login?code=" + emailAuth.Code
+		bindData.Url = "http://localhost:5000/#/email-login?code=" + emailAuth.Code
 	} else {
 		bindData.Keyword = "회원가입"
-		bindData.Url = "https://velog.io/register?code=" + emailAuth.Code
+		bindData.Url = "http://localhost:5000/#/register?code=" + emailAuth.Code
 	}
 
 	addr := os.Getenv("SMTP")

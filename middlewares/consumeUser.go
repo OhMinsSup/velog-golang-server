@@ -30,8 +30,21 @@ func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error)
 	tokens := user.RefreshUserToken(tokenId, exp, refreshToken)
 	accessT := fmt.Sprintf("%v", tokens["accessToken"])
 	refreshT := fmt.Sprintf("%v", tokens["refreshToken"])
-	ctx.SetCookie("access_token", accessT, 60*60*24, "/", "localhost", false, true)
-	ctx.SetCookie("refresh_token", refreshT, 60*60*24*30, "/", "localhost", false, true)
+
+	env := helpers.GetEnvWithKey("APP_ENV")
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", accessT, 60*60*24, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", refreshT, 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+		break
+	case "development":
+		ctx.SetCookie("access_token", accessT, 60*60*24, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", refreshT, 60*60*24*30, "/", "localhost", false, true)
+		break
+	default:
+		break
+	}
+
 	return payload["token_id"].(string), nil
 }
 
@@ -43,8 +56,6 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		accessToken, errAccess := context.Cookie("access_token")
-		log.Println("accessToken", accessToken)
-		log.Println("errAccess", errAccess)
 		if errAccess != nil {
 			// try reading HTTP Header
 			authorization := context.Request.Header.Get("Authorization")
@@ -60,9 +71,6 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		refreshToken, errRefresh := context.Cookie("refresh_token")
-		log.Println("refreshToken", refreshToken)
-		log.Println("errRefresh", errRefresh)
-
 		if errRefresh != nil {
 			context.Next()
 			return
@@ -81,7 +89,6 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 			context.Next()
 			return
 		}
-		log.Println("decodeTokenData", decodeTokenData)
 
 		payload := decodeTokenData["payload"].(map[string]interface{})
 		tokenExpire := int64(decodeTokenData["exp"].(float64))

@@ -13,6 +13,7 @@ func ApplyRoutes(r *gin.RouterGroup) {
 		auth.POST("/register/local", controllers.LocalRegisterController)
 		auth.POST("/sendmail", controllers.SendEmailController)
 		auth.GET("/code/:code", controllers.CodeController)
+		auth.POST("/logout", controllers.LogoutController)
 
 		// social
 		auth.GET("/social/redirect/:provider", controllers.SocialRedirect)

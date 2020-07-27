@@ -55,3 +55,21 @@ func CodeController(ctx *gin.Context) {
 
 	ctx.JSON(code, result)
 }
+
+func LogoutController(ctx *gin.Context) {
+	env := helpers.GetEnvWithKey("APP_ENV")
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", "", 0, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", "", 0, "/", ".storeis.vercel.app", true, true)
+		break
+	case "development":
+		ctx.SetCookie("access_token", "", 0, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", "", 0, "/", "localhost", false, true)
+		break
+	default:
+		break
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
