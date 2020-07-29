@@ -11,6 +11,12 @@ type LocalRegisterBody struct {
 	ShortBio      string `json:"short_bio"`
 }
 
+type SocialRegisterBody struct {
+	DisplayName   string `json:"display_name"binding:"required"`
+	UserName      string `json:"username"binding:"required"`
+	ShortBio      string `json:"short_bio"`
+}
+
 type RegisterTokenPayload struct {
 	Email string `json:"email"`
 	ID    string `json:"id"`

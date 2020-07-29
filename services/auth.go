@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	emailService "github.com/OhMinsSup/story-server/helpers/email"
@@ -14,6 +15,67 @@ import (
 	"strings"
 	"time"
 )
+
+func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+	authRepository := repository.NewAuthRepository(db)
+
+	decoded, err := helpers.DecodeToken(registerToken)
+	if err != nil {
+		return nil, http.StatusForbidden, err
+	}
+
+	// decoded data (email, id)
+	payload := decoded["payload"].(helpers.JSON)
+	profile := payload["profile"].(helpers.JSON)
+
+	userData := repository.SocialUserParams{
+		Email:       strings.ToLower(payload["email"].(string)),
+		Username:    body.UserName,
+		UserID:      payload["id"].(string),
+		DisplayName: body.DisplayName,
+		ShortBio:    body.ShortBio,
+		SocialID: fmt.Sprintf("%c", profile["ID"]),
+		AccessToken: fmt.Sprintf("%c", payload["access_token"]),
+		Provider: fmt.Sprintf("%c", payload["provider"]),
+	}
+
+	// username, email 이미 존재하는지 체크
+	_, existsCode, existsError := authRepository.ExistsByEmailAndUsername(userData.Username, userData.Email)
+	if existsError != nil {
+		return nil, existsCode, existsError
+	}
+
+	user, userProfile, userCode, userError := authRepository.SocialUser(userData)
+	if userError != nil {
+		return nil, userCode, userError
+	}
+
+	tokens := user.GenerateUserToken(db)
+	env := helpers.GetEnvWithKey("APP_ENV")
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+		break
+	case "development":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+		break
+	default:
+		break
+	}
+
+	return helpers.JSON{
+		"id":           user.ID,
+		"username":     user.Username,
+		"email":        user.Email,
+		"thumbnail":    userProfile.Thumbnail,
+		"display_name": userProfile.DisplayName,
+		"short_bio":    userProfile.ShortBio,
+		"accessToken":  tokens["accessToken"],
+		"refreshToken": tokens["refreshToken"],
+	}, http.StatusOK, nil
+}
 
 func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	authRepository := repository.NewAuthRepository(db)
@@ -116,7 +178,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 		}
 
 		return helpers.JSON{
-			"email":          existsCode.Email,
+			"email":         existsCode.Email,
 			"registerToken": registerToken,
 		}, http.StatusOK, nil
 	}

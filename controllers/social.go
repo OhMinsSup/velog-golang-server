@@ -2,15 +2,44 @@ package controllers
 
 import (
 	"fmt"
+	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/helpers/social"
 	"github.com/OhMinsSup/story-server/models"
+	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/github"
 	"github.com/jinzhu/gorm"
 	"net/http"
 	"strings"
 )
+
+func SocialProfileController (ctx *gin.Context) {
+	return
+}
+
+func SocialRegisterController(ctx *gin.Context) {
+	registerToken, err := ctx.Cookie("register_token")
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	var body dto.SocialRegisterBody
+	if err := ctx.BindJSON(&body); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.SocialRegisterService(body, registerToken, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
 
 func SocialRedirect(ctx *gin.Context) {
 	provider := ctx.Param("provider")
@@ -113,12 +142,24 @@ func GithubSocialCallback(ctx *gin.Context) {
 			return
 		}
 
-		tokens := user.GenerateUserToken(db)
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-
-		redirectUrl := "http://localhost:5000"
+		redirectUrl := ""
 		next := ""
+		tokens := user.GenerateUserToken(db)
+		env := helpers.GetEnvWithKey("APP_ENV")
+		switch env {
+		case "production":
+			ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+			ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+			redirectUrl = "https://storeis.vercel.app/"
+			break
+		case "development":
+			ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+			ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+			redirectUrl = "http://localhost:5000/"
+			break
+		default:
+			break
+		}
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl+next)
 		return
 	}
@@ -136,16 +177,41 @@ func GithubSocialCallback(ctx *gin.Context) {
 			return
 		}
 
-		ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
-		redirectUrl := "http://localhost:5000/register?social=1"
+		env := helpers.GetEnvWithKey("APP_ENV")
+		redirectUrl := ""
+		switch env {
+		case "production":
+			ctx.SetCookie("register_token", registerToken, 60*60, "/", ".storeis.vercel.app", true, true)
+			redirectUrl = "https://storeis.vercel.app/#/register?social=1"
+			break
+		case "development":
+			ctx.SetCookie("register_token", registerToken, 60*60, "/", "localhost", false, true)
+			redirectUrl = "http://localhost:5000/#/register?social=1"
+			break
+		default:
+			break
+		}
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 		return
 	}
 
 	tokens := user.GenerateUserToken(db)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-	redirectUrl := "https://localhost:5000/"
+	redirectUrl := ""
+	env := helpers.GetEnvWithKey("APP_ENV")
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+		redirectUrl = "https://storeis.vercel.app/"
+		break
+	case "development":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+		redirectUrl = "http://localhost:5000/"
+		break
+	default:
+		break
+	}
 	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }
 
@@ -170,11 +236,23 @@ func FacebookSocialCallback(ctx *gin.Context) {
 		}
 
 		tokens := user.GenerateUserToken(db)
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-
-		redirectUrl := "http://localhost:5000"
+		env := helpers.GetEnvWithKey("APP_ENV")
+		redirectUrl := ""
 		next := ""
+		switch env {
+		case "production":
+			ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+			ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+			redirectUrl = "https://storeis.vercel.app/"
+			break
+		case "development":
+			ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+			ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+			redirectUrl = "http://localhost:5000/"
+			break
+		default:
+			break
+		}
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl+next)
 		return
 	}
@@ -192,15 +270,42 @@ func FacebookSocialCallback(ctx *gin.Context) {
 			return
 		}
 
-		ctx.SetCookie("register_token", registerToken, 60*60, "/", "", false, true)
-		redirectUrl := "http://localhost:5000/register?social=1"
+
+		env := helpers.GetEnvWithKey("APP_ENV")
+		redirectUrl := ""
+		switch env {
+		case "production":
+			ctx.SetCookie("register_token", registerToken, 60*60, "/", ".storeis.vercel.app", true, true)
+			redirectUrl = "https://storeis.vercel.app/#/register?social=1"
+			break
+		case "development":
+			ctx.SetCookie("register_token", registerToken, 60*60, "/", "localhost", false, true)
+			redirectUrl = "http://localhost:5000/#/register?social=1"
+			break
+		default:
+			break
+		}
+
 		ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 		return
 	}
 
 	tokens := user.GenerateUserToken(db)
-	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "", false, true)
-	ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "", false, true)
-	redirectUrl := "https://localhost:5000/"
+	env := helpers.GetEnvWithKey("APP_ENV")
+	redirectUrl := ""
+	switch env {
+	case "production":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
+		redirectUrl = "https://storeis.vercel.app/"
+		break
+	case "development":
+		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
+		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
+		redirectUrl = "http://localhost:5000/"
+		break
+	default:
+		break
+	}
 	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }

@@ -21,6 +21,17 @@ type CreateUserParams struct {
 	UserID      string `json:"user_id"`
 }
 
+type SocialUserParams struct {
+	Email       string `json:"email"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	ShortBio    string `json:"short_bio"`
+	UserID      string `json:"user_id"`
+	AccessToken string `json:"access_token"`
+	Provider    string `json:"provider"`
+	SocialID    string `json:"social_id"`
+}
+
 func NewAuthRepository(db *gorm.DB) *AuthRepository {
 	return &AuthRepository{
 		db: db,
@@ -82,6 +93,63 @@ func (a *AuthRepository) ExistsByEmailAndUsername(username, email string) (bool,
 	}
 
 	return false, http.StatusConflict, helpers.ErrorAlreadyExists
+}
+
+func (a *AuthRepository) SocialUser(userData SocialUserParams) (*models.User, *models.UserProfile, int, error) {
+	tx := a.db.Begin()
+	user := models.User{
+		Email:       userData.Email,
+		IsCertified: true,
+		Username:    userData.Username,
+	}
+
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
+		return nil, nil, http.StatusInternalServerError, err
+	}
+
+	socialAccount := models.SocialAccount{
+		AccessToken: userData.AccessToken,
+		Provider:    userData.Provider,
+		UserID:      user.ID,
+		SocialId:    userData.SocialID,
+	}
+
+	if err := tx.Create(&socialAccount).Error; err != nil {
+		tx.Rollback()
+		return nil, nil, http.StatusInternalServerError, err
+	}
+
+	userProfile := models.UserProfile{
+		DisplayName: userData.DisplayName,
+		ShortBio:    userData.ShortBio,
+		UserID:      user.ID,
+	}
+
+	if err := tx.Create(&userProfile).Error; err != nil {
+		tx.Rollback()
+		return nil, nil, http.StatusInternalServerError, err
+	}
+
+	velogConfig := models.VelogConfig{
+		UserID: user.ID,
+	}
+
+	if err := tx.Create(&velogConfig).Error; err != nil {
+		tx.Rollback()
+		return nil, nil, http.StatusInternalServerError, err
+	}
+
+	userMeta := models.UserMeta{
+		UserID: user.ID,
+	}
+
+	if err := tx.Create(&userMeta).Error; err != nil {
+		tx.Rollback()
+		return nil, nil, http.StatusInternalServerError, err
+	}
+
+	return  &user, &userProfile, http.StatusOK, tx.Commit().Error
 }
 
 func (a *AuthRepository) CreateUser(userData CreateUserParams) (*models.User, *models.UserProfile, int, error) {

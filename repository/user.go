@@ -23,8 +23,14 @@ func (u *UserRepository) GetCurrentUser(userId string) (dto.UserRawQueryResult, 
 	   up.display_name,
        up.short_bio,
 	   up.thumbnail
+ 	   um.twitter,
+       um.github,
+       um.facebook,
+       um.email_notification,
+       um.email_promotion
 	   FROM "users" AS u
 	   INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+       INNER JOIN "user_meta" As um ON um.user_id = u.id
 	   WHERE u.id = ?`, userId).Scan(&user).Error; err != nil {
 		return dto.UserRawQueryResult{}, err
 	}
@@ -54,9 +60,15 @@ func (u *UserRepository) GetUserInfo(username, userId string) (dto.UserRawQueryR
 	   u.*,
 	   up.display_name,
        up.short_bio,
-	   up.thumbnail
+	   up.thumbnail,
+ 	   um.twitter,
+       um.github,
+       um.facebook,
+       um.email_notification,
+       um.email_promotion
 	   FROM "users" AS u
 	   INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+       INNER JOIN "user_meta" As um ON um.user_id = u.id
 	   WHERE u.username = ?`, username).Scan(&user).Error; err != nil {
 		return dto.UserRawQueryResult{}, err
 	}

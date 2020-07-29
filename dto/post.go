@@ -44,14 +44,19 @@ type WritePostBody struct {
 }
 
 type UserRawQueryResult struct {
-	ID          string    `json:"id"`
-	Username    string    `json:"username"`
-	Email       string    `json:"email"`
-	DisplayName string    `json:"display_name"`
-	ShortBio    string    `json:"short_bio"`
-	Thumbnail   string    `json:"thumbnail"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID                string    `json:"id"`
+	Username          string    `json:"username"`
+	Email             string    `json:"email"`
+	DisplayName       string    `json:"display_name"`
+	ShortBio          string    `json:"short_bio"`
+	Thumbnail         string    `json:"thumbnail"`
+	EmailNotification bool      `json:"email_notification"`
+	EmailPromotion    bool      `json:"email_promotion"`
+	Twitter           string    `json:"twitter"`
+	Facebook          string    `json:"facebook"`
+	Github            string    `json:"github"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type PostRawQueryResult struct {
