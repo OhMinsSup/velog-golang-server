@@ -15,7 +15,23 @@ import (
 )
 
 func SocialProfileController (ctx *gin.Context) {
-	return
+	registerToken, err := ctx.Cookie("register_token")
+	if err != nil {
+		ctx.AbortWithError(http.StatusUnauthorized, err)
+		return
+	}
+
+	decoded, err := helpers.DecodeToken(registerToken)
+	if err != nil {
+		ctx.AbortWithError(http.StatusForbidden, err)
+		return
+	}
+
+	// decoded data (email, id)
+	payload := decoded["payload"].(helpers.JSON)
+	profile := payload["profile"].(helpers.JSON)
+
+	ctx.JSON(http.StatusOK, profile)
 }
 
 func SocialRegisterController(ctx *gin.Context) {

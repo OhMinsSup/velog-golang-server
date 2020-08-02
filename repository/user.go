@@ -22,7 +22,7 @@ func (u *UserRepository) GetCurrentUser(userId string) (dto.UserRawQueryResult, 
 	   u.*,
 	   up.display_name,
        up.short_bio,
-	   up.thumbnail
+	   up.thumbnail,
  	   um.twitter,
        um.github,
        um.facebook,
