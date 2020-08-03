@@ -2,7 +2,9 @@ package repository
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
+	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
+	"net/http"
 )
 
 type UserRepository struct {
@@ -73,4 +75,63 @@ func (u *UserRepository) GetUserInfo(username, userId string) (dto.UserRawQueryR
 		return dto.UserRawQueryResult{}, err
 	}
 	return user, nil
+}
+
+func (u *UserRepository) UpdateProfile(userId, shortBio, displayName, thumbnail string) (int, error) {
+	tx := u.db.Begin()
+
+	var userProfile models.UserProfile
+	if err := tx.Where("user_id = ?", userId).First(&userProfile).Error; err != nil {
+		tx.Rollback()
+		return http.StatusNotFound, err
+	}
+
+	if err := tx.Model(&userProfile).Updates(models.UserProfile{
+		ShortBio:    shortBio,
+		DisplayName: displayName,
+		Thumbnail:   thumbnail,
+	}).Error; err != nil {
+		tx.Rollback()
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}
+
+func (u *UserRepository) UpdateEmailRules(userId string, notification, promotion bool) (int, error) {
+	tx := u.db.Begin()
+
+	var userMeta models.UserMeta
+	if err := tx.Where("user_id = ?", userId).First(&userMeta).Error; err != nil {
+		tx.Rollback()
+		return http.StatusNotFound, err
+	}
+
+	if err := tx.Model(&userMeta).Updates(models.UserMeta{
+		EmailNotification: notification,
+		EmailPromotion:    promotion,
+	}).Error; err != nil {
+		tx.Rollback()
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}
+
+func (u *UserRepository) UpdateSocialInfo(userId, twitter, facebook, github string) (int, error) {
+	tx := u.db.Begin()
+
+	var userMeta models.UserMeta
+	if err := tx.Where("user_id = ?", userId).First(&userMeta).Error; err != nil {
+		tx.Rollback()
+		return http.StatusNotFound, err
+	}
+
+	if err := tx.Model(&userMeta).Updates(models.UserMeta{
+		Twitter:  twitter,
+		Facebook: facebook,
+		Github:   github,
+	}).Error; err != nil {
+		tx.Rollback()
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }
