@@ -5,6 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/apis/file"
 	"github.com/OhMinsSup/story-server/apis/post"
 	"github.com/OhMinsSup/story-server/apis/posts"
+	"github.com/OhMinsSup/story-server/apis/rss"
 	"github.com/OhMinsSup/story-server/apis/tag"
 	"github.com/OhMinsSup/story-server/apis/user"
 	"github.com/gin-gonic/gin"
@@ -26,5 +27,6 @@ func ApplyRoutes(r *gin.Engine) {
 		posts.ApplyRoutes(api)
 		tag.ApplyRoutes(api)
 		file.ApplyRoutes(api)
+		rss.ApplyRoutes(api)
 	}
 }

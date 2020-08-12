@@ -439,6 +439,22 @@ func (p *PostRepository) LikePostList(userId string, query dto.PostsQuery) ([]dt
 	return posts, http.StatusOK, nil
 }
 
+func (p *PostRepository) FeedPostList() ([]dto.PostsRawQueryResult, int, error) {
+	var posts []dto.PostsRawQueryResult
+	if err := p.db.Raw(`
+      SELECT p.*, u.email, u.username, up.display_name, up.short_bio, up.thumbnail AS user_thumbnail FROM "posts" AS p
+      INNER JOIN "users" AS u ON u.id = p.user_id
+	  INNER JOIN "user_profiles" AS up ON up.user_id = u.id
+	  WHERE p.is_temp = false AND p.is_private = false
+      ORDER BY p.created_at desc, p.id desc
+      LIMIT 20		
+	`).Scan(&posts).Error; err != nil {
+		return nil, http.StatusNotFound, err
+	}
+
+	return posts, http.StatusOK, nil
+}
+
 func (p *PostRepository) TrendingPostList(query dto.TrendingPostQuery) ([]dto.PostsRawQueryResult, int, error) {
 	var trendingPosts []struct {
 		ID    string  `json:"id"`
