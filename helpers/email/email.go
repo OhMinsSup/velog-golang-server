@@ -1,75 +1,44 @@
 package email
 
 import (
-	"bytes"
-	"gopkg.in/gomail.v2"
-	template2 "html/template"
+	"context"
+	"github.com/OhMinsSup/story-server/helpers"
+	mailgun2 "github.com/mailgun/mailgun-go/v4"
+	"log"
+	"time"
 )
 
-type BindData struct {
-	Keyword string
-	Url     string
+// 이메일 템플릿에 필요한 데이터
+type EmailAuthTemplate struct {
+	Keyword string `json:"keyword"`
+	Url     string `json:"url"`
 }
 
-type Config struct {
-	Host     string
-	Port     string
-	Addr     string
-	Username string
-	Password string
-}
+// mailgun에서 등록된 템플릿 이용해서 메일을 보낸다
+func SendTemplateMessage(email string, template EmailAuthTemplate) (string, error) {
+	apiKey := helpers.GetEnvWithKey("MAILGUN_API_KEY")
+	domain := helpers.GetEnvWithKey("MAILGUN_DOMAIN_NAME")
 
-type EmailSender struct {
-	conf     *Config
-	template string
-}
+	mailgun := mailgun2.NewMailgun(domain, apiKey)
 
-type Sender interface {
-	Send(to string) error
-	ParseTemplate(filepath string, data interface{}) error
-}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
 
-// Send 이메일을 보내는 메소드
-func (e *EmailSender) Send(to string) error {
-	m := gomail.NewMessage()
-	m.SetHeader("From", e.conf.Addr)
-	//m.SetHeader("To", strings.Join(to[:], ","))
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", "Velog 인증")
-	m.SetBody("text/html", e.template)
+	// Give time for template to show up in the system.
+	time.Sleep(time.Second * 1)
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, e.conf.Username, e.conf.Password)
-	if err := d.DialAndSend(m); err != nil {
-		return err
+	// Create a new message with template
+	mail := mailgun.NewMessage("Veloss form Velog <mailgun@"+domain+">", "이메일 인증", "")
+	mail.SetTemplate("velog-email")
+	mail.AddRecipient(email)
+	mail.AddVariable("keyword", template.Keyword)
+	mail.AddVariable("url", template.Url)
+
+	_, id, err := mailgun.Send(ctx, mail)
+	if err != nil {
+		panic(err)
 	}
 
-	return nil
-}
-
-// ParseTemplate html 템플릿을 읽고 리턴한다
-func (e *EmailSender) ParseTemplate(filepath string, data interface{}) error {
-	template, errTemp := template2.ParseFiles(filepath)
-	if errTemp != nil {
-		return errTemp
-	}
-
-	buf := new(bytes.Buffer)
-	if err := template.Execute(buf, data); err != nil {
-		return err
-	}
-
-	e.template = buf.String()
-	return nil
-}
-
-// NewEmailSender 이메일 생성 및 보내는 구조체를 정의
-func NewEmailSender(conf *Config, template string) Sender {
-	return &EmailSender{conf: conf, template: template}
-}
-
-// SetupEmailCredentials 설정값 정의
-func SetupEmailCredentials(host, port, senderAddr, username, password string) Config {
-	return Config{
-		host, port, senderAddr, username, password,
-	}
+	log.Printf("Queued: %s", id)
+	return id, err
 }

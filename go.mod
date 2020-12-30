@@ -18,9 +18,10 @@ require (
 	github.com/gorilla/feeds v1.1.1
 	github.com/jinzhu/gorm v1.9.12
 	github.com/joho/godotenv v1.3.0
-	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/lib/pq v1.1.1
+	github.com/mailgun/mailgun-go/v3 v3.6.4
+	github.com/mailgun/mailgun-go/v4 v4.3.0
 	github.com/mailru/easyjson v0.7.1 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/pborman/uuid v1.2.0

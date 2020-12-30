@@ -10,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -144,18 +142,22 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	}, http.StatusOK, nil
 }
 
+// 이메일 코드로 회원가입을 한 유저의 경우 로그인 아닌 경우 회원가입 분기
 func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	authRepository := repository.NewAuthRepository(db)
 
-	existsCode, ExistsCode, ExistsErr := authRepository.ExistsCode(code)
-	if ExistsErr != nil {
-		return nil, ExistsCode, ExistsErr
+	// 코드가 현재 서버에서 발급된 코드인지 확인
+	existsCode, statusCode, err := authRepository.ExistsCode(code)
+	if err != nil {
+		return nil, statusCode, err
 	}
 
+	// 이미 인증한 코드의 경우에는 401 error
 	if existsCode.Logged {
 		return nil, http.StatusForbidden, helpers.ErrorTokenAlreadyUse
 	}
 
+	// 발송한 이메일은 발송 후 하루 동안의 유효기간을 가짐 그 이후는 만료처리
 	expireTime := existsCode.CreatedAt.AddDate(0, 0, 1).Unix()
 	currentTime := time.Now().Unix()
 	if currentTime > expireTime || existsCode.Logged {
@@ -172,6 +174,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 			"id":    existsCode.ID,
 		}
 
+		// 회원가입시 서버에서 발급하는 register token을 가지고 회원가입 절차를 가짐
 		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
 		if err != nil {
 			return nil, http.StatusConflict, err
@@ -188,6 +191,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 		return nil, http.StatusNotFound, helpers.ErrorUserProfileDefine
 	}
 
+	// 토큰 생성
 	tokens := user.GenerateUserToken(db)
 	env := helpers.GetEnvWithKey("APP_ENV")
 	switch env {
@@ -218,57 +222,30 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	authRepository := repository.NewAuthRepository(db)
 
-	exists, ExistsCode, ExistsErr := authRepository.ExistEmail(email)
-	if ExistsErr != nil {
-		return false, ExistsCode, ExistsErr
-	}
-
-	emailAuth, CreateCode, CreateErr := authRepository.CreateEmailAuth(email)
-	if CreateErr != nil {
-		return false, CreateCode, CreateErr
-	}
-
-	wd, err := os.Getwd()
+	// 에메일 검증
+	exists, code, err := authRepository.ExistEmail(email)
 	if err != nil {
-		return exists, http.StatusNotFound, err
+		return false, code, err
 	}
 
-	var bindData emailService.BindData
+	// 이메일 인증 코드 생성
+	emailAuth, code, err := authRepository.CreateEmailAuth(email)
+	if err != nil {
+		return false, code, err
+	}
+
+	// 템플릿에 필요한 데이터 바인딩
+	var template emailService.EmailAuthTemplate
 	if exists {
-		bindData.Keyword = "로그인"
-		bindData.Url = "http://localhost:5000/#/email-login?code=" + emailAuth.Code
+		template.Keyword = "로그인"
+		template.Url = "http://127.0.0.1:3000/email-login?code=" + emailAuth.Code
 	} else {
-		bindData.Keyword = "회원가입"
-		bindData.Url = "http://localhost:5000/#/register?code=" + emailAuth.Code
+		template.Keyword = "회원가입"
+		template.Url = "http://127.0.0.1:3000/register?code=" + emailAuth.Code
 	}
 
-	addr := os.Getenv("SMTP")
-	username := os.Getenv("SMTP_USERNAME")
-	password := os.Getenv("SMTP_PASSWORD")
-	host := "smtp.gmail.com"
-	port := "587"
+	// 메일을 생성해서 보낸다
+	_, err = emailService.SendTemplateMessage(email, template)
 
-	emailConfig := emailService.SetupEmailCredentials(
-		host,
-		port,
-		addr,
-		username,
-		password,
-	)
-
-	sender := emailService.NewEmailSender(&emailConfig, email)
-
-	// create send Email Template
-	c := make(chan bool)
-	go func() {
-		if err := sender.ParseTemplate(filepath.Join(wd, "./statics/emailTemplate.html"), bindData); err != nil {
-			c <- true
-		}
-
-		if err := sender.Send(email); err != nil {
-			c <- true
-		}
-	}()
-
-	return exists, http.StatusOK, nil
+	return exists, http.StatusOK, err
 }

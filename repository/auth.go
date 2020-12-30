@@ -38,19 +38,25 @@ func NewAuthRepository(db *gorm.DB) *AuthRepository {
 	}
 }
 
+// 이메일이 현재 db에 등록되어 있는지 체크
 func (a *AuthRepository) ExistEmail(email string) (bool, int, error) {
 	var user models.User
 	err := a.db.Where("email = ?", strings.ToLower(email)).First(&user).Error
+
 	if !gorm.IsRecordNotFoundError(err) {
+		// 이메일이 존재하지 않는 경우 회원가입
 		return true, http.StatusOK, nil
 	} else {
+		// 이메일이 존쟈하는 경우 로그인
 		return false, http.StatusOK, nil
 	}
 }
 
+// 이메일 인증 코드 유효성 체크
 func (a *AuthRepository) ExistsCode(code string) (*models.EmailAuth, int, error) {
 	var emailAuth models.EmailAuth
 	err := a.db.Where("code = ?", code).First(&emailAuth).Error
+	// 코드가 존재하지 않는경우 badRequest
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, http.StatusBadRequest, err
 	} else {
@@ -58,15 +64,19 @@ func (a *AuthRepository) ExistsCode(code string) (*models.EmailAuth, int, error)
 	}
 }
 
+// 이메일 인증 모델 생성
 func (a *AuthRepository) CreateEmailAuth(email string) (*models.EmailAuth, int, error) {
 	shortId := shortid.Generator()
 
 	tx := a.db.Begin()
+
+	// 이메일 인증 모델 생성
 	emailAuth := models.EmailAuth{
 		Email: email,
 		Code:  shortId.Generate(),
 	}
 
+	// 이메일 생성
 	if err := tx.Create(&emailAuth).Error; err != nil {
 		tx.Rollback()
 		return nil, http.StatusInternalServerError, err

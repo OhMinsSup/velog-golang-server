@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/OhMinsSup/story-server/apis"
 	"github.com/OhMinsSup/story-server/database"
+	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/middlewares"
 	"github.com/OhMinsSup/story-server/storage"
 	"github.com/gin-contrib/cors"
@@ -32,7 +33,7 @@ func main() {
 		loadEnv(".env.prod")
 		break
 	case "development":
-		allowOrigins = append(allowOrigins, "http://localhost:5000")
+		allowOrigins = append(allowOrigins, "http://localhost:3000")
 		loadEnv(".env.dev")
 		break
 	default:
@@ -44,7 +45,7 @@ func main() {
 	db, _ := database.Initialize()
 	sess := storage.Initialize()
 
-	port := os.Getenv("PORT")
+	port := helpers.GetEnvWithKey("PORT")
 	// create gin app
 	app := gin.Default()
 	app.MaxMultipartMemory = 8 << 20  // 8 MiB
