@@ -1,71 +1,73 @@
 package repository
 
 import (
+	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/SKAhack/go-shortid"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	"net/http"
 	"strings"
 )
 
+// AuthRepository
 type AuthRepository struct {
 	db *gorm.DB
 }
 
-type CreateUserParams struct {
-	Email       string `json:"email"`
-	Username    string `json:"username"`
-	DisplayName string `json:"display_name"`
-	ShortBio    string `json:"short_bio"`
-	UserID      string `json:"user_id"`
-}
-
-type SocialUserParams struct {
-	Email       string `json:"email"`
-	Username    string `json:"username"`
-	DisplayName string `json:"display_name"`
-	ShortBio    string `json:"short_bio"`
-	UserID      string `json:"user_id"`
-	AccessToken string `json:"access_token"`
-	Provider    string `json:"provider"`
-	SocialID    string `json:"social_id"`
-}
-
+// NewAuthRepository auth 저장소를 생성해서 auth 와 관련된 기능들을 제공
 func NewAuthRepository(db *gorm.DB) *AuthRepository {
 	return &AuthRepository{
 		db: db,
 	}
 }
 
-// 이메일이 현재 db에 등록되어 있는지 체크
+// ExistEmail 이메일이 현재 db에 등록되어 있는지 체크
 func (a *AuthRepository) ExistEmail(email string) (bool, int, error) {
+	// 이메일이 존재하지 않는 경우
+	if email == "" {
+		return false, http.StatusBadRequest, errors.New("Email is Empty")
+	}
+
 	var user models.User
 	err := a.db.Where("email = ?", strings.ToLower(email)).First(&user).Error
 
 	if !gorm.IsRecordNotFoundError(err) {
-		// 이메일이 존재하지 않는 경우 회원가입
+		// 이메일이 존쟈하는 경우 (로그인)
 		return true, http.StatusOK, nil
 	} else {
-		// 이메일이 존쟈하는 경우 로그인
+		// 이메일이 존재하지 않는 경우 (회원가입)
 		return false, http.StatusOK, nil
 	}
 }
 
-// 이메일 인증 코드 유효성 체크
+// ExistsCode 이메일 인증 코드 유효성 체크
 func (a *AuthRepository) ExistsCode(code string) (*models.EmailAuth, int, error) {
+	if code == "" {
+		return nil, http.StatusBadRequest, errors.New("Code is Empty")
+	}
+
 	var emailAuth models.EmailAuth
 	err := a.db.Where("code = ?", code).First(&emailAuth).Error
 	// 코드가 존재하지 않는경우 badRequest
 	if gorm.IsRecordNotFoundError(err) {
+		// 코드가 존재하지 않는 경우는 db 테이블에 데이터가 존재하지 않는 경우
 		return nil, http.StatusBadRequest, err
 	} else {
+		// 존재하는 경우에는 emailAuth 정보를 리턴
 		return &emailAuth, http.StatusOK, nil
 	}
 }
 
-// 이메일 인증 모델 생성
+// CreateEmailAuth 이메일 인증 모델 생성
 func (a *AuthRepository) CreateEmailAuth(email string) (*models.EmailAuth, int, error) {
+	// 이메일이 존재하지 않는 경우
+	if email == "" {
+		return nil, http.StatusBadRequest, errors.New("Email is Empty")
+	}
+
+	// 인증 code Id 값
 	shortId := shortid.Generator()
 
 	tx := a.db.Begin()
@@ -76,7 +78,7 @@ func (a *AuthRepository) CreateEmailAuth(email string) (*models.EmailAuth, int, 
 		Code:  shortId.Generate(),
 	}
 
-	// 이메일 생성
+	// 이메일 인증 모델 실제 db에 생성
 	if err := tx.Create(&emailAuth).Error; err != nil {
 		tx.Rollback()
 		return nil, http.StatusInternalServerError, err
@@ -105,7 +107,7 @@ func (a *AuthRepository) ExistsByEmailAndUsername(username, email string) (bool,
 	return false, http.StatusConflict, helpers.ErrorAlreadyExists
 }
 
-func (a *AuthRepository) SocialUser(userData SocialUserParams) (*models.User, *models.UserProfile, int, error) {
+func (a *AuthRepository) SocialUser(userData dto.SocialUserParams) (*models.User, *models.UserProfile, int, error) {
 	tx := a.db.Begin()
 	user := models.User{
 		Email:       userData.Email,
@@ -159,10 +161,10 @@ func (a *AuthRepository) SocialUser(userData SocialUserParams) (*models.User, *m
 		return nil, nil, http.StatusInternalServerError, err
 	}
 
-	return  &user, &userProfile, http.StatusOK, tx.Commit().Error
+	return &user, &userProfile, http.StatusOK, tx.Commit().Error
 }
 
-func (a *AuthRepository) CreateUser(userData CreateUserParams) (*models.User, *models.UserProfile, int, error) {
+func (a *AuthRepository) CreateUser(userData dto.CreateUserParams) (*models.User, *models.UserProfile, int, error) {
 	tx := a.db.Begin()
 	user := models.User{
 		Email:       userData.Email,

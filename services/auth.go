@@ -26,15 +26,15 @@ func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db
 	payload := decoded["payload"].(helpers.JSON)
 	profile := payload["profile"].(helpers.JSON)
 
-	userData := repository.SocialUserParams{
+	userData := dto.SocialUserParams{
 		Email:       strings.ToLower(payload["email"].(string)),
 		Username:    body.UserName,
 		UserID:      payload["id"].(string),
 		DisplayName: body.DisplayName,
 		ShortBio:    body.ShortBio,
-		SocialID: fmt.Sprintf("%c", profile["ID"]),
+		SocialID:    fmt.Sprintf("%c", profile["ID"]),
 		AccessToken: fmt.Sprintf("%c", payload["access_token"]),
-		Provider: fmt.Sprintf("%c", payload["provider"]),
+		Provider:    fmt.Sprintf("%c", payload["provider"]),
 	}
 
 	// username, email 이미 존재하는지 체크
@@ -90,7 +90,7 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	// decoded data (email, id)
 	payload := decoded["payload"].(helpers.JSON)
 
-	userData := repository.CreateUserParams{
+	userData := dto.CreateUserParams{
 		Email:       strings.ToLower(payload["email"].(string)),
 		Username:    body.UserName,
 		UserID:      payload["id"].(string),
@@ -142,7 +142,7 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	}, http.StatusOK, nil
 }
 
-// 이메일 코드로 회원가입을 한 유저의 경우 로그인 아닌 경우 회원가입 분기
+// CodeService 이메일 코드로 회원가입을 한 유저의 경우 로그인 아닌 경우 회원가입 분기
 func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	authRepository := repository.NewAuthRepository(db)
 
@@ -219,6 +219,7 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 	}, http.StatusOK, nil
 }
 
+// SendEmailService 이메일 로그인및 회원가입을 하기위한 이메일 발송
 func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	authRepository := repository.NewAuthRepository(db)
 
@@ -235,7 +236,10 @@ func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 	}
 
 	// 템플릿에 필요한 데이터 바인딩
-	var template emailService.EmailAuthTemplate
+	var template emailService.AuthTemplate
+
+	template.Subject = "이메일 인증"
+	template.Template = "velog-email"
 	if exists {
 		template.Keyword = "로그인"
 		template.Url = "http://127.0.0.1:3000/email-login?code=" + emailAuth.Code
@@ -246,6 +250,10 @@ func SendEmailService(email string, db *gorm.DB) (bool, int, error) {
 
 	// 메일을 생성해서 보낸다
 	_, err = emailService.SendTemplateMessage(email, template)
+	// 이메일 발송에 실패한 경우
+	if err != nil {
+		return false, http.StatusInternalServerError, err
+	}
 
 	return exists, http.StatusOK, err
 }

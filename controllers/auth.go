@@ -26,6 +26,7 @@ func LocalRegisterController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
+// SendEmailController
 func SendEmailController(ctx *gin.Context) {
 	var body dto.SendEmailBody
 	if err := ctx.BindJSON(&body); err != nil {
@@ -34,6 +35,7 @@ func SendEmailController(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
+
 	registerd, code, err := services.SendEmailService(body.Email, db)
 	if err != nil {
 		ctx.AbortWithError(code, err)
@@ -45,9 +47,21 @@ func SendEmailController(ctx *gin.Context) {
 	})
 }
 
+// CodeController
 func CodeController(ctx *gin.Context) {
+	// validation Code Params
+	var params = dto.CodeParams{
+		Code: ctx.Param("code"),
+	}
+
+	if err := ctx.BindJSON(&params); err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
 	db := ctx.MustGet("db").(*gorm.DB)
-	result, code, err := services.CodeService(ctx.Param("code"), db, ctx)
+
+	result, code, err := services.CodeService(params.Code, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
 		return
