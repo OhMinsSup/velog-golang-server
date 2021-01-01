@@ -7,7 +7,7 @@ type SendEmailBody struct {
 
 // CodeParams - CodeController 코드 인증에 관한 params 데이터
 type CodeParams struct {
-	Code string `json:"code" binding:"required"`
+	Code string `json:"code"`
 }
 
 type LocalRegisterBody struct {

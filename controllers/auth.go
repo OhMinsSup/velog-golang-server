@@ -6,6 +6,7 @@ import (
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -54,8 +55,8 @@ func CodeController(ctx *gin.Context) {
 		Code: ctx.Param("code"),
 	}
 
-	if err := ctx.BindJSON(&params); err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
+	if params.Code == "" {
+		ctx.AbortWithError(http.StatusBadRequest, errors.New("Code is Required"))
 		return
 	}
 

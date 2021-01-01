@@ -37,6 +37,7 @@ func (u User) Serialize() helpers.JSON {
 	}
 }
 
+// GenerateUserToken 유저의 access token 및 refresh token 을 발급한다
 func (u *User) GenerateUserToken(db *gorm.DB) helpers.JSON {
 	authToken := AuthToken{
 		UserID: u.ID,
@@ -66,22 +67,23 @@ func (u *User) GenerateUserToken(db *gorm.DB) helpers.JSON {
 	}
 }
 
+// RefreshUserToken 유저의 access token 을 재발급하고 refresh token 이 만료되면 다시 발급한다
 func (u *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalRefreshToken string) helpers.JSON {
 	now := time.Now().Unix()
 	diff := refreshTokenExp - now
 
-	log.Println("refreshing..")
 	refreshToken := originalRefreshToken
 
+	// new access token generate
+	accessSubject := "access_token"
+	accessPayload := helpers.JSON{
+		"user_id": u.ID,
+	}
+
+	accessToken, _ := helpers.GenerateAccessToken(accessPayload, accessSubject)
+
 	if diff < 60*60*24*15 {
-		log.Println("refreshing refreshToken")
-		accessSubject := "access_token"
-		accessPayload := helpers.JSON{
-			"user_id": u.ID,
-		}
-
-		accessToken, _ := helpers.GenerateAccessToken(accessPayload, accessSubject)
-
+		log.Println("refreshing....")
 		refreshSubject := "refresh_token"
 		refreshPayload := helpers.JSON{
 			"user_id":  u.ID,
@@ -89,14 +91,12 @@ func (u *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalR
 		}
 
 		refreshToken, _ = helpers.GenerateRefreshToken(refreshPayload, refreshSubject)
-
-		return helpers.JSON{
-			"accessToken":  accessToken,
-			"refreshToken": refreshToken,
-		}
 	}
 
-	return nil
+	return helpers.JSON{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	}
 }
 
 type UserProfile struct {
