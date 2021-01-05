@@ -37,6 +37,7 @@ func DeletePostController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
+// WritePostController - WritePostController 포스트를 등록하는 API
 func WritePostController(ctx *gin.Context) {
 	var body dto.WritePostBody
 	if err := ctx.BindJSON(&body); err != nil {
@@ -45,6 +46,7 @@ func WritePostController(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
+
 	result, code, err := services.WritePostService(body, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)

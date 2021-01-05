@@ -10,6 +10,7 @@ import (
 	"net/http"
 )
 
+// LocalRegisterController
 func LocalRegisterController(ctx *gin.Context) {
 	var body dto.LocalRegisterBody
 	if err := ctx.BindJSON(&body); err != nil {
@@ -18,6 +19,7 @@ func LocalRegisterController(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*gorm.DB)
+
 	result, code, err := services.LocalRegisterService(body, db, ctx)
 	if err != nil {
 		ctx.AbortWithError(code, err)
@@ -71,20 +73,8 @@ func CodeController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
+// LogoutController
 func LogoutController(ctx *gin.Context) {
-	env := helpers.GetEnvWithKey("APP_ENV")
-	switch env {
-	case "production":
-		ctx.SetCookie("access_token", "", 0, "/", ".storeis.vercel.app", true, true)
-		ctx.SetCookie("refresh_token", "", 0, "/", ".storeis.vercel.app", true, true)
-		break
-	case "development":
-		ctx.SetCookie("access_token", "", 0, "/", "localhost", false, true)
-		ctx.SetCookie("refresh_token", "", 0, "/", "localhost", false, true)
-		break
-	default:
-		break
-	}
-
+	helpers.SetCookie(ctx, "", "")
 	ctx.Status(http.StatusNoContent)
 }

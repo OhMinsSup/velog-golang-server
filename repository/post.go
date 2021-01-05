@@ -61,6 +61,7 @@ func (p *PostRepository) GetPost(postId string) (helpers.JSON, int, error) {
 	}, http.StatusOK, nil
 }
 
+// CreatePost - 포스트를 생성 (쿼리 동작)
 func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (string, int, error) {
 	newPost := models.Post{
 		Title:      body.Title,
@@ -78,6 +79,7 @@ func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (stri
 		return "", http.StatusInternalServerError, err
 	}
 
+	// 중복된 태그인지 삭제하는 태그인지 새로 추가하는 태그인지 sync 를 맞춘다
 	if code, err := p.SyncPostTags(body.Tag, newPost.ID, newPost); err != nil {
 		tx.Rollback()
 		return "", code, err
@@ -200,9 +202,11 @@ func (p *PostRepository) View(body dto.PostViewParams, userId string) (int, erro
 	return http.StatusOK, tx.Commit().Error
 }
 
+// SyncPostTags - 현재 포스트에 이미 존재하는 tag 는 그래돌 유지하고 새로운 태그면 추가
 func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost models.Post) (int, error) {
 	tagRepository := NewTagRepository(p.db)
 
+	// 새로 생성된 태그 정보및 기존에 존재하는 태그 정보를 가져온다
 	var tagIds []string
 	for _, tag := range tags {
 		tagId, err := tagRepository.FindTagAndCreate(tag)
@@ -223,6 +227,7 @@ func (p *PostRepository) SyncPostTags(tags []string, postId string, txPost model
 		}
 	}
 
+	// 현재 포스트에 등록된 태그 정보
 	var prevPostTag struct {
 		TagIds pq.StringArray `json:"tag_ids"`
 	}

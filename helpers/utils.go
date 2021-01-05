@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// CreateHash 해시를 생성하는 함수
 func CreateHash(data string) string {
 	hash := sha256.New()
 	hash.Write([]byte(data))
@@ -16,6 +17,7 @@ func CreateHash(data string) string {
 	return mdStr
 }
 
+// GetEnvWithKey process.env 에 key값과 일치하는 값을 가져온다
 func GetEnvWithKey(key string) string {
 	return os.Getenv(key)
 }

@@ -10,11 +10,21 @@ type CodeParams struct {
 	Code string `json:"code"`
 }
 
+// LocalRegisterBody - LocalRegisterController 회원가입 body 데이터
 type LocalRegisterBody struct {
 	RegisterToken string `json:"register_token" binding:"required"`
 	DisplayName   string `json:"display_name" binding:"required"`
 	UserName      string `json:"username" binding:"required"`
 	ShortBio      string `json:"short_bio"`
+}
+
+// LocalRegisterDTO -  회원가입시 필요한 데이터를 객체화
+type LocalRegisterDTO struct {
+	Email       string `json:"email"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	ShortBio    string `json:"short_bio"`
+	UserID      string `json:"user_id"`
 }
 
 type SocialRegisterBody struct {
@@ -33,14 +43,6 @@ type RegisterTokenType struct {
 	Issuer  string               `json:"issuer"`
 	Payload RegisterTokenPayload `json:"payload"`
 	Subject string               `json:"subject"`
-}
-
-type CreateUserParams struct {
-	Email       string `json:"email"`
-	Username    string `json:"username"`
-	DisplayName string `json:"display_name"`
-	ShortBio    string `json:"short_bio"`
-	UserID      string `json:"user_id"`
 }
 
 type SocialUserParams struct {

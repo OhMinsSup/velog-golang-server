@@ -75,22 +75,24 @@ func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db
 	}, http.StatusOK, nil
 }
 
+// LocalRegisterService - 유저 회원가입 서비스 로직
 func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	authRepository := repository.NewAuthRepository(db)
 	// email register token deocoded
 	decoded, err := helpers.DecodeToken(body.RegisterToken)
 	if err != nil {
-		return nil, http.StatusForbidden, err
+		return nil, http.StatusInternalServerError, err
 	}
 
+	// email-register 가 아닌 다른 값인 경우에는 회원가입시 발급한 코드값이 아님
 	if decoded["subject"] != "email-register" {
-		return nil, http.StatusForbidden, helpers.ErrorInvalidToken
+		return nil, http.StatusBadRequest, helpers.ErrorInvalidToken
 	}
 
 	// decoded data (email, id)
 	payload := decoded["payload"].(helpers.JSON)
 
-	userData := dto.CreateUserParams{
+	userData := dto.LocalRegisterDTO{
 		Email:       strings.ToLower(payload["email"].(string)),
 		Username:    body.UserName,
 		UserID:      payload["id"].(string),
@@ -99,44 +101,30 @@ func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Cont
 	}
 
 	// username, email 이미 존재하는지 체크
-	_, existsCode, existsError := authRepository.ExistsByEmailAndUsername(userData.Username, userData.Email)
-	if existsError != nil {
-		return nil, existsCode, existsError
+	_, code, err := authRepository.ExistsByEmailAndUsername(userData.Username, userData.Email)
+	if err != nil {
+		return nil, code, err
 	}
 
 	var emailAuth models.EmailAuth
-	if existsEmailAuth := db.Where("id = ?", payload["id"].(string)).First(&emailAuth); existsEmailAuth != nil {
+	// register token 에서 userId을 emailAuth 모델에 존재하는지 체크 존재하는 경우
+	if exists := db.Where("id = ?", payload["id"].(string)).First(&emailAuth); exists != nil {
+		// 존재하는 경우 Logged 를 변경
 		emailAuth.Logged = true
 		db.Save(&emailAuth)
 	}
 
-	user, userProfile, userCode, userError := authRepository.CreateUser(userData)
-	if userError != nil {
-		return nil, userCode, userError
+	// 유저 생성
+	user, code, err := authRepository.CreateUser(userData)
+	if err != nil {
+		return nil, code, err
 	}
 
 	tokens := user.GenerateUserToken(db)
-	env := helpers.GetEnvWithKey("APP_ENV")
-	switch env {
-	case "production":
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
-		break
-	case "development":
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
-		break
-	default:
-		break
-	}
+	helpers.SetCookie(ctx, tokens["accessToken"].(string), tokens["refreshToken"].(string))
 
 	return helpers.JSON{
 		"id":           user.ID,
-		"username":     user.Username,
-		"email":        user.Email,
-		"thumbnail":    userProfile.Thumbnail,
-		"display_name": userProfile.DisplayName,
-		"short_bio":    userProfile.ShortBio,
 		"accessToken":  tokens["accessToken"],
 		"refreshToken": tokens["refreshToken"],
 	}, http.StatusOK, nil
@@ -193,27 +181,11 @@ func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int,
 
 	// 토큰 생성
 	tokens := user.GenerateUserToken(db)
-	env := helpers.GetEnvWithKey("APP_ENV")
-	switch env {
-	case "production":
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
-		break
-	case "development":
-		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
-		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
-		break
-	default:
-		break
-	}
+	helpers.SetCookie(ctx, tokens["accessToken"].(string), tokens["refreshToken"].(string))
+
 	// 해당 이메일로 등록한 유저가 있는 경우
 	return helpers.JSON{
 		"id":           user.ID,
-		"username":     user.Username,
-		"email":        user.Email,
-		"thumbnail":    userProfile.Thumbnail,
-		"display_name": userProfile.DisplayName,
-		"short_bio":    userProfile.ShortBio,
 		"accessToken":  tokens["accessToken"],
 		"refreshToken": tokens["refreshToken"],
 	}, http.StatusOK, nil

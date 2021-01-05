@@ -66,6 +66,7 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 	}, http.StatusOK, nil
 }
 
+// WritePostService - 포스트 등록 서비스 코드
 func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	postRepository := repository.NewPostRepository(db)

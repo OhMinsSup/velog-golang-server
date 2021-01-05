@@ -97,6 +97,7 @@ func (a *AuthRepository) FindByEmailAndUsername(username, email string) (*models
 	return &user, http.StatusOK, nil
 }
 
+// ExistsByEmailAndUsername - 이메일및 유저명이 이미 존재하는지 존재하지않는지 체크
 func (a *AuthRepository) ExistsByEmailAndUsername(username, email string) (bool, int, error) {
 	var user models.User
 	err := a.db.Where("email = ?", email).Or("username = ?", username).First(&user).Error
@@ -164,7 +165,8 @@ func (a *AuthRepository) SocialUser(userData dto.SocialUserParams) (*models.User
 	return &user, &userProfile, http.StatusOK, tx.Commit().Error
 }
 
-func (a *AuthRepository) CreateUser(userData dto.CreateUserParams) (*models.User, *models.UserProfile, int, error) {
+// CreateUser - 유저가 회원가입을 할 경우 유저 생성
+func (a *AuthRepository) CreateUser(userData dto.LocalRegisterDTO) (*models.User, int, error) {
 	tx := a.db.Begin()
 	user := models.User{
 		Email:       userData.Email,
@@ -174,7 +176,7 @@ func (a *AuthRepository) CreateUser(userData dto.CreateUserParams) (*models.User
 
 	if err := tx.Create(&user).Error; err != nil {
 		tx.Rollback()
-		return nil, nil, http.StatusInternalServerError, err
+		return nil, http.StatusInternalServerError, err
 	}
 
 	userProfile := models.UserProfile{
@@ -185,7 +187,7 @@ func (a *AuthRepository) CreateUser(userData dto.CreateUserParams) (*models.User
 
 	if err := tx.Create(&userProfile).Error; err != nil {
 		tx.Rollback()
-		return nil, nil, http.StatusInternalServerError, err
+		return nil, http.StatusInternalServerError, err
 	}
 
 	velogConfig := models.VelogConfig{
@@ -194,7 +196,7 @@ func (a *AuthRepository) CreateUser(userData dto.CreateUserParams) (*models.User
 
 	if err := tx.Create(&velogConfig).Error; err != nil {
 		tx.Rollback()
-		return nil, nil, http.StatusInternalServerError, err
+		return nil, http.StatusInternalServerError, err
 	}
 
 	userMeta := models.UserMeta{
@@ -203,8 +205,8 @@ func (a *AuthRepository) CreateUser(userData dto.CreateUserParams) (*models.User
 
 	if err := tx.Create(&userMeta).Error; err != nil {
 		tx.Rollback()
-		return nil, nil, http.StatusInternalServerError, err
+		return nil, http.StatusInternalServerError, err
 	}
 
-	return &user, &userProfile, http.StatusOK, tx.Commit().Error
+	return &user, http.StatusOK, tx.Commit().Error
 }

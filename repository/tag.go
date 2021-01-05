@@ -17,6 +17,7 @@ func NewTagRepository(db *gorm.DB) *TagRepository {
 	}
 }
 
+// FindTagAndCreate - 현재 태그가 존재하는 경우에는 값을 가져오고 없는 경우에는 생성
 func (t *TagRepository) FindTagAndCreate(name string) (string, error) {
 	var tag models.Tag
 	if err := t.db.FirstOrCreate(&tag, models.Tag{Name: name}).Error; err != nil {

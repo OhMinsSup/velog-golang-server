@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+// WritePostBody - WritePostController 포스트 등록 body 데이터
+type WritePostBody struct {
+	Title      string   `json:"title" binding:"required"`
+	Body       string   `json:"body"`
+	Thumbnail  string   `json:"thumbnail"`
+	IsMarkdown bool     `json:"is_markdown"`
+	IsTemp     bool     `json:"is_temp"`
+	IsPrivate  bool     `json:"is_private"`
+	Tag        []string `json:"tag"`
+}
+
 type PostsQuery struct {
 	Cursor string `json:"cursor"`
 	Limit  int64  `json:"limit"`
@@ -31,16 +42,6 @@ type TrendingPostQuery struct {
 	Limit     int64  `json:"limit"`
 	Timeframe string `json:"timeframe"`
 	Offset    int64  `json:"offset"`
-}
-
-type WritePostBody struct {
-	Title      string   `json:"title"binding:"required"`
-	Body       string   `json:"body"`
-	Thumbnail  string   `json:"thumbnail"`
-	IsMarkdown bool     `json:"is_markdown"`
-	IsTemp     bool     `json:"is_temp"`
-	IsPrivate  bool     `json:"is_private"`
-	Tag        []string `json:"tag"`
 }
 
 type UserRawQueryResult struct {
