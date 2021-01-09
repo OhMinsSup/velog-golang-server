@@ -9,6 +9,5 @@ func ApplyRoutes(r *gin.RouterGroup) {
 	file := r.Group("/file")
 	{
 		file.POST("/upload-url", controllers.GeneratePresignedUrlController)
-		file.POST("/upload-file", controllers.S3ImageUploadController)
 	}
 }

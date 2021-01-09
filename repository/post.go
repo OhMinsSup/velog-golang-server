@@ -80,7 +80,7 @@ func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (stri
 	}
 
 	// 중복된 태그인지 삭제하는 태그인지 새로 추가하는 태그인지 sync 를 맞춘다
-	if code, err := p.SyncPostTags(body.Tag, newPost.ID, newPost); err != nil {
+	if code, err := p.SyncPostTags(body.Tags, newPost.ID, newPost); err != nil {
 		tx.Rollback()
 		return "", code, err
 	}
@@ -113,8 +113,8 @@ func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId strin
 		return "", http.StatusInternalServerError, err
 	}
 
-	if len(body.Tag) > 0 {
-		if code, err := p.SyncPostTags(body.Tag, postId, currentPost); err != nil {
+	if len(body.Tags) > 0 {
+		if code, err := p.SyncPostTags(body.Tags, postId, currentPost); err != nil {
 			tx.Rollback()
 			return "", code, err
 		}

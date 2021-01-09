@@ -34,24 +34,7 @@ func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error)
 
 	// 토큰값으로 access, refresh 재발급
 	tokens := user.RefreshUserToken(tokenId, exp, refreshToken)
-
-	newAccessToken := fmt.Sprintf("%v", tokens["accessToken"])
-	newRefreshToken := fmt.Sprintf("%v", tokens["refreshToken"])
-	// cookie 재발급
-	env := helpers.GetEnvWithKey("APP_ENV")
-	switch env {
-	case "production":
-		ctx.SetCookie("access_token", newAccessToken, 60*60*24, "/", ".storeis.vercel.app", true, true)
-		ctx.SetCookie("refresh_token", newRefreshToken, 60*60*24*30, "/", ".storeis.vercel.app", true, true)
-		break
-	case "development":
-		ctx.SetCookie("access_token", newAccessToken, 60*60*24, "/", "localhost", false, true)
-		ctx.SetCookie("refresh_token", newRefreshToken, 60*60*24*30, "/", "localhost", false, true)
-		break
-	default:
-		break
-	}
-
+	helpers.SetCookie(ctx, fmt.Sprintf("%v", tokens["accessToken"]), fmt.Sprintf("%v", tokens["refreshToken"]))
 	return userId, nil
 }
 

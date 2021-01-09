@@ -6,25 +6,25 @@ import (
 )
 
 type Post struct {
-	ID          string        `gorm:"primary_key;uuid"json:"id"`
+	ID          string        `gorm:"primary_key;uuid" json:"id"`
 	Title       string        `json:"title"`
-	Body        string        `gorm:"type:text"json:"body"`
+	Body        string        `gorm:"type:text" json:"body"`
 	Thumbnail   string        `json:"thumbnail"`
 	IsMarkdown  bool          `json:"is_markdown"`
 	IsTemp      bool          `json:"is_temp"`
 	IsPrivate   bool          `json:"is_private"`
-	Likes       int64         `gorm:"default:0"json:"likes"`
-	Views       int64         `gorm:"default:0"json:"views"`
-	User        User          `gorm:"foreignkey:UserID"json:"user"`
+	Likes       int64         `gorm:"default:0" json:"likes"`
+	Views       int64         `gorm:"default:0" json:"views"`
+	User        User          `gorm:"foreignkey:UserID" json:"user"`
 	UserID      string        `json:"user_id"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
-	Tags        []Tag         `gorm:"many2many:posts_tags;association_autocreate:false"json:"tags"`
-	PostScore   []PostScore   `gorm:"polymorphic:Owner;"json:"post_score"`
-	PostRead    []PostRead    `gorm:"polymorphic:Owner;"json:"post_read"`
-	PostHistory []PostHistory `gorm:"polymorphic:Owner;"json:"post_history"`
-	PostLike    []PostLike    `gorm:"polymorphic:Owner;"json:"post_like"`
-	PostComment []Comment     `gorm:"polymorphic:Owner;"json:"post_comment"`
+	Tags        []Tag         `gorm:"many2many:posts_tags;association_autocreate:false" json:"tags"`
+	PostScore   []PostScore   `gorm:"polymorphic:Owner;" json:"post_score"`
+	PostRead    []PostRead    `gorm:"polymorphic:Owner;" json:"post_read"`
+	PostHistory []PostHistory `gorm:"polymorphic:Owner;" json:"post_history"`
+	PostLike    []PostLike    `gorm:"polymorphic:Owner;" json:"post_like"`
+	PostComment []Comment     `gorm:"polymorphic:Owner;" json:"post_comment"`
 }
 
 func (p Post) Serialize() helpers.JSON {

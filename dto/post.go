@@ -13,7 +13,7 @@ type WritePostBody struct {
 	IsMarkdown bool     `json:"is_markdown"`
 	IsTemp     bool     `json:"is_temp"`
 	IsPrivate  bool     `json:"is_private"`
-	Tag        []string `json:"tag"`
+	Tags        []string `json:"tags"`
 }
 
 type PostsQuery struct {
