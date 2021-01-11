@@ -22,37 +22,42 @@ func NewPostRepository(db *gorm.DB) *PostRepository {
 	}
 }
 
+// GetPost - 포스트 상세 보기 (쿼리 동작)
 func (p *PostRepository) GetPost(postId string) (helpers.JSON, int, error) {
-	var post dto.PostRawQueryResult
+	var post dto.GetPostDTO
+	// 포스트 상세 정보 가져오기
 	if err := p.db.Raw(`
-		SELECT
-		p.*,
-		array_agg(t.name) AS tag FROM "posts" AS p
-		INNER JOIN "posts_tags" AS pt  ON pt.post_id = p.id
-		INNER JOIN "tags" AS t ON t.id = pt.tag_id
-		WHERE p.id = ?
-		GROUP BY p.id, pt.post_id`, postId).Scan(&post).Error; err != nil {
+	select p.*, u.username, up.display_name, up.short_bio, up.thumbnail as user_thumbnail from "posts" as p
+	Inner Join "users" as u on u.id = p.user_id
+	Inner Join "user_profiles" as up on up.user_id = u.id
+	where p.id = ?`, postId).Scan(&post).Error; err != nil {
 		return nil, http.StatusNotFound, err
 	}
 
-	var user dto.UserRawQueryResult
-	if err := p.db.Raw(`
-       SELECT
-	   u.*,
-	   up.display_name,
-       up.short_bio,
-	   up.thumbnail
-	   FROM "users" AS u
-	   INNER JOIN "user_profiles" AS up ON up.user_id = u.id
-	   WHERE u.id = ?`, post.UserID).Scan(&user).Error; err != nil {
-		return nil, http.StatusNotFound, err
-	}
-
-	post.User = user
-
+	// 댓글 수
 	var commentCount int64
-	if err := p.db.Model(&models.Comment{}).Where("post_id AND deleted = false", postId).Count(&commentCount).Error; err != nil {
-		return nil, http.StatusNotFound, err
+	if err := p.db.Model(&models.Comment{}).Where("post_id = ? AND deleted = false", postId).Count(&commentCount).Error; err != nil {
+		commentCount = 0
+	}
+
+	// 현재 포스트에 등록된 태그 정보
+	var tag struct {
+		Tags pq.StringArray `json:"tags"`
+	}
+
+	// 해당 포스트에 등록된 태그 정보 가져오기
+	err := p.db.Raw(`
+	select array_agg(t.name) as tags from "posts" as p
+	Inner Join "posts_tags" as pt on pt.post_id = p.id
+	Inner Join "tags" as t on t.id = pt.tag_id
+	where p.id = ?
+	group by p.id`, postId).Scan(&tag).Error
+
+	// 태그가 없는 없는 경우 빈 배열
+	if err != nil {
+		post.Tags = []string{}
+	} else {
+		post.Tags = tag.Tags
 	}
 
 	return helpers.JSON{
@@ -88,12 +93,12 @@ func (p *PostRepository) CreatePost(body dto.WritePostBody, userId string) (stri
 	return newPost.ID, http.StatusOK, tx.Commit().Error
 }
 
+// UpdatePost - 포스트를 수정 (쿼리 동작)
 func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId string) (string, int, error) {
 	tx := p.db.Begin()
 
 	var currentPost models.Post
 	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
-		tx.Rollback()
 		return "", http.StatusNotFound, err
 	}
 
@@ -101,6 +106,7 @@ func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId strin
 		return "", http.StatusUnauthorized, helpers.ErrorPermission
 	}
 
+	// 업데이트
 	if err := tx.Model(&currentPost).Updates(models.Post{
 		Title:      body.Title,
 		Body:       body.Body,
@@ -113,7 +119,9 @@ func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId strin
 		return "", http.StatusInternalServerError, err
 	}
 
+	// 태그 값이 존재하는 경우
 	if len(body.Tags) > 0 {
+		// 중복된 태그인지 삭제하는 태그인지 새로 추가하는 태그인지 sync 를 맞춘다
 		if code, err := p.SyncPostTags(body.Tags, postId, currentPost); err != nil {
 			tx.Rollback()
 			return "", code, err

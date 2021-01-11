@@ -13,7 +13,27 @@ type WritePostBody struct {
 	IsMarkdown bool     `json:"is_markdown"`
 	IsTemp     bool     `json:"is_temp"`
 	IsPrivate  bool     `json:"is_private"`
-	Tags        []string `json:"tags"`
+	Tags       []string `json:"tags"`
+}
+
+// GetPostDTO - GetPostResponse 포스트 상세 데이터
+type GetPostDTO struct {
+	ID            string         `json:"id"`
+	Title         string         `json:"title"`
+	Body          string         `json:"body"`
+	Thumbnail     string         `json:"thumbnail"`
+	IsMarkdown    bool           `json:"is_markdown"`
+	IsTemp        bool           `json:"is_temp"`
+	IsPrivate     bool           `json:"is_private"`
+	Likes         int            `json:"likes"`
+	Views         int            `json:"views"`
+	UserID        string         `json:"user_id"`
+	UserThumbnail string         `json:"user_thumbnail"`
+	Username      string         `json:"username"`
+	Tags          pq.StringArray `json:"tags"`
+	DisplayName   string         `json:"display_name"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 type PostsQuery struct {

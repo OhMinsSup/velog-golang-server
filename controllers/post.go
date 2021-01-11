@@ -9,6 +9,7 @@ import (
 	"net/http"
 )
 
+// UpdatePostController
 func UpdatePostController(ctx *gin.Context) {
 	var body dto.WritePostBody
 	if err := ctx.BindJSON(&body); err != nil {
@@ -56,6 +57,7 @@ func WritePostController(ctx *gin.Context) {
 	ctx.JSON(code, result)
 }
 
+// GetPostController - GetPostController 포스트를 가져오는 API
 func GetPostController(ctx *gin.Context) {
 	db := ctx.MustGet("db").(*gorm.DB)
 	result, code, err := services.GetPostService(db, ctx)

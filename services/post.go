@@ -11,14 +11,9 @@ import (
 )
 
 func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	postId := ctx.Param("post_id")
-
-	if postId == "" {
-		return nil, http.StatusBadRequest, nil
-	}
-
 	postRepository := repository.NewPostRepository(db)
-	post, code, err := postRepository.GetPost(postId)
+
+	post, code, err := postRepository.GetPost(ctx.Param("post_id"))
 	if err != nil {
 		return nil, code, err
 	}
@@ -46,17 +41,11 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 	}, http.StatusOK, nil
 }
 
+// UpdatePostService - 포스트 수정 서비스 코드
 func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
-	postId := ctx.Param("post_id")
-
-	if postId == "" {
-		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
-	}
-
 	postRepository := repository.NewPostRepository(db)
 
-	postId, code, err := postRepository.UpdatePost(body, userId, postId)
+	postId, code, err := postRepository.UpdatePost(body, fmt.Sprintf("%v", ctx.MustGet("id")), ctx.Param("post_id"))
 	if err != nil {
 		return nil, code, err
 	}
@@ -68,10 +57,9 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 
 // WritePostService - 포스트 등록 서비스 코드
 func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	postRepository := repository.NewPostRepository(db)
 
-	postId, code, err := postRepository.CreatePost(body, userId)
+	postId, code, err := postRepository.CreatePost(body, fmt.Sprintf("%v", ctx.MustGet("id")))
 	if err != nil {
 		return nil, code, err
 	}
