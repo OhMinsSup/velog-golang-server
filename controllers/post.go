@@ -9,6 +9,24 @@ import (
 	"net/http"
 )
 
+// CreatePostHistoryController
+func CreatePostHistoryController(ctx *gin.Context) {
+	var body dto.CreatePostHistoryBody
+	if err := ctx.BindJSON(&body); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	db := ctx.MustGet("db").(*gorm.DB)
+	result, code, err := services.CreatePostHistoryService(body, db, ctx)
+	if err != nil {
+		ctx.AbortWithError(code, err)
+		return
+	}
+
+	ctx.JSON(code, result)
+}
+
 // UpdatePostController
 func UpdatePostController(ctx *gin.Context) {
 	var body dto.WritePostBody

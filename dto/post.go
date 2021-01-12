@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+// CreatePostHistoryBody - 임시 저장시 history 데이터를 생성하는 함수
+type CreatePostHistoryBody struct {
+	Title      string `json:"title" binding:"required"`
+	Body       string `json:"body" binding:"required"`
+	IsMarkdown bool   `json:"is_markdown" binding:"required"`
+}
+
 // WritePostBody - WritePostController 포스트 등록 body 데이터
 type WritePostBody struct {
 	Title      string   `json:"title" binding:"required"`
