@@ -3,13 +3,8 @@ package main
 import (
 	"context"
 	"github.com/OhMinsSup/story-server/apis"
-	"github.com/OhMinsSup/story-server/database"
+	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/helpers"
-	"github.com/OhMinsSup/story-server/middlewares"
-	"github.com/OhMinsSup/story-server/storage"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -18,56 +13,19 @@ import (
 	"time"
 )
 
-func loadEnv(filename string) {
-	err := godotenv.Load(filename)
-	if err != nil {
-		panic(err)
-	}
+func init() {
+	app.NewEnv()
 }
 
 func main() {
-	env := os.Getenv("APP_ENV")
-	allowOrigins := []string{"https://storeis.vercel.app"}
-	switch env {
-	case "production":
-		loadEnv(".env.prod")
-		break
-	case "development":
-		allowOrigins = append(allowOrigins, "http://localhost:3000")
-		loadEnv(".env.dev")
-		break
-	default:
-		loadEnv(".env.prod")
-		break
-	}
-
-	// initializes database
-	db, _ := database.Initialize()
-	sess := storage.Initialize()
-
 	port := helpers.GetEnvWithKey("PORT")
-	// create gin app
-	app := gin.Default()
-	app.MaxMultipartMemory = 8 << 20  // 8 MiB
+	server := app.New()
 
-	app.Use(gin.Logger())
-	app.Use(gin.Recovery())
-	app.Use(storage.Inject(sess))
-	app.Use(database.Inject(db))
-
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = allowOrigins
-	corsConfig.AllowCredentials = true
-	corsConfig.AllowMethods = []string{"POST, OPTIONS, GET, PUT, PATCH, DELETE"}
-
-	app.Use(cors.New(corsConfig))
-	app.Use(middlewares.ConsumeUser(db))
-
-	apis.ApplyRoutes(app)
+	apis.ApplyRoutes(server)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
-		Handler: app,
+		Handler: server,
 	}
 
 	log.Println("Listening and serving HTTP on :" + port)

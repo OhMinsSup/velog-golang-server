@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/helpers/aws"
 	"github.com/OhMinsSup/story-server/models"
-	"github.com/OhMinsSup/story-server/storage"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -26,7 +26,7 @@ func GeneratePresignedUrlService(filename, fileType, refId string, ctx *gin.Cont
 		return nil, http.StatusBadRequest, errors.New("BUCKET_NAME_IS_EMPTY")
 	}
 
-	storageRepository := storage.NewStorageRepository(sess)
+	storageRepository := aws.NewStorageRepository(sess)
 
 	tx := db.Begin()
 

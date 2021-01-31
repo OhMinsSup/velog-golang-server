@@ -8,21 +8,22 @@ import (
 )
 
 type User struct {
-	ID          string      `gorm:"primary_key;uuid"json:"id"`
-	Username    string      `sql:"index"json:"username"`
-	Email       string      `sql:"index"json:"email"`
-	IsCertified bool        `gorm:"default:false"json:"is_certified"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-	AuthTokens  []AuthToken `gorm:"foreignkey:UserID"json:"auth_tokens"`
-	UserProfile UserProfile `gorm:"foreignkey:UserID"json:"user_profile"`
-	UserMeta    UserMeta    `gorm:"foreignkey:UserID"json:"user_meta"`
-	VelogConfig VelogConfig `gorm:"foreignkey:UserID"json:"velog_config"`
-	UserImage   []UserImage `gorm:"polymorphic:Owner"json:"user_image"`
-	PostScore   []PostScore `gorm:"polymorphic:Owner;"json:"post_score"`
-	PostRead    []PostRead  `gorm:"polymorphic:Owner;"json:"post_read"`
-	PostLike    []PostLike  `gorm:"polymorphic:Owner;"json:"post_like"`
-	PostComment []Comment   `gorm:"polymorphic:Owner;"json:"post_comment"`
+	ID          string    `gorm:"primary_key;uuid" json:"id"`
+	Username    string    `gorm:"index" json:"username"`
+	Email       string    `gorm:"index" json:"email"`
+	IsCertified bool      `gorm:"default:false" json:"is_certified"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+
+	AuthTokens  []AuthToken `gorm:"foreignkey:UserID" json:"auth_tokens"`
+	UserProfile UserProfile `gorm:"foreignkey:UserID" json:"user_profile"`
+	UserMeta    UserMeta    `gorm:"foreignkey:UserID" json:"user_meta"`
+	VelogConfig VelogConfig `gorm:"foreignkey:UserID" json:"velog_config"`
+	UserImage   []UserImage `gorm:"polymorphic:Owner" json:"user_image"`
+	PostScore   []PostScore `gorm:"polymorphic:Owner;" json:"post_score"`
+	PostRead    []PostRead  `gorm:"polymorphic:Owner;" json:"post_read"`
+	PostLike    []PostLike  `gorm:"polymorphic:Owner;" json:"post_like"`
+	PostComment []Comment   `gorm:"polymorphic:Owner;" json:"post_comment"`
 }
 
 func (u User) Serialize() helpers.JSON {
@@ -100,7 +101,7 @@ func (u *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalR
 }
 
 type UserProfile struct {
-	ID          string    `gorm:"primary_key;uuid"json:"id"`
+	ID          string    `gorm:"primary_key;uuid" json:"id"`
 	DisplayName string    `json:"display_name"`
 	ShortBio    string    `json:"short_bio"`
 	Thumbnail   string    `json:"thumbnail"`
@@ -119,7 +120,7 @@ func (u UserProfile) Serialize() helpers.JSON {
 }
 
 type UserImage struct {
-	ID        string    `gorm:"primary_key;uuid"json:"id"`
+	ID        string    `gorm:"primary_key;uuid" json:"id"`
 	UserID    string    `json:"user_id"`
 	Type      string    `json:"type"`
 	FileSize  float64   `json:"file_size"`
@@ -130,9 +131,9 @@ type UserImage struct {
 }
 
 type UserMeta struct {
-	ID                string    `gorm:"primary_key;uuid"json:"id"`
-	EmailNotification bool      `gorm:"default:false"json:"email_notification"`
-	EmailPromotion    bool      `gorm:"default:false"json:"email_promotion"`
+	ID                string    `gorm:"primary_key;uuid" json:"id"`
+	EmailNotification bool      `gorm:"default:false" json:"email_notification"`
+	EmailPromotion    bool      `gorm:"default:false" json:"email_promotion"`
 	Twitter           string    `json:"twitter"`
 	Facebook          string    `json:"facebook"`
 	Github            string    `json:"github"`
@@ -150,36 +151,36 @@ func (u UserMeta) Serialize() helpers.JSON {
 }
 
 type EmailAuth struct {
-	ID        string    `gorm:"primary_key;uuid"json:"id"`
-	Code      string    `sql:"index"json:"code"`
+	ID        string    `gorm:"primary_key;uuid" json:"id"`
+	Code      string    `gorm:"index" json:"code"`
 	Email     string    `json:"email"`
-	Logged    bool      `gorm:"default:false"json:"logged"`
+	Logged    bool      `gorm:"default:false" json:"logged"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type AuthToken struct {
-	ID        string    `gorm:"primary_key;uuid"json:"id"`
-	Disabled  bool      `gorm:"default:false"json:"disabled"`
-	User      User      `gorm:"foreignkey:UserID"json:"user"`
+	ID        string    `gorm:"primary_key;uuid" json:"id"`
+	Disabled  bool      `gorm:"default:false" json:"disabled"`
+	User      User      `gorm:"foreignkey:UserID" json:"user"`
 	UserID    string    `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type SocialAccount struct {
-	ID          string    `gorm:"primary_key;uuid"json:"id"`
-	SocialId    string    `sql:"index"json:"social_id"`
+	ID          string    `gorm:"primary_key;uuid" json:"id"`
+	SocialId    string    `gorm:"index" json:"social_id"`
 	AccessToken string    `json:"access_token"`
-	Provider    string    `sql:"index"json:"provider"`
-	User        User      `gorm:"foreignkey:UserID"json:"user"`
+	Provider    string    `gorm:"index" json:"provider"`
+	User        User      `gorm:"foreignkey:UserID" json:"user"`
 	UserID      string    `json:"user_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type VelogConfig struct {
-	ID        string    `gorm:"primary_key;uuid"json:"id"`
+	ID        string    `gorm:"primary_key;uuid" json:"id"`
 	Title     string    `json:"title"`
 	LogoImage string    `json:"logo_image"`
 	UserID    string    `json:"user_id"`

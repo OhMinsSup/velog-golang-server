@@ -1,4 +1,4 @@
-package storage
+package aws
 
 import (
 	"github.com/OhMinsSup/story-server/helpers"
