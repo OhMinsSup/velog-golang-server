@@ -5,14 +5,36 @@ package ent
 import (
 	"time"
 
+	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/schema"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/google/uuid"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	emailauthFields := schema.EmailAuth{}.Fields()
+	_ = emailauthFields
+	// emailauthDescLogged is the schema descriptor for logged field.
+	emailauthDescLogged := emailauthFields[3].Descriptor()
+	// emailauth.DefaultLogged holds the default value on creation for the logged field.
+	emailauth.DefaultLogged = emailauthDescLogged.Default.(bool)
+	// emailauthDescCreatedAt is the schema descriptor for created_at field.
+	emailauthDescCreatedAt := emailauthFields[4].Descriptor()
+	// emailauth.DefaultCreatedAt holds the default value on creation for the created_at field.
+	emailauth.DefaultCreatedAt = emailauthDescCreatedAt.Default.(func() time.Time)
+	// emailauthDescUpdatedAt is the schema descriptor for updated_at field.
+	emailauthDescUpdatedAt := emailauthFields[5].Descriptor()
+	// emailauth.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	emailauth.DefaultUpdatedAt = emailauthDescUpdatedAt.Default.(func() time.Time)
+	// emailauth.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	emailauth.UpdateDefaultUpdatedAt = emailauthDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// emailauthDescID is the schema descriptor for id field.
+	emailauthDescID := emailauthFields[0].Descriptor()
+	// emailauth.DefaultID holds the default value on creation for the id field.
+	emailauth.DefaultID = emailauthDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUsername is the schema descriptor for username field.
@@ -37,4 +59,8 @@ func init() {
 	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	user.UpdateDefaultUpdatedAt = userDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// userDescID is the schema descriptor for id field.
+	userDescID := userFields[0].Descriptor()
+	// user.DefaultID holds the default value on creation for the id field.
+	user.DefaultID = userDescID.Default.(func() uuid.UUID)
 }

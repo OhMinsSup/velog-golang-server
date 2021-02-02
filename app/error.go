@@ -7,26 +7,28 @@ import (
 
 type ErrorStatus string
 
-type ErrorException struct {
+type ResponseException struct {
 	Code          int          `json:"code"`
 	Message       ErrorStatus  `json:"message"`
 	ResultCode    int          `json:"result_code"`
-	ResultMessage error        `json:"result_message"`
+	ResultMessage string       `json:"result_message"`
 	Data          helpers.JSON `json:"data"`
 }
 
 const (
-	AlreadyExist  = ErrorStatus("ALREADY_EXIST")
-	BadRequest    = ErrorStatus("BAD_REQUEST")
-	NotFound      = ErrorStatus("NOT_FOUND")
-	Forbidden     = ErrorStatus("FORBIDDEN")
-	InteralServer = ErrorStatus("INTERNAL_SERVER_ERROR")
-	UnAuthorized  = ErrorStatus("UNAUTHORIZED")
-	NotExist      = ErrorStatus("NOT_EXIST")
+	AlreadyExist      = ErrorStatus("ALREADY_EXIST")
+	BadRequest        = ErrorStatus("BAD_REQUEST")
+	NotFound          = ErrorStatus("NOT_FOUND")
+	Forbidden         = ErrorStatus("FORBIDDEN")
+	InteralServer     = ErrorStatus("INTERNAL_SERVER_ERROR")
+	UnAuthorized      = ErrorStatus("UNAUTHORIZED")
+	NotExist          = ErrorStatus("NOT_EXIST")
+	DBQueryError      = ErrorStatus("DB_QUERY_ERROR")
+	TransactionsError = ErrorStatus("TransactionsError")
 )
 
-func AlreadyExistsErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func AlreadyExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusOK,
 		Message:       AlreadyExist,
 		ResultCode:    2003,
@@ -36,8 +38,8 @@ func AlreadyExistsErrorResponse(msg error, data helpers.JSON) *ErrorException {
 	return &exception
 }
 
-func NotExistsErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func NotExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusOK,
 		Message:       NotExist,
 		ResultCode:    2002,
@@ -47,8 +49,30 @@ func NotExistsErrorResponse(msg error, data helpers.JSON) *ErrorException {
 	return &exception
 }
 
-func UnAuthorizedErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func DBQueryErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
+		Code:          http.StatusInternalServerError,
+		Message:       DBQueryError,
+		ResultCode:    5000,
+		ResultMessage: msg,
+		Data:          data,
+	}
+	return &exception
+}
+
+func TransactionsErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
+		Code:          http.StatusInternalServerError,
+		Message:       TransactionsError,
+		ResultCode:    5000,
+		ResultMessage: msg,
+		Data:          data,
+	}
+	return &exception
+}
+
+func UnAuthorizedErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusUnauthorized,
 		Message:       UnAuthorized,
 		ResultCode:    -1,
@@ -58,8 +82,8 @@ func UnAuthorizedErrorResponse(msg error, data helpers.JSON) *ErrorException {
 	return &exception
 }
 
-func BadRequestErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func BadRequestErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusBadRequest,
 		Message:       BadRequest,
 		ResultCode:    -1,
@@ -69,8 +93,8 @@ func BadRequestErrorResponse(msg error, data helpers.JSON) *ErrorException {
 	return &exception
 }
 
-func NotFoundErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func NotFoundErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusNotFound,
 		Message:       NotFound,
 		ResultCode:    -1,
@@ -79,8 +103,8 @@ func NotFoundErrorResponse(msg error, data helpers.JSON) *ErrorException {
 	return &exception
 }
 
-func ForbiddenErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func ForbiddenErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusForbidden,
 		Message:       Forbidden,
 		ResultCode:    -1,
@@ -90,8 +114,8 @@ func ForbiddenErrorResponse(msg error, data helpers.JSON) *ErrorException {
 	return &exception
 }
 
-func InteralServerErrorResponse(msg error, data helpers.JSON) *ErrorException {
-	exception := ErrorException{
+func InteralServerErrorResponse(msg string, data helpers.JSON) *ResponseException {
+	exception := ResponseException{
 		Code:          http.StatusInternalServerError,
 		Message:       InteralServer,
 		ResultCode:    -1,

@@ -19,7 +19,7 @@ func init() {
 
 func main() {
 	port := helpers.GetEnvWithKey("PORT")
-	server := app.New()
+	server, client := app.New()
 
 	apis.ApplyRoutes(server)
 
@@ -56,6 +56,9 @@ func main() {
 	select {
 	case <-ctx.Done():
 		log.Println("timeout of 5 seconds.")
+
+		log.Println("Database Close...")
+		client.Close()
 	}
 	log.Println("Server exiting")
 }

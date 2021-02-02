@@ -9,10 +9,11 @@ import (
 func ApplyRoutes(r *gin.RouterGroup) {
 	auth := r.Group("/auth")
 	{
+		auth.POST("/sendmail", controllers.SendEmailController)
+
 		// local
 		auth.POST("/register/social", controllers.SocialRegisterController)
 		auth.POST("/register/local", controllers.LocalRegisterController)
-		auth.POST("/sendmail", controllers.SendEmailController)
 		auth.GET("/code/:code", controllers.CodeController)
 		auth.POST("/logout", controllers.LogoutController)
 

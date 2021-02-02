@@ -8,6 +8,29 @@ import (
 )
 
 var (
+	// EmailAuthsColumns holds the columns for the "email_auths" table.
+	EmailAuthsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "code", Type: field.TypeString},
+		{Name: "email", Type: field.TypeString},
+		{Name: "logged", Type: field.TypeBool},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// EmailAuthsTable holds the schema information for the "email_auths" table.
+	EmailAuthsTable = &schema.Table{
+		Name:        "email_auths",
+		Columns:     EmailAuthsColumns,
+		PrimaryKey:  []*schema.Column{EmailAuthsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{},
+		Indexes: []*schema.Index{
+			{
+				Name:    "emailauth_code",
+				Unique:  false,
+				Columns: []*schema.Column{EmailAuthsColumns[1]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -33,6 +56,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		EmailAuthsTable,
 		UsersTable,
 	}
 )

@@ -6,5 +6,8 @@ import (
 	"github.com/facebook/ent/dialect/sql"
 )
 
+// EmailAuth is the predicate function for emailauth builders.
+type EmailAuth func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

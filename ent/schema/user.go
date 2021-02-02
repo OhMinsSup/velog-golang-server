@@ -16,7 +16,7 @@ type User struct {
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.New()),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("username").Unique().MaxLen(255),
 		field.String("email").Unique().Nillable().Optional().MaxLen(255),
 		field.Bool("is_certified").Default(false),

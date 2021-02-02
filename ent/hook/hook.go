@@ -9,6 +9,19 @@ import (
 	"github.com/OhMinsSup/story-server/ent"
 )
 
+// The EmailAuthFunc type is an adapter to allow the use of ordinary
+// function as EmailAuth mutator.
+type EmailAuthFunc func(context.Context, *ent.EmailAuthMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EmailAuthFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.EmailAuthMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmailAuthMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

@@ -2,22 +2,20 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/OhMinsSup/story-server/ent"
+	"github.com/OhMinsSup/story-server/ent/migrate"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/helpers/aws"
+	"github.com/facebook/ent/dialect"
+	entsql "github.com/facebook/ent/dialect/sql"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
 )
 
-func New() *gin.Engine {
-	allowOrigins := []string{"https://storeis.vercel.app"}
-
-	if helpers.GetEnvWithKey("APP_ENV") == "development" {
-		allowOrigins = append(allowOrigins, "http://localhost:3000")
-	}
-
+func New() (*gin.Engine, *ent.Client) {
 	// initializes database
 	//db, _ := database.Initialize()
 
@@ -29,18 +27,21 @@ func New() *gin.Engine {
 	// https://gobyexample.com/string-formatting
 	dbConfig := fmt.Sprintf("host=%v port=%v user=%v dbname=%v password=%v sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
 
-	// create database client
-	client, err := ent.Open("postgres", dbConfig)
+	db, err := sql.Open("postgres", dbConfig)
 	if err != nil {
 		log.Fatalf("failed opening connection to postgres: %v", err)
-
 	}
 
-	// database close
-	defer client.Close()
+	drv := entsql.OpenDB(dialect.Postgres, db)
+	// create database client
+	client := ent.NewClient(ent.Driver(drv))
+
 	ctx := context.Background()
 	// run the auto migration tool.
-	if err := client.Schema.Create(ctx); err != nil {
+	if err := client.Schema.Create(
+		ctx,
+		migrate.WithDropIndex(true),
+		migrate.WithDropColumn(true)); err != nil {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
@@ -56,10 +57,17 @@ func New() *gin.Engine {
 	app.Use(gin.Recovery())
 	app.Use(aws.Inject(sess))
 	app.Use(func(c *gin.Context) {
+		c.Set("db", db)
 		c.Set("client", client)
 		c.Next()
 	})
 	//app.Use(database.Inject(db))
+
+	allowOrigins := []string{"https://storeis.vercel.app"}
+
+	if helpers.GetEnvWithKey("APP_ENV") == "development" {
+		allowOrigins = append(allowOrigins, "http://localhost:3000")
+	}
 
 	// setting cors
 	corsConfig := cors.DefaultConfig()
@@ -71,5 +79,5 @@ func New() *gin.Engine {
 	app.Use(cors.New(corsConfig))
 	//app.Use(middlewares.ConsumeUser(db))
 
-	return app
+	return app, client
 }

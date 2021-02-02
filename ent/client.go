@@ -10,6 +10,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent/migrate"
 	"github.com/google/uuid"
 
+	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/user"
 
 	"github.com/facebook/ent/dialect"
@@ -21,6 +22,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// EmailAuth is the client for interacting with the EmailAuth builders.
+	EmailAuth *EmailAuthClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -36,6 +39,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.EmailAuth = NewEmailAuthClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -67,9 +71,10 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}
 	cfg := config{driver: tx, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		User:   NewUserClient(cfg),
+		ctx:       ctx,
+		config:    cfg,
+		EmailAuth: NewEmailAuthClient(cfg),
+		User:      NewUserClient(cfg),
 	}, nil
 }
 
@@ -84,15 +89,16 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	}
 	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		config: cfg,
-		User:   NewUserClient(cfg),
+		config:    cfg,
+		EmailAuth: NewEmailAuthClient(cfg),
+		User:      NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		User.
+//		EmailAuth.
 //		Query().
 //		Count(ctx)
 //
@@ -114,7 +120,96 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.EmailAuth.Use(hooks...)
 	c.User.Use(hooks...)
+}
+
+// EmailAuthClient is a client for the EmailAuth schema.
+type EmailAuthClient struct {
+	config
+}
+
+// NewEmailAuthClient returns a client for the EmailAuth from the given config.
+func NewEmailAuthClient(c config) *EmailAuthClient {
+	return &EmailAuthClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `emailauth.Hooks(f(g(h())))`.
+func (c *EmailAuthClient) Use(hooks ...Hook) {
+	c.hooks.EmailAuth = append(c.hooks.EmailAuth, hooks...)
+}
+
+// Create returns a create builder for EmailAuth.
+func (c *EmailAuthClient) Create() *EmailAuthCreate {
+	mutation := newEmailAuthMutation(c.config, OpCreate)
+	return &EmailAuthCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of EmailAuth entities.
+func (c *EmailAuthClient) CreateBulk(builders ...*EmailAuthCreate) *EmailAuthCreateBulk {
+	return &EmailAuthCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for EmailAuth.
+func (c *EmailAuthClient) Update() *EmailAuthUpdate {
+	mutation := newEmailAuthMutation(c.config, OpUpdate)
+	return &EmailAuthUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EmailAuthClient) UpdateOne(ea *EmailAuth) *EmailAuthUpdateOne {
+	mutation := newEmailAuthMutation(c.config, OpUpdateOne, withEmailAuth(ea))
+	return &EmailAuthUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EmailAuthClient) UpdateOneID(id uuid.UUID) *EmailAuthUpdateOne {
+	mutation := newEmailAuthMutation(c.config, OpUpdateOne, withEmailAuthID(id))
+	return &EmailAuthUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for EmailAuth.
+func (c *EmailAuthClient) Delete() *EmailAuthDelete {
+	mutation := newEmailAuthMutation(c.config, OpDelete)
+	return &EmailAuthDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *EmailAuthClient) DeleteOne(ea *EmailAuth) *EmailAuthDeleteOne {
+	return c.DeleteOneID(ea.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *EmailAuthClient) DeleteOneID(id uuid.UUID) *EmailAuthDeleteOne {
+	builder := c.Delete().Where(emailauth.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EmailAuthDeleteOne{builder}
+}
+
+// Query returns a query builder for EmailAuth.
+func (c *EmailAuthClient) Query() *EmailAuthQuery {
+	return &EmailAuthQuery{config: c.config}
+}
+
+// Get returns a EmailAuth entity by its id.
+func (c *EmailAuthClient) Get(ctx context.Context, id uuid.UUID) (*EmailAuth, error) {
+	return c.Query().Where(emailauth.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EmailAuthClient) GetX(ctx context.Context, id uuid.UUID) *EmailAuth {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *EmailAuthClient) Hooks() []Hook {
+	return c.hooks.EmailAuth
 }
 
 // UserClient is a client for the User schema.
