@@ -24,8 +24,18 @@ const (
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 
+	// EdgeUserProfile holds the string denoting the user_profile edge name in mutations.
+	EdgeUserProfile = "user_profile"
+
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// UserProfileTable is the table the holds the user_profile relation/edge.
+	UserProfileTable = "user_profiles"
+	// UserProfileInverseTable is the table name for the UserProfile entity.
+	// It exists in this package in order to avoid circular dependency with the "userprofile" package.
+	UserProfileInverseTable = "user_profiles"
+	// UserProfileColumn is the table column denoting the user_profile relation/edge.
+	UserProfileColumn = "user_user_profile"
 )
 
 // Columns holds all SQL columns for user fields.

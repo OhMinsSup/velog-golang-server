@@ -11,3 +11,6 @@ type EmailAuth func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// UserProfile is the predicate function for userprofile builders.
+type UserProfile func(*sql.Selector)

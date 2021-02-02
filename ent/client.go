@@ -12,9 +12,11 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/userprofile"
 
 	"github.com/facebook/ent/dialect"
 	"github.com/facebook/ent/dialect/sql"
+	"github.com/facebook/ent/dialect/sql/sqlgraph"
 )
 
 // Client is the client that holds all ent builders.
@@ -26,6 +28,8 @@ type Client struct {
 	EmailAuth *EmailAuthClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserProfile is the client for interacting with the UserProfile builders.
+	UserProfile *UserProfileClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -41,6 +45,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.EmailAuth = NewEmailAuthClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.UserProfile = NewUserProfileClient(c.config)
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -71,10 +76,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}
 	cfg := config{driver: tx, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		ctx:       ctx,
-		config:    cfg,
-		EmailAuth: NewEmailAuthClient(cfg),
-		User:      NewUserClient(cfg),
+		ctx:         ctx,
+		config:      cfg,
+		EmailAuth:   NewEmailAuthClient(cfg),
+		User:        NewUserClient(cfg),
+		UserProfile: NewUserProfileClient(cfg),
 	}, nil
 }
 
@@ -89,9 +95,10 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	}
 	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		config:    cfg,
-		EmailAuth: NewEmailAuthClient(cfg),
-		User:      NewUserClient(cfg),
+		config:      cfg,
+		EmailAuth:   NewEmailAuthClient(cfg),
+		User:        NewUserClient(cfg),
+		UserProfile: NewUserProfileClient(cfg),
 	}, nil
 }
 
@@ -122,6 +129,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	c.EmailAuth.Use(hooks...)
 	c.User.Use(hooks...)
+	c.UserProfile.Use(hooks...)
 }
 
 // EmailAuthClient is a client for the EmailAuth schema.
@@ -295,7 +303,127 @@ func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	return obj
 }
 
+// QueryUserProfile queries the user_profile edge of a User.
+func (c *UserClient) QueryUserProfile(u *User) *UserProfileQuery {
+	query := &UserProfileQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userprofile.Table, userprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.UserProfileTable, user.UserProfileColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
+}
+
+// UserProfileClient is a client for the UserProfile schema.
+type UserProfileClient struct {
+	config
+}
+
+// NewUserProfileClient returns a client for the UserProfile from the given config.
+func NewUserProfileClient(c config) *UserProfileClient {
+	return &UserProfileClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userprofile.Hooks(f(g(h())))`.
+func (c *UserProfileClient) Use(hooks ...Hook) {
+	c.hooks.UserProfile = append(c.hooks.UserProfile, hooks...)
+}
+
+// Create returns a create builder for UserProfile.
+func (c *UserProfileClient) Create() *UserProfileCreate {
+	mutation := newUserProfileMutation(c.config, OpCreate)
+	return &UserProfileCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserProfile entities.
+func (c *UserProfileClient) CreateBulk(builders ...*UserProfileCreate) *UserProfileCreateBulk {
+	return &UserProfileCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserProfile.
+func (c *UserProfileClient) Update() *UserProfileUpdate {
+	mutation := newUserProfileMutation(c.config, OpUpdate)
+	return &UserProfileUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserProfileClient) UpdateOne(up *UserProfile) *UserProfileUpdateOne {
+	mutation := newUserProfileMutation(c.config, OpUpdateOne, withUserProfile(up))
+	return &UserProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserProfileClient) UpdateOneID(id uuid.UUID) *UserProfileUpdateOne {
+	mutation := newUserProfileMutation(c.config, OpUpdateOne, withUserProfileID(id))
+	return &UserProfileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserProfile.
+func (c *UserProfileClient) Delete() *UserProfileDelete {
+	mutation := newUserProfileMutation(c.config, OpDelete)
+	return &UserProfileDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *UserProfileClient) DeleteOne(up *UserProfile) *UserProfileDeleteOne {
+	return c.DeleteOneID(up.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *UserProfileClient) DeleteOneID(id uuid.UUID) *UserProfileDeleteOne {
+	builder := c.Delete().Where(userprofile.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserProfileDeleteOne{builder}
+}
+
+// Query returns a query builder for UserProfile.
+func (c *UserProfileClient) Query() *UserProfileQuery {
+	return &UserProfileQuery{config: c.config}
+}
+
+// Get returns a UserProfile entity by its id.
+func (c *UserProfileClient) Get(ctx context.Context, id uuid.UUID) (*UserProfile, error) {
+	return c.Query().Where(userprofile.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserProfileClient) GetX(ctx context.Context, id uuid.UUID) *UserProfile {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a UserProfile.
+func (c *UserProfileClient) QueryUser(up *UserProfile) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := up.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userprofile.Table, userprofile.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, userprofile.UserTable, userprofile.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(up.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserProfileClient) Hooks() []Hook {
+	return c.hooks.UserProfile
 }

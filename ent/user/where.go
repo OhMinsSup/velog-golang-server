@@ -7,6 +7,7 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/facebook/ent/dialect/sql"
+	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -527,6 +528,34 @@ func UpdatedAtLT(v time.Time) predicate.User {
 func UpdatedAtLTE(v time.Time) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldUpdatedAt), v))
+	})
+}
+
+// HasUserProfile applies the HasEdge predicate on the "user_profile" edge.
+func HasUserProfile() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UserProfileTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, UserProfileTable, UserProfileColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserProfileWith applies the HasEdge predicate on the "user_profile" edge with a given conditions (other predicates).
+func HasUserProfileWith(preds ...predicate.UserProfile) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UserProfileInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, UserProfileTable, UserProfileColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/schema"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/google/uuid"
 )
 
@@ -63,4 +64,28 @@ func init() {
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.
 	user.DefaultID = userDescID.Default.(func() uuid.UUID)
+	userprofileFields := schema.UserProfile{}.Fields()
+	_ = userprofileFields
+	// userprofileDescDisplayName is the schema descriptor for display_name field.
+	userprofileDescDisplayName := userprofileFields[1].Descriptor()
+	// userprofile.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	userprofile.DisplayNameValidator = userprofileDescDisplayName.Validators[0].(func(string) error)
+	// userprofileDescShortBio is the schema descriptor for short_bio field.
+	userprofileDescShortBio := userprofileFields[2].Descriptor()
+	// userprofile.ShortBioValidator is a validator for the "short_bio" field. It is called by the builders before save.
+	userprofile.ShortBioValidator = userprofileDescShortBio.Validators[0].(func(string) error)
+	// userprofileDescCreatedAt is the schema descriptor for created_at field.
+	userprofileDescCreatedAt := userprofileFields[6].Descriptor()
+	// userprofile.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userprofile.DefaultCreatedAt = userprofileDescCreatedAt.Default.(func() time.Time)
+	// userprofileDescUpdatedAt is the schema descriptor for updated_at field.
+	userprofileDescUpdatedAt := userprofileFields[7].Descriptor()
+	// userprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	userprofile.DefaultUpdatedAt = userprofileDescUpdatedAt.Default.(func() time.Time)
+	// userprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	userprofile.UpdateDefaultUpdatedAt = userprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// userprofileDescID is the schema descriptor for id field.
+	userprofileDescID := userprofileFields[0].Descriptor()
+	// userprofile.DefaultID holds the default value on creation for the id field.
+	userprofile.DefaultID = userprofileDescID.Default.(func() uuid.UUID)
 }

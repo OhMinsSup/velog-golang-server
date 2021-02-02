@@ -11,6 +11,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/google/uuid"
 
 	"github.com/facebook/ent"
@@ -25,8 +26,9 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeEmailAuth = "EmailAuth"
-	TypeUser      = "User"
+	TypeEmailAuth   = "EmailAuth"
+	TypeUser        = "User"
+	TypeUserProfile = "UserProfile"
 )
 
 // EmailAuthMutation represents an operation that mutates the EmailAuth nodes in the graph.
@@ -541,18 +543,20 @@ func (m *EmailAuthMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	username      *string
-	email         *string
-	is_certified  *bool
-	created_at    *time.Time
-	updated_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*User, error)
-	predicates    []predicate.User
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	username            *string
+	email               *string
+	is_certified        *bool
+	created_at          *time.Time
+	updated_at          *time.Time
+	clearedFields       map[string]struct{}
+	user_profile        *uuid.UUID
+	cleareduser_profile bool
+	done                bool
+	oldValue            func(context.Context) (*User, error)
+	predicates          []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -833,6 +837,45 @@ func (m *UserMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetUserProfileID sets the "user_profile" edge to the UserProfile entity by id.
+func (m *UserMutation) SetUserProfileID(id uuid.UUID) {
+	m.user_profile = &id
+}
+
+// ClearUserProfile clears the "user_profile" edge to the UserProfile entity.
+func (m *UserMutation) ClearUserProfile() {
+	m.cleareduser_profile = true
+}
+
+// UserProfileCleared returns if the "user_profile" edge to the UserProfile entity was cleared.
+func (m *UserMutation) UserProfileCleared() bool {
+	return m.cleareduser_profile
+}
+
+// UserProfileID returns the "user_profile" edge ID in the mutation.
+func (m *UserMutation) UserProfileID() (id uuid.UUID, exists bool) {
+	if m.user_profile != nil {
+		return *m.user_profile, true
+	}
+	return
+}
+
+// UserProfileIDs returns the "user_profile" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserProfileID instead. It exists only for internal usage by the builders.
+func (m *UserMutation) UserProfileIDs() (ids []uuid.UUID) {
+	if id := m.user_profile; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUserProfile resets all changes to the "user_profile" edge.
+func (m *UserMutation) ResetUserProfile() {
+	m.user_profile = nil
+	m.cleareduser_profile = false
+}
+
 // Op returns the operation name.
 func (m *UserMutation) Op() Op {
 	return m.op
@@ -1023,48 +1066,784 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.user_profile != nil {
+		edges = append(edges, user.EdgeUserProfile)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case user.EdgeUserProfile:
+		if id := m.user_profile; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.cleareduser_profile {
+		edges = append(edges, user.EdgeUserProfile)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *UserMutation) EdgeCleared(name string) bool {
+	switch name {
+	case user.EdgeUserProfile:
+		return m.cleareduser_profile
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *UserMutation) ClearEdge(name string) error {
+	switch name {
+	case user.EdgeUserProfile:
+		m.ClearUserProfile()
+		return nil
+	}
 	return fmt.Errorf("unknown User unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *UserMutation) ResetEdge(name string) error {
+	switch name {
+	case user.EdgeUserProfile:
+		m.ResetUserProfile()
+		return nil
+	}
 	return fmt.Errorf("unknown User edge %s", name)
+}
+
+// UserProfileMutation represents an operation that mutates the UserProfile nodes in the graph.
+type UserProfileMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	display_name  *string
+	short_bio     *string
+	about         *string
+	profile_links *[]string
+	thumbnail     *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	user          *uuid.UUID
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*UserProfile, error)
+	predicates    []predicate.UserProfile
+}
+
+var _ ent.Mutation = (*UserProfileMutation)(nil)
+
+// userprofileOption allows management of the mutation configuration using functional options.
+type userprofileOption func(*UserProfileMutation)
+
+// newUserProfileMutation creates new mutation for the UserProfile entity.
+func newUserProfileMutation(c config, op Op, opts ...userprofileOption) *UserProfileMutation {
+	m := &UserProfileMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUserProfile,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withUserProfileID sets the ID field of the mutation.
+func withUserProfileID(id uuid.UUID) userprofileOption {
+	return func(m *UserProfileMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *UserProfile
+		)
+		m.oldValue = func(ctx context.Context) (*UserProfile, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().UserProfile.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withUserProfile sets the old UserProfile of the mutation.
+func withUserProfile(node *UserProfile) userprofileOption {
+	return func(m *UserProfileMutation) {
+		m.oldValue = func(context.Context) (*UserProfile, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UserProfileMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UserProfileMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of UserProfile entities.
+func (m *UserProfileMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *UserProfileMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetDisplayName sets the "display_name" field.
+func (m *UserProfileMutation) SetDisplayName(s string) {
+	m.display_name = &s
+}
+
+// DisplayName returns the value of the "display_name" field in the mutation.
+func (m *UserProfileMutation) DisplayName() (r string, exists bool) {
+	v := m.display_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDisplayName returns the old "display_name" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldDisplayName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDisplayName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDisplayName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDisplayName: %w", err)
+	}
+	return oldValue.DisplayName, nil
+}
+
+// ResetDisplayName resets all changes to the "display_name" field.
+func (m *UserProfileMutation) ResetDisplayName() {
+	m.display_name = nil
+}
+
+// SetShortBio sets the "short_bio" field.
+func (m *UserProfileMutation) SetShortBio(s string) {
+	m.short_bio = &s
+}
+
+// ShortBio returns the value of the "short_bio" field in the mutation.
+func (m *UserProfileMutation) ShortBio() (r string, exists bool) {
+	v := m.short_bio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldShortBio returns the old "short_bio" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldShortBio(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldShortBio is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldShortBio requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldShortBio: %w", err)
+	}
+	return oldValue.ShortBio, nil
+}
+
+// ResetShortBio resets all changes to the "short_bio" field.
+func (m *UserProfileMutation) ResetShortBio() {
+	m.short_bio = nil
+}
+
+// SetAbout sets the "about" field.
+func (m *UserProfileMutation) SetAbout(s string) {
+	m.about = &s
+}
+
+// About returns the value of the "about" field in the mutation.
+func (m *UserProfileMutation) About() (r string, exists bool) {
+	v := m.about
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAbout returns the old "about" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldAbout(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldAbout is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldAbout requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAbout: %w", err)
+	}
+	return oldValue.About, nil
+}
+
+// ResetAbout resets all changes to the "about" field.
+func (m *UserProfileMutation) ResetAbout() {
+	m.about = nil
+}
+
+// SetProfileLinks sets the "profile_links" field.
+func (m *UserProfileMutation) SetProfileLinks(s []string) {
+	m.profile_links = &s
+}
+
+// ProfileLinks returns the value of the "profile_links" field in the mutation.
+func (m *UserProfileMutation) ProfileLinks() (r []string, exists bool) {
+	v := m.profile_links
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProfileLinks returns the old "profile_links" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldProfileLinks(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldProfileLinks is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldProfileLinks requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProfileLinks: %w", err)
+	}
+	return oldValue.ProfileLinks, nil
+}
+
+// ResetProfileLinks resets all changes to the "profile_links" field.
+func (m *UserProfileMutation) ResetProfileLinks() {
+	m.profile_links = nil
+}
+
+// SetThumbnail sets the "thumbnail" field.
+func (m *UserProfileMutation) SetThumbnail(s string) {
+	m.thumbnail = &s
+}
+
+// Thumbnail returns the value of the "thumbnail" field in the mutation.
+func (m *UserProfileMutation) Thumbnail() (r string, exists bool) {
+	v := m.thumbnail
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldThumbnail returns the old "thumbnail" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldThumbnail(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldThumbnail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldThumbnail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldThumbnail: %w", err)
+	}
+	return oldValue.Thumbnail, nil
+}
+
+// ClearThumbnail clears the value of the "thumbnail" field.
+func (m *UserProfileMutation) ClearThumbnail() {
+	m.thumbnail = nil
+	m.clearedFields[userprofile.FieldThumbnail] = struct{}{}
+}
+
+// ThumbnailCleared returns if the "thumbnail" field was cleared in this mutation.
+func (m *UserProfileMutation) ThumbnailCleared() bool {
+	_, ok := m.clearedFields[userprofile.FieldThumbnail]
+	return ok
+}
+
+// ResetThumbnail resets all changes to the "thumbnail" field.
+func (m *UserProfileMutation) ResetThumbnail() {
+	m.thumbnail = nil
+	delete(m.clearedFields, userprofile.FieldThumbnail)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UserProfileMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UserProfileMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UserProfileMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *UserProfileMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *UserProfileMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the UserProfile entity.
+// If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserProfileMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *UserProfileMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *UserProfileMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *UserProfileMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared returns if the "user" edge to the User entity was cleared.
+func (m *UserProfileMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *UserProfileMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *UserProfileMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *UserProfileMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Op returns the operation name.
+func (m *UserProfileMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (UserProfile).
+func (m *UserProfileMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UserProfileMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.display_name != nil {
+		fields = append(fields, userprofile.FieldDisplayName)
+	}
+	if m.short_bio != nil {
+		fields = append(fields, userprofile.FieldShortBio)
+	}
+	if m.about != nil {
+		fields = append(fields, userprofile.FieldAbout)
+	}
+	if m.profile_links != nil {
+		fields = append(fields, userprofile.FieldProfileLinks)
+	}
+	if m.thumbnail != nil {
+		fields = append(fields, userprofile.FieldThumbnail)
+	}
+	if m.created_at != nil {
+		fields = append(fields, userprofile.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, userprofile.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UserProfileMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case userprofile.FieldDisplayName:
+		return m.DisplayName()
+	case userprofile.FieldShortBio:
+		return m.ShortBio()
+	case userprofile.FieldAbout:
+		return m.About()
+	case userprofile.FieldProfileLinks:
+		return m.ProfileLinks()
+	case userprofile.FieldThumbnail:
+		return m.Thumbnail()
+	case userprofile.FieldCreatedAt:
+		return m.CreatedAt()
+	case userprofile.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UserProfileMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case userprofile.FieldDisplayName:
+		return m.OldDisplayName(ctx)
+	case userprofile.FieldShortBio:
+		return m.OldShortBio(ctx)
+	case userprofile.FieldAbout:
+		return m.OldAbout(ctx)
+	case userprofile.FieldProfileLinks:
+		return m.OldProfileLinks(ctx)
+	case userprofile.FieldThumbnail:
+		return m.OldThumbnail(ctx)
+	case userprofile.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case userprofile.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown UserProfile field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UserProfileMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case userprofile.FieldDisplayName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDisplayName(v)
+		return nil
+	case userprofile.FieldShortBio:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetShortBio(v)
+		return nil
+	case userprofile.FieldAbout:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAbout(v)
+		return nil
+	case userprofile.FieldProfileLinks:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProfileLinks(v)
+		return nil
+	case userprofile.FieldThumbnail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetThumbnail(v)
+		return nil
+	case userprofile.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case userprofile.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UserProfile field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UserProfileMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UserProfileMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UserProfileMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown UserProfile numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UserProfileMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(userprofile.FieldThumbnail) {
+		fields = append(fields, userprofile.FieldThumbnail)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UserProfileMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UserProfileMutation) ClearField(name string) error {
+	switch name {
+	case userprofile.FieldThumbnail:
+		m.ClearThumbnail()
+		return nil
+	}
+	return fmt.Errorf("unknown UserProfile nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UserProfileMutation) ResetField(name string) error {
+	switch name {
+	case userprofile.FieldDisplayName:
+		m.ResetDisplayName()
+		return nil
+	case userprofile.FieldShortBio:
+		m.ResetShortBio()
+		return nil
+	case userprofile.FieldAbout:
+		m.ResetAbout()
+		return nil
+	case userprofile.FieldProfileLinks:
+		m.ResetProfileLinks()
+		return nil
+	case userprofile.FieldThumbnail:
+		m.ResetThumbnail()
+		return nil
+	case userprofile.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case userprofile.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown UserProfile field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UserProfileMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, userprofile.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UserProfileMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case userprofile.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UserProfileMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UserProfileMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UserProfileMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, userprofile.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UserProfileMutation) EdgeCleared(name string) bool {
+	switch name {
+	case userprofile.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UserProfileMutation) ClearEdge(name string) error {
+	switch name {
+	case userprofile.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown UserProfile unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UserProfileMutation) ResetEdge(name string) error {
+	switch name {
+	case userprofile.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown UserProfile edge %s", name)
 }

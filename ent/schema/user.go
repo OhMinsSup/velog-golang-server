@@ -2,6 +2,7 @@ package schema
 
 import (
 	"github.com/facebook/ent"
+	"github.com/facebook/ent/schema/edge"
 	"github.com/facebook/ent/schema/field"
 	"github.com/facebook/ent/schema/index"
 	"github.com/google/uuid"
@@ -34,5 +35,8 @@ func (User) Indexes() []ent.Index {
 
 // Edges of the User.
 func (User) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("user_profile", UserProfile.Type).
+			Unique(),
+	}
 }

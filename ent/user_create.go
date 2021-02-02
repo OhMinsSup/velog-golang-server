@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -87,6 +88,25 @@ func (uc *UserCreate) SetNillableUpdatedAt(t *time.Time) *UserCreate {
 func (uc *UserCreate) SetID(u uuid.UUID) *UserCreate {
 	uc.mutation.SetID(u)
 	return uc
+}
+
+// SetUserProfileID sets the "user_profile" edge to the UserProfile entity by ID.
+func (uc *UserCreate) SetUserProfileID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetUserProfileID(id)
+	return uc
+}
+
+// SetNillableUserProfileID sets the "user_profile" edge to the UserProfile entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableUserProfileID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetUserProfileID(*id)
+	}
+	return uc
+}
+
+// SetUserProfile sets the "user_profile" edge to the UserProfile entity.
+func (uc *UserCreate) SetUserProfile(u *UserProfile) *UserCreate {
+	return uc.SetUserProfileID(u.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -251,6 +271,25 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Column: user.FieldUpdatedAt,
 		})
 		_node.UpdatedAt = value
+	}
+	if nodes := uc.mutation.UserProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.UserProfileTable,
+			Columns: []string{user.UserProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userprofile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

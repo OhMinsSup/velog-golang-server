@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/google/uuid"
 )
@@ -27,6 +28,32 @@ type User struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserQuery when eager-loading is set.
+	Edges UserEdges `json:"edges"`
+}
+
+// UserEdges holds the relations/edges for other nodes in the graph.
+type UserEdges struct {
+	// UserProfile holds the value of the user_profile edge.
+	UserProfile *UserProfile
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// UserProfileOrErr returns the UserProfile value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) UserProfileOrErr() (*UserProfile, error) {
+	if e.loadedTypes[0] {
+		if e.UserProfile == nil {
+			// The edge user_profile was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: userprofile.Label}
+		}
+		return e.UserProfile, nil
+	}
+	return nil, &NotLoadedError{edge: "user_profile"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -97,6 +124,11 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 		}
 	}
 	return nil
+}
+
+// QueryUserProfile queries the "user_profile" edge of the User entity.
+func (u *User) QueryUserProfile() *UserProfileQuery {
+	return (&UserClient{config: u.config}).QueryUserProfile(u)
 }
 
 // Update returns a builder for updating this User.

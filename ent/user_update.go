@@ -9,9 +9,11 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -73,9 +75,34 @@ func (uu *UserUpdate) SetUpdatedAt(t time.Time) *UserUpdate {
 	return uu
 }
 
+// SetUserProfileID sets the "user_profile" edge to the UserProfile entity by ID.
+func (uu *UserUpdate) SetUserProfileID(id uuid.UUID) *UserUpdate {
+	uu.mutation.SetUserProfileID(id)
+	return uu
+}
+
+// SetNillableUserProfileID sets the "user_profile" edge to the UserProfile entity by ID if the given value is not nil.
+func (uu *UserUpdate) SetNillableUserProfileID(id *uuid.UUID) *UserUpdate {
+	if id != nil {
+		uu = uu.SetUserProfileID(*id)
+	}
+	return uu
+}
+
+// SetUserProfile sets the "user_profile" edge to the UserProfile entity.
+func (uu *UserUpdate) SetUserProfile(u *UserProfile) *UserUpdate {
+	return uu.SetUserProfileID(u.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
+}
+
+// ClearUserProfile clears the "user_profile" edge to the UserProfile entity.
+func (uu *UserUpdate) ClearUserProfile() *UserUpdate {
+	uu.mutation.ClearUserProfile()
+	return uu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -211,6 +238,41 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: user.FieldUpdatedAt,
 		})
 	}
+	if uu.mutation.UserProfileCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.UserProfileTable,
+			Columns: []string{user.UserProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userprofile.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.UserProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.UserProfileTable,
+			Columns: []string{user.UserProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userprofile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -275,9 +337,34 @@ func (uuo *UserUpdateOne) SetUpdatedAt(t time.Time) *UserUpdateOne {
 	return uuo
 }
 
+// SetUserProfileID sets the "user_profile" edge to the UserProfile entity by ID.
+func (uuo *UserUpdateOne) SetUserProfileID(id uuid.UUID) *UserUpdateOne {
+	uuo.mutation.SetUserProfileID(id)
+	return uuo
+}
+
+// SetNillableUserProfileID sets the "user_profile" edge to the UserProfile entity by ID if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableUserProfileID(id *uuid.UUID) *UserUpdateOne {
+	if id != nil {
+		uuo = uuo.SetUserProfileID(*id)
+	}
+	return uuo
+}
+
+// SetUserProfile sets the "user_profile" edge to the UserProfile entity.
+func (uuo *UserUpdateOne) SetUserProfile(u *UserProfile) *UserUpdateOne {
+	return uuo.SetUserProfileID(u.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
+}
+
+// ClearUserProfile clears the "user_profile" edge to the UserProfile entity.
+func (uuo *UserUpdateOne) ClearUserProfile() *UserUpdateOne {
+	uuo.mutation.ClearUserProfile()
+	return uuo
 }
 
 // Save executes the query and returns the updated User entity.
@@ -410,6 +497,41 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Value:  value,
 			Column: user.FieldUpdatedAt,
 		})
+	}
+	if uuo.mutation.UserProfileCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.UserProfileTable,
+			Columns: []string{user.UserProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userprofile.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.UserProfileIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.UserProfileTable,
+			Columns: []string{user.UserProfileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userprofile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &User{config: uuo.config}
 	_spec.Assign = _node.assignValues
