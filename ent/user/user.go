@@ -26,6 +26,12 @@ const (
 
 	// EdgeUserProfile holds the string denoting the user_profile edge name in mutations.
 	EdgeUserProfile = "user_profile"
+	// EdgeVelogConfig holds the string denoting the velog_config edge name in mutations.
+	EdgeVelogConfig = "velog_config"
+	// EdgeUserMeta holds the string denoting the user_meta edge name in mutations.
+	EdgeUserMeta = "user_meta"
+	// EdgeAuthToken holds the string denoting the auth_token edge name in mutations.
+	EdgeAuthToken = "auth_token"
 
 	// Table holds the table name of the user in the database.
 	Table = "users"
@@ -35,7 +41,28 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "userprofile" package.
 	UserProfileInverseTable = "user_profiles"
 	// UserProfileColumn is the table column denoting the user_profile relation/edge.
-	UserProfileColumn = "user_user_profile"
+	UserProfileColumn = "fk_user_id"
+	// VelogConfigTable is the table the holds the velog_config relation/edge.
+	VelogConfigTable = "velog_configs"
+	// VelogConfigInverseTable is the table name for the VelogConfig entity.
+	// It exists in this package in order to avoid circular dependency with the "velogconfig" package.
+	VelogConfigInverseTable = "velog_configs"
+	// VelogConfigColumn is the table column denoting the velog_config relation/edge.
+	VelogConfigColumn = "fk_user_id"
+	// UserMetaTable is the table the holds the user_meta relation/edge.
+	UserMetaTable = "user_meta"
+	// UserMetaInverseTable is the table name for the UserMeta entity.
+	// It exists in this package in order to avoid circular dependency with the "usermeta" package.
+	UserMetaInverseTable = "user_meta"
+	// UserMetaColumn is the table column denoting the user_meta relation/edge.
+	UserMetaColumn = "fk_user_id"
+	// AuthTokenTable is the table the holds the auth_token relation/edge.
+	AuthTokenTable = "auth_tokens"
+	// AuthTokenInverseTable is the table name for the AuthToken entity.
+	// It exists in this package in order to avoid circular dependency with the "authtoken" package.
+	AuthTokenInverseTable = "auth_tokens"
+	// AuthTokenColumn is the table column denoting the auth_token relation/edge.
+	AuthTokenColumn = "fk_user_id"
 )
 
 // Columns holds all SQL columns for user fields.

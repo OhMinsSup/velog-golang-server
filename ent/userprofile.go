@@ -35,8 +35,8 @@ type UserProfile struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserProfileQuery when eager-loading is set.
-	Edges             UserProfileEdges `json:"edges"`
-	user_user_profile *uuid.UUID
+	Edges      UserProfileEdges `json:"edges"`
+	fk_user_id *uuid.UUID
 }
 
 // UserProfileEdges holds the relations/edges for other nodes in the graph.
@@ -75,7 +75,7 @@ func (*UserProfile) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullTime{}
 		case userprofile.FieldID:
 			values[i] = &uuid.UUID{}
-		case userprofile.ForeignKeys[0]: // user_user_profile
+		case userprofile.ForeignKeys[0]: // fk_user_id
 			values[i] = &uuid.UUID{}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type UserProfile", columns[i])
@@ -146,9 +146,9 @@ func (up *UserProfile) assignValues(columns []string, values []interface{}) erro
 			}
 		case userprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field user_user_profile", values[i])
+				return fmt.Errorf("unexpected type %T for field fk_user_id", values[i])
 			} else if value != nil {
-				up.user_user_profile = value
+				up.fk_user_id = value
 			}
 		}
 	}

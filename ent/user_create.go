@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
+	"github.com/OhMinsSup/story-server/ent/velogconfig"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -107,6 +110,59 @@ func (uc *UserCreate) SetNillableUserProfileID(id *uuid.UUID) *UserCreate {
 // SetUserProfile sets the "user_profile" edge to the UserProfile entity.
 func (uc *UserCreate) SetUserProfile(u *UserProfile) *UserCreate {
 	return uc.SetUserProfileID(u.ID)
+}
+
+// SetVelogConfigID sets the "velog_config" edge to the VelogConfig entity by ID.
+func (uc *UserCreate) SetVelogConfigID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetVelogConfigID(id)
+	return uc
+}
+
+// SetNillableVelogConfigID sets the "velog_config" edge to the VelogConfig entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableVelogConfigID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetVelogConfigID(*id)
+	}
+	return uc
+}
+
+// SetVelogConfig sets the "velog_config" edge to the VelogConfig entity.
+func (uc *UserCreate) SetVelogConfig(v *VelogConfig) *UserCreate {
+	return uc.SetVelogConfigID(v.ID)
+}
+
+// SetUserMetaID sets the "user_meta" edge to the UserMeta entity by ID.
+func (uc *UserCreate) SetUserMetaID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetUserMetaID(id)
+	return uc
+}
+
+// SetNillableUserMetaID sets the "user_meta" edge to the UserMeta entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableUserMetaID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetUserMetaID(*id)
+	}
+	return uc
+}
+
+// SetUserMeta sets the "user_meta" edge to the UserMeta entity.
+func (uc *UserCreate) SetUserMeta(u *UserMeta) *UserCreate {
+	return uc.SetUserMetaID(u.ID)
+}
+
+// AddAuthTokenIDs adds the "auth_token" edge to the AuthToken entity by IDs.
+func (uc *UserCreate) AddAuthTokenIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddAuthTokenIDs(ids...)
+	return uc
+}
+
+// AddAuthToken adds the "auth_token" edges to the AuthToken entity.
+func (uc *UserCreate) AddAuthToken(a ...*AuthToken) *UserCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return uc.AddAuthTokenIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -283,6 +339,63 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: userprofile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.VelogConfigIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.VelogConfigTable,
+			Columns: []string{user.VelogConfigColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: velogconfig.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.UserMetaIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.UserMetaTable,
+			Columns: []string{user.UserMetaColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: usermeta.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.AuthTokenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AuthTokenTable,
+			Columns: []string{user.AuthTokenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: authtoken.FieldID,
 				},
 			},
 		}

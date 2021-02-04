@@ -8,10 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
+	"github.com/OhMinsSup/story-server/ent/velogconfig"
 	"github.com/google/uuid"
 
 	"github.com/facebook/ent"
@@ -26,10 +29,483 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAuthToken   = "AuthToken"
 	TypeEmailAuth   = "EmailAuth"
 	TypeUser        = "User"
+	TypeUserMeta    = "UserMeta"
 	TypeUserProfile = "UserProfile"
+	TypeVelogConfig = "VelogConfig"
 )
+
+// AuthTokenMutation represents an operation that mutates the AuthToken nodes in the graph.
+type AuthTokenMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	disabled      *bool
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	user          *uuid.UUID
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*AuthToken, error)
+	predicates    []predicate.AuthToken
+}
+
+var _ ent.Mutation = (*AuthTokenMutation)(nil)
+
+// authtokenOption allows management of the mutation configuration using functional options.
+type authtokenOption func(*AuthTokenMutation)
+
+// newAuthTokenMutation creates new mutation for the AuthToken entity.
+func newAuthTokenMutation(c config, op Op, opts ...authtokenOption) *AuthTokenMutation {
+	m := &AuthTokenMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAuthToken,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAuthTokenID sets the ID field of the mutation.
+func withAuthTokenID(id uuid.UUID) authtokenOption {
+	return func(m *AuthTokenMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AuthToken
+		)
+		m.oldValue = func(ctx context.Context) (*AuthToken, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AuthToken.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAuthToken sets the old AuthToken of the mutation.
+func withAuthToken(node *AuthToken) authtokenOption {
+	return func(m *AuthTokenMutation) {
+		m.oldValue = func(context.Context) (*AuthToken, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AuthTokenMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AuthTokenMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AuthToken entities.
+func (m *AuthTokenMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *AuthTokenMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetDisabled sets the "disabled" field.
+func (m *AuthTokenMutation) SetDisabled(b bool) {
+	m.disabled = &b
+}
+
+// Disabled returns the value of the "disabled" field in the mutation.
+func (m *AuthTokenMutation) Disabled() (r bool, exists bool) {
+	v := m.disabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDisabled returns the old "disabled" field's value of the AuthToken entity.
+// If the AuthToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthTokenMutation) OldDisabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDisabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDisabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDisabled: %w", err)
+	}
+	return oldValue.Disabled, nil
+}
+
+// ResetDisabled resets all changes to the "disabled" field.
+func (m *AuthTokenMutation) ResetDisabled() {
+	m.disabled = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AuthTokenMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AuthTokenMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AuthToken entity.
+// If the AuthToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthTokenMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AuthTokenMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AuthTokenMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AuthTokenMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AuthToken entity.
+// If the AuthToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthTokenMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AuthTokenMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *AuthTokenMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *AuthTokenMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared returns if the "user" edge to the User entity was cleared.
+func (m *AuthTokenMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *AuthTokenMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *AuthTokenMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *AuthTokenMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Op returns the operation name.
+func (m *AuthTokenMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (AuthToken).
+func (m *AuthTokenMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AuthTokenMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.disabled != nil {
+		fields = append(fields, authtoken.FieldDisabled)
+	}
+	if m.created_at != nil {
+		fields = append(fields, authtoken.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, authtoken.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AuthTokenMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case authtoken.FieldDisabled:
+		return m.Disabled()
+	case authtoken.FieldCreatedAt:
+		return m.CreatedAt()
+	case authtoken.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AuthTokenMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case authtoken.FieldDisabled:
+		return m.OldDisabled(ctx)
+	case authtoken.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case authtoken.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown AuthToken field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AuthTokenMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case authtoken.FieldDisabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDisabled(v)
+		return nil
+	case authtoken.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case authtoken.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AuthToken field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AuthTokenMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AuthTokenMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AuthTokenMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AuthToken numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AuthTokenMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AuthTokenMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AuthTokenMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown AuthToken nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AuthTokenMutation) ResetField(name string) error {
+	switch name {
+	case authtoken.FieldDisabled:
+		m.ResetDisabled()
+		return nil
+	case authtoken.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case authtoken.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AuthToken field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AuthTokenMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, authtoken.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AuthTokenMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case authtoken.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AuthTokenMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AuthTokenMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AuthTokenMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, authtoken.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AuthTokenMutation) EdgeCleared(name string) bool {
+	switch name {
+	case authtoken.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AuthTokenMutation) ClearEdge(name string) error {
+	switch name {
+	case authtoken.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown AuthToken unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AuthTokenMutation) ResetEdge(name string) error {
+	switch name {
+	case authtoken.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown AuthToken edge %s", name)
+}
 
 // EmailAuthMutation represents an operation that mutates the EmailAuth nodes in the graph.
 type EmailAuthMutation struct {
@@ -554,6 +1030,13 @@ type UserMutation struct {
 	clearedFields       map[string]struct{}
 	user_profile        *uuid.UUID
 	cleareduser_profile bool
+	velog_config        *uuid.UUID
+	clearedvelog_config bool
+	user_meta           *uuid.UUID
+	cleareduser_meta    bool
+	auth_token          map[uuid.UUID]struct{}
+	removedauth_token   map[uuid.UUID]struct{}
+	clearedauth_token   bool
 	done                bool
 	oldValue            func(context.Context) (*User, error)
 	predicates          []predicate.User
@@ -876,6 +1359,137 @@ func (m *UserMutation) ResetUserProfile() {
 	m.cleareduser_profile = false
 }
 
+// SetVelogConfigID sets the "velog_config" edge to the VelogConfig entity by id.
+func (m *UserMutation) SetVelogConfigID(id uuid.UUID) {
+	m.velog_config = &id
+}
+
+// ClearVelogConfig clears the "velog_config" edge to the VelogConfig entity.
+func (m *UserMutation) ClearVelogConfig() {
+	m.clearedvelog_config = true
+}
+
+// VelogConfigCleared returns if the "velog_config" edge to the VelogConfig entity was cleared.
+func (m *UserMutation) VelogConfigCleared() bool {
+	return m.clearedvelog_config
+}
+
+// VelogConfigID returns the "velog_config" edge ID in the mutation.
+func (m *UserMutation) VelogConfigID() (id uuid.UUID, exists bool) {
+	if m.velog_config != nil {
+		return *m.velog_config, true
+	}
+	return
+}
+
+// VelogConfigIDs returns the "velog_config" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// VelogConfigID instead. It exists only for internal usage by the builders.
+func (m *UserMutation) VelogConfigIDs() (ids []uuid.UUID) {
+	if id := m.velog_config; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetVelogConfig resets all changes to the "velog_config" edge.
+func (m *UserMutation) ResetVelogConfig() {
+	m.velog_config = nil
+	m.clearedvelog_config = false
+}
+
+// SetUserMetaID sets the "user_meta" edge to the UserMeta entity by id.
+func (m *UserMutation) SetUserMetaID(id uuid.UUID) {
+	m.user_meta = &id
+}
+
+// ClearUserMeta clears the "user_meta" edge to the UserMeta entity.
+func (m *UserMutation) ClearUserMeta() {
+	m.cleareduser_meta = true
+}
+
+// UserMetaCleared returns if the "user_meta" edge to the UserMeta entity was cleared.
+func (m *UserMutation) UserMetaCleared() bool {
+	return m.cleareduser_meta
+}
+
+// UserMetaID returns the "user_meta" edge ID in the mutation.
+func (m *UserMutation) UserMetaID() (id uuid.UUID, exists bool) {
+	if m.user_meta != nil {
+		return *m.user_meta, true
+	}
+	return
+}
+
+// UserMetaIDs returns the "user_meta" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserMetaID instead. It exists only for internal usage by the builders.
+func (m *UserMutation) UserMetaIDs() (ids []uuid.UUID) {
+	if id := m.user_meta; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUserMeta resets all changes to the "user_meta" edge.
+func (m *UserMutation) ResetUserMeta() {
+	m.user_meta = nil
+	m.cleareduser_meta = false
+}
+
+// AddAuthTokenIDs adds the "auth_token" edge to the AuthToken entity by ids.
+func (m *UserMutation) AddAuthTokenIDs(ids ...uuid.UUID) {
+	if m.auth_token == nil {
+		m.auth_token = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.auth_token[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAuthToken clears the "auth_token" edge to the AuthToken entity.
+func (m *UserMutation) ClearAuthToken() {
+	m.clearedauth_token = true
+}
+
+// AuthTokenCleared returns if the "auth_token" edge to the AuthToken entity was cleared.
+func (m *UserMutation) AuthTokenCleared() bool {
+	return m.clearedauth_token
+}
+
+// RemoveAuthTokenIDs removes the "auth_token" edge to the AuthToken entity by IDs.
+func (m *UserMutation) RemoveAuthTokenIDs(ids ...uuid.UUID) {
+	if m.removedauth_token == nil {
+		m.removedauth_token = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.removedauth_token[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAuthToken returns the removed IDs of the "auth_token" edge to the AuthToken entity.
+func (m *UserMutation) RemovedAuthTokenIDs() (ids []uuid.UUID) {
+	for id := range m.removedauth_token {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AuthTokenIDs returns the "auth_token" edge IDs in the mutation.
+func (m *UserMutation) AuthTokenIDs() (ids []uuid.UUID) {
+	for id := range m.auth_token {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAuthToken resets all changes to the "auth_token" edge.
+func (m *UserMutation) ResetAuthToken() {
+	m.auth_token = nil
+	m.clearedauth_token = false
+	m.removedauth_token = nil
+}
+
 // Op returns the operation name.
 func (m *UserMutation) Op() Op {
 	return m.op
@@ -1066,9 +1680,18 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 4)
 	if m.user_profile != nil {
 		edges = append(edges, user.EdgeUserProfile)
+	}
+	if m.velog_config != nil {
+		edges = append(edges, user.EdgeVelogConfig)
+	}
+	if m.user_meta != nil {
+		edges = append(edges, user.EdgeUserMeta)
+	}
+	if m.auth_token != nil {
+		edges = append(edges, user.EdgeAuthToken)
 	}
 	return edges
 }
@@ -1081,13 +1704,30 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user_profile; id != nil {
 			return []ent.Value{*id}
 		}
+	case user.EdgeVelogConfig:
+		if id := m.velog_config; id != nil {
+			return []ent.Value{*id}
+		}
+	case user.EdgeUserMeta:
+		if id := m.user_meta; id != nil {
+			return []ent.Value{*id}
+		}
+	case user.EdgeAuthToken:
+		ids := make([]ent.Value, 0, len(m.auth_token))
+		for id := range m.auth_token {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 4)
+	if m.removedauth_token != nil {
+		edges = append(edges, user.EdgeAuthToken)
+	}
 	return edges
 }
 
@@ -1095,15 +1735,30 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case user.EdgeAuthToken:
+		ids := make([]ent.Value, 0, len(m.removedauth_token))
+		for id := range m.removedauth_token {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 4)
 	if m.cleareduser_profile {
 		edges = append(edges, user.EdgeUserProfile)
+	}
+	if m.clearedvelog_config {
+		edges = append(edges, user.EdgeVelogConfig)
+	}
+	if m.cleareduser_meta {
+		edges = append(edges, user.EdgeUserMeta)
+	}
+	if m.clearedauth_token {
+		edges = append(edges, user.EdgeAuthToken)
 	}
 	return edges
 }
@@ -1114,6 +1769,12 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
 	case user.EdgeUserProfile:
 		return m.cleareduser_profile
+	case user.EdgeVelogConfig:
+		return m.clearedvelog_config
+	case user.EdgeUserMeta:
+		return m.cleareduser_meta
+	case user.EdgeAuthToken:
+		return m.clearedauth_token
 	}
 	return false
 }
@@ -1124,6 +1785,12 @@ func (m *UserMutation) ClearEdge(name string) error {
 	switch name {
 	case user.EdgeUserProfile:
 		m.ClearUserProfile()
+		return nil
+	case user.EdgeVelogConfig:
+		m.ClearVelogConfig()
+		return nil
+	case user.EdgeUserMeta:
+		m.ClearUserMeta()
 		return nil
 	}
 	return fmt.Errorf("unknown User unique edge %s", name)
@@ -1136,8 +1803,541 @@ func (m *UserMutation) ResetEdge(name string) error {
 	case user.EdgeUserProfile:
 		m.ResetUserProfile()
 		return nil
+	case user.EdgeVelogConfig:
+		m.ResetVelogConfig()
+		return nil
+	case user.EdgeUserMeta:
+		m.ResetUserMeta()
+		return nil
+	case user.EdgeAuthToken:
+		m.ResetAuthToken()
+		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)
+}
+
+// UserMetaMutation represents an operation that mutates the UserMeta nodes in the graph.
+type UserMetaMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	email_notification *bool
+	email_promotions   *bool
+	created_at         *time.Time
+	updated_at         *time.Time
+	clearedFields      map[string]struct{}
+	user               *uuid.UUID
+	cleareduser        bool
+	done               bool
+	oldValue           func(context.Context) (*UserMeta, error)
+	predicates         []predicate.UserMeta
+}
+
+var _ ent.Mutation = (*UserMetaMutation)(nil)
+
+// usermetaOption allows management of the mutation configuration using functional options.
+type usermetaOption func(*UserMetaMutation)
+
+// newUserMetaMutation creates new mutation for the UserMeta entity.
+func newUserMetaMutation(c config, op Op, opts ...usermetaOption) *UserMetaMutation {
+	m := &UserMetaMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUserMeta,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withUserMetaID sets the ID field of the mutation.
+func withUserMetaID(id uuid.UUID) usermetaOption {
+	return func(m *UserMetaMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *UserMeta
+		)
+		m.oldValue = func(ctx context.Context) (*UserMeta, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().UserMeta.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withUserMeta sets the old UserMeta of the mutation.
+func withUserMeta(node *UserMeta) usermetaOption {
+	return func(m *UserMetaMutation) {
+		m.oldValue = func(context.Context) (*UserMeta, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UserMetaMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UserMetaMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of UserMeta entities.
+func (m *UserMetaMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *UserMetaMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetEmailNotification sets the "email_notification" field.
+func (m *UserMetaMutation) SetEmailNotification(b bool) {
+	m.email_notification = &b
+}
+
+// EmailNotification returns the value of the "email_notification" field in the mutation.
+func (m *UserMetaMutation) EmailNotification() (r bool, exists bool) {
+	v := m.email_notification
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmailNotification returns the old "email_notification" field's value of the UserMeta entity.
+// If the UserMeta object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMetaMutation) OldEmailNotification(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldEmailNotification is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldEmailNotification requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmailNotification: %w", err)
+	}
+	return oldValue.EmailNotification, nil
+}
+
+// ResetEmailNotification resets all changes to the "email_notification" field.
+func (m *UserMetaMutation) ResetEmailNotification() {
+	m.email_notification = nil
+}
+
+// SetEmailPromotions sets the "email_promotions" field.
+func (m *UserMetaMutation) SetEmailPromotions(b bool) {
+	m.email_promotions = &b
+}
+
+// EmailPromotions returns the value of the "email_promotions" field in the mutation.
+func (m *UserMetaMutation) EmailPromotions() (r bool, exists bool) {
+	v := m.email_promotions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmailPromotions returns the old "email_promotions" field's value of the UserMeta entity.
+// If the UserMeta object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMetaMutation) OldEmailPromotions(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldEmailPromotions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldEmailPromotions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmailPromotions: %w", err)
+	}
+	return oldValue.EmailPromotions, nil
+}
+
+// ResetEmailPromotions resets all changes to the "email_promotions" field.
+func (m *UserMetaMutation) ResetEmailPromotions() {
+	m.email_promotions = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UserMetaMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UserMetaMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the UserMeta entity.
+// If the UserMeta object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMetaMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UserMetaMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *UserMetaMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *UserMetaMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the UserMeta entity.
+// If the UserMeta object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMetaMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *UserMetaMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *UserMetaMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *UserMetaMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared returns if the "user" edge to the User entity was cleared.
+func (m *UserMetaMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *UserMetaMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *UserMetaMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *UserMetaMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Op returns the operation name.
+func (m *UserMetaMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (UserMeta).
+func (m *UserMetaMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UserMetaMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.email_notification != nil {
+		fields = append(fields, usermeta.FieldEmailNotification)
+	}
+	if m.email_promotions != nil {
+		fields = append(fields, usermeta.FieldEmailPromotions)
+	}
+	if m.created_at != nil {
+		fields = append(fields, usermeta.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, usermeta.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UserMetaMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case usermeta.FieldEmailNotification:
+		return m.EmailNotification()
+	case usermeta.FieldEmailPromotions:
+		return m.EmailPromotions()
+	case usermeta.FieldCreatedAt:
+		return m.CreatedAt()
+	case usermeta.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UserMetaMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case usermeta.FieldEmailNotification:
+		return m.OldEmailNotification(ctx)
+	case usermeta.FieldEmailPromotions:
+		return m.OldEmailPromotions(ctx)
+	case usermeta.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case usermeta.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown UserMeta field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UserMetaMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case usermeta.FieldEmailNotification:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmailNotification(v)
+		return nil
+	case usermeta.FieldEmailPromotions:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmailPromotions(v)
+		return nil
+	case usermeta.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case usermeta.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UserMeta field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UserMetaMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UserMetaMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UserMetaMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown UserMeta numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UserMetaMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UserMetaMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UserMetaMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown UserMeta nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UserMetaMutation) ResetField(name string) error {
+	switch name {
+	case usermeta.FieldEmailNotification:
+		m.ResetEmailNotification()
+		return nil
+	case usermeta.FieldEmailPromotions:
+		m.ResetEmailPromotions()
+		return nil
+	case usermeta.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case usermeta.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown UserMeta field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UserMetaMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, usermeta.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UserMetaMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case usermeta.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UserMetaMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UserMetaMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UserMetaMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, usermeta.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UserMetaMutation) EdgeCleared(name string) bool {
+	switch name {
+	case usermeta.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UserMetaMutation) ClearEdge(name string) error {
+	switch name {
+	case usermeta.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown UserMeta unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UserMetaMutation) ResetEdge(name string) error {
+	switch name {
+	case usermeta.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown UserMeta edge %s", name)
 }
 
 // UserProfileMutation represents an operation that mutates the UserProfile nodes in the graph.
@@ -1846,4 +3046,569 @@ func (m *UserProfileMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown UserProfile edge %s", name)
+}
+
+// VelogConfigMutation represents an operation that mutates the VelogConfig nodes in the graph.
+type VelogConfigMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	title         *string
+	logo_title    *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	user          *uuid.UUID
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*VelogConfig, error)
+	predicates    []predicate.VelogConfig
+}
+
+var _ ent.Mutation = (*VelogConfigMutation)(nil)
+
+// velogconfigOption allows management of the mutation configuration using functional options.
+type velogconfigOption func(*VelogConfigMutation)
+
+// newVelogConfigMutation creates new mutation for the VelogConfig entity.
+func newVelogConfigMutation(c config, op Op, opts ...velogconfigOption) *VelogConfigMutation {
+	m := &VelogConfigMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeVelogConfig,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withVelogConfigID sets the ID field of the mutation.
+func withVelogConfigID(id uuid.UUID) velogconfigOption {
+	return func(m *VelogConfigMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *VelogConfig
+		)
+		m.oldValue = func(ctx context.Context) (*VelogConfig, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().VelogConfig.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withVelogConfig sets the old VelogConfig of the mutation.
+func withVelogConfig(node *VelogConfig) velogconfigOption {
+	return func(m *VelogConfigMutation) {
+		m.oldValue = func(context.Context) (*VelogConfig, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m VelogConfigMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m VelogConfigMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of VelogConfig entities.
+func (m *VelogConfigMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *VelogConfigMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetTitle sets the "title" field.
+func (m *VelogConfigMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *VelogConfigMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the VelogConfig entity.
+// If the VelogConfig object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VelogConfigMutation) OldTitle(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ClearTitle clears the value of the "title" field.
+func (m *VelogConfigMutation) ClearTitle() {
+	m.title = nil
+	m.clearedFields[velogconfig.FieldTitle] = struct{}{}
+}
+
+// TitleCleared returns if the "title" field was cleared in this mutation.
+func (m *VelogConfigMutation) TitleCleared() bool {
+	_, ok := m.clearedFields[velogconfig.FieldTitle]
+	return ok
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *VelogConfigMutation) ResetTitle() {
+	m.title = nil
+	delete(m.clearedFields, velogconfig.FieldTitle)
+}
+
+// SetLogoTitle sets the "logo_title" field.
+func (m *VelogConfigMutation) SetLogoTitle(s string) {
+	m.logo_title = &s
+}
+
+// LogoTitle returns the value of the "logo_title" field in the mutation.
+func (m *VelogConfigMutation) LogoTitle() (r string, exists bool) {
+	v := m.logo_title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLogoTitle returns the old "logo_title" field's value of the VelogConfig entity.
+// If the VelogConfig object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VelogConfigMutation) OldLogoTitle(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldLogoTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldLogoTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLogoTitle: %w", err)
+	}
+	return oldValue.LogoTitle, nil
+}
+
+// ClearLogoTitle clears the value of the "logo_title" field.
+func (m *VelogConfigMutation) ClearLogoTitle() {
+	m.logo_title = nil
+	m.clearedFields[velogconfig.FieldLogoTitle] = struct{}{}
+}
+
+// LogoTitleCleared returns if the "logo_title" field was cleared in this mutation.
+func (m *VelogConfigMutation) LogoTitleCleared() bool {
+	_, ok := m.clearedFields[velogconfig.FieldLogoTitle]
+	return ok
+}
+
+// ResetLogoTitle resets all changes to the "logo_title" field.
+func (m *VelogConfigMutation) ResetLogoTitle() {
+	m.logo_title = nil
+	delete(m.clearedFields, velogconfig.FieldLogoTitle)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *VelogConfigMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *VelogConfigMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the VelogConfig entity.
+// If the VelogConfig object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VelogConfigMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *VelogConfigMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *VelogConfigMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *VelogConfigMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the VelogConfig entity.
+// If the VelogConfig object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VelogConfigMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *VelogConfigMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *VelogConfigMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *VelogConfigMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared returns if the "user" edge to the User entity was cleared.
+func (m *VelogConfigMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *VelogConfigMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *VelogConfigMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *VelogConfigMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Op returns the operation name.
+func (m *VelogConfigMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (VelogConfig).
+func (m *VelogConfigMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *VelogConfigMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.title != nil {
+		fields = append(fields, velogconfig.FieldTitle)
+	}
+	if m.logo_title != nil {
+		fields = append(fields, velogconfig.FieldLogoTitle)
+	}
+	if m.created_at != nil {
+		fields = append(fields, velogconfig.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, velogconfig.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *VelogConfigMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case velogconfig.FieldTitle:
+		return m.Title()
+	case velogconfig.FieldLogoTitle:
+		return m.LogoTitle()
+	case velogconfig.FieldCreatedAt:
+		return m.CreatedAt()
+	case velogconfig.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *VelogConfigMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case velogconfig.FieldTitle:
+		return m.OldTitle(ctx)
+	case velogconfig.FieldLogoTitle:
+		return m.OldLogoTitle(ctx)
+	case velogconfig.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case velogconfig.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown VelogConfig field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *VelogConfigMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case velogconfig.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case velogconfig.FieldLogoTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLogoTitle(v)
+		return nil
+	case velogconfig.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case velogconfig.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown VelogConfig field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *VelogConfigMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *VelogConfigMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *VelogConfigMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown VelogConfig numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *VelogConfigMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(velogconfig.FieldTitle) {
+		fields = append(fields, velogconfig.FieldTitle)
+	}
+	if m.FieldCleared(velogconfig.FieldLogoTitle) {
+		fields = append(fields, velogconfig.FieldLogoTitle)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *VelogConfigMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *VelogConfigMutation) ClearField(name string) error {
+	switch name {
+	case velogconfig.FieldTitle:
+		m.ClearTitle()
+		return nil
+	case velogconfig.FieldLogoTitle:
+		m.ClearLogoTitle()
+		return nil
+	}
+	return fmt.Errorf("unknown VelogConfig nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *VelogConfigMutation) ResetField(name string) error {
+	switch name {
+	case velogconfig.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case velogconfig.FieldLogoTitle:
+		m.ResetLogoTitle()
+		return nil
+	case velogconfig.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case velogconfig.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown VelogConfig field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *VelogConfigMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, velogconfig.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *VelogConfigMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case velogconfig.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *VelogConfigMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *VelogConfigMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *VelogConfigMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, velogconfig.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *VelogConfigMutation) EdgeCleared(name string) bool {
+	switch name {
+	case velogconfig.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *VelogConfigMutation) ClearEdge(name string) error {
+	switch name {
+	case velogconfig.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown VelogConfig unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *VelogConfigMutation) ResetEdge(name string) error {
+	switch name {
+	case velogconfig.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown VelogConfig edge %s", name)
 }

@@ -12,12 +12,18 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AuthToken is the client for interacting with the AuthToken builders.
+	AuthToken *AuthTokenClient
 	// EmailAuth is the client for interacting with the EmailAuth builders.
 	EmailAuth *EmailAuthClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserMeta is the client for interacting with the UserMeta builders.
+	UserMeta *UserMetaClient
 	// UserProfile is the client for interacting with the UserProfile builders.
 	UserProfile *UserProfileClient
+	// VelogConfig is the client for interacting with the VelogConfig builders.
+	VelogConfig *VelogConfigClient
 
 	// lazily loaded.
 	client     *Client
@@ -153,9 +159,12 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AuthToken = NewAuthTokenClient(tx.config)
 	tx.EmailAuth = NewEmailAuthClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.UserMeta = NewUserMetaClient(tx.config)
 	tx.UserProfile = NewUserProfileClient(tx.config)
+	tx.VelogConfig = NewVelogConfigClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -165,7 +174,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: EmailAuth.QueryXXX(), the query will be executed
+// applies a query, for example: AuthToken.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

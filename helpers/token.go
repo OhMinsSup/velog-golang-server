@@ -1,12 +1,25 @@
 package helpers
 
 import (
+	"github.com/OhMinsSup/story-server/ent"
 	"github.com/dgrijalva/jwt-go"
 	"log"
 	"time"
 )
 
-var signingKey = []byte("AllYourBase")
+var (
+	signingKey       = []byte("AllYourBase")
+	accessTokenName  = "access_token"
+	refreshTokenName = "refresh_token"
+)
+
+func GenerateUserToken(user *ent.User, client *ent.Client) (string, string) {
+	return "", ""
+}
+
+func RefreshUserToken(user *ent.User, client *ent.Client) (string, string) {
+	return "", ""
+}
 
 func generateToken(payload JSON, subject string, expire time.Duration) (string, error) {
 	// Create the Claims

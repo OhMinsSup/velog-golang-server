@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
+	"github.com/OhMinsSup/story-server/ent/velogconfig"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/google/uuid"
 )
@@ -37,9 +39,15 @@ type User struct {
 type UserEdges struct {
 	// UserProfile holds the value of the user_profile edge.
 	UserProfile *UserProfile
+	// VelogConfig holds the value of the velog_config edge.
+	VelogConfig *VelogConfig
+	// UserMeta holds the value of the user_meta edge.
+	UserMeta *UserMeta
+	// AuthToken holds the value of the auth_token edge.
+	AuthToken []*AuthToken
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [4]bool
 }
 
 // UserProfileOrErr returns the UserProfile value or an error if the edge
@@ -54,6 +62,43 @@ func (e UserEdges) UserProfileOrErr() (*UserProfile, error) {
 		return e.UserProfile, nil
 	}
 	return nil, &NotLoadedError{edge: "user_profile"}
+}
+
+// VelogConfigOrErr returns the VelogConfig value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) VelogConfigOrErr() (*VelogConfig, error) {
+	if e.loadedTypes[1] {
+		if e.VelogConfig == nil {
+			// The edge velog_config was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: velogconfig.Label}
+		}
+		return e.VelogConfig, nil
+	}
+	return nil, &NotLoadedError{edge: "velog_config"}
+}
+
+// UserMetaOrErr returns the UserMeta value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) UserMetaOrErr() (*UserMeta, error) {
+	if e.loadedTypes[2] {
+		if e.UserMeta == nil {
+			// The edge user_meta was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: usermeta.Label}
+		}
+		return e.UserMeta, nil
+	}
+	return nil, &NotLoadedError{edge: "user_meta"}
+}
+
+// AuthTokenOrErr returns the AuthToken value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) AuthTokenOrErr() ([]*AuthToken, error) {
+	if e.loadedTypes[3] {
+		return e.AuthToken, nil
+	}
+	return nil, &NotLoadedError{edge: "auth_token"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -129,6 +174,21 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 // QueryUserProfile queries the "user_profile" edge of the User entity.
 func (u *User) QueryUserProfile() *UserProfileQuery {
 	return (&UserClient{config: u.config}).QueryUserProfile(u)
+}
+
+// QueryVelogConfig queries the "velog_config" edge of the User entity.
+func (u *User) QueryVelogConfig() *VelogConfigQuery {
+	return (&UserClient{config: u.config}).QueryVelogConfig(u)
+}
+
+// QueryUserMeta queries the "user_meta" edge of the User entity.
+func (u *User) QueryUserMeta() *UserMetaQuery {
+	return (&UserClient{config: u.config}).QueryUserMeta(u)
+}
+
+// QueryAuthToken queries the "auth_token" edge of the User entity.
+func (u *User) QueryAuthToken() *AuthTokenQuery {
+	return (&UserClient{config: u.config}).QueryAuthToken(u)
 }
 
 // Update returns a builder for updating this User.

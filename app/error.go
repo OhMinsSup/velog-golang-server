@@ -16,15 +16,16 @@ type ResponseException struct {
 }
 
 const (
-	AlreadyExist      = ErrorStatus("ALREADY_EXIST")
-	BadRequest        = ErrorStatus("BAD_REQUEST")
-	NotFound          = ErrorStatus("NOT_FOUND")
-	Forbidden         = ErrorStatus("FORBIDDEN")
-	InteralServer     = ErrorStatus("INTERNAL_SERVER_ERROR")
-	UnAuthorized      = ErrorStatus("UNAUTHORIZED")
-	NotExist          = ErrorStatus("NOT_EXIST")
-	DBQueryError      = ErrorStatus("DB_QUERY_ERROR")
-	TransactionsError = ErrorStatus("TransactionsError")
+	AlreadyExist       = ErrorStatus("ALREADY_EXIST")
+	BadRequest         = ErrorStatus("BAD_REQUEST")
+	NotFound           = ErrorStatus("NOT_FOUND")
+	Forbidden          = ErrorStatus("FORBIDDEN")
+	InteralServer      = ErrorStatus("INTERNAL_SERVER_ERROR")
+	UnAuthorized       = ErrorStatus("UNAUTHORIZED")
+	NotExist           = ErrorStatus("NOT_EXIST")
+	DBQueryError       = ErrorStatus("DB_QUERY_ERROR")
+	TransactionsError  = ErrorStatus("TransactionsError")
+	GenerateTokenError = ErrorStatus("GenerateTokenError")
 )
 
 func AlreadyExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {

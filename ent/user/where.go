@@ -559,6 +559,90 @@ func HasUserProfileWith(preds ...predicate.UserProfile) predicate.User {
 	})
 }
 
+// HasVelogConfig applies the HasEdge predicate on the "velog_config" edge.
+func HasVelogConfig() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(VelogConfigTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, VelogConfigTable, VelogConfigColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasVelogConfigWith applies the HasEdge predicate on the "velog_config" edge with a given conditions (other predicates).
+func HasVelogConfigWith(preds ...predicate.VelogConfig) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(VelogConfigInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, VelogConfigTable, VelogConfigColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUserMeta applies the HasEdge predicate on the "user_meta" edge.
+func HasUserMeta() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UserMetaTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, UserMetaTable, UserMetaColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserMetaWith applies the HasEdge predicate on the "user_meta" edge with a given conditions (other predicates).
+func HasUserMetaWith(preds ...predicate.UserMeta) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UserMetaInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, UserMetaTable, UserMetaColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAuthToken applies the HasEdge predicate on the "auth_token" edge.
+func HasAuthToken() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AuthTokenTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AuthTokenTable, AuthTokenColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAuthTokenWith applies the HasEdge predicate on the "auth_token" edge with a given conditions (other predicates).
+func HasAuthTokenWith(preds ...predicate.AuthToken) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(AuthTokenInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AuthTokenTable, AuthTokenColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(func(s *sql.Selector) {

@@ -27,6 +27,7 @@ func New() (*gin.Engine, *ent.Client) {
 	// https://gobyexample.com/string-formatting
 	dbConfig := fmt.Sprintf("host=%v port=%v user=%v dbname=%v password=%v sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
 
+	// database tcp/ip connection error:: https://stackoverflow.com/questions/37307346/is-the-server-running-on-host-localhost-1-and-accepting-tcp-ip-connections
 	db, err := sql.Open("postgres", dbConfig)
 	if err != nil {
 		log.Fatalf("failed opening connection to postgres: %v", err)

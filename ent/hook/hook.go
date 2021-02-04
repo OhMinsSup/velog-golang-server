@@ -9,6 +9,19 @@ import (
 	"github.com/OhMinsSup/story-server/ent"
 )
 
+// The AuthTokenFunc type is an adapter to allow the use of ordinary
+// function as AuthToken mutator.
+type AuthTokenFunc func(context.Context, *ent.AuthTokenMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AuthTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.AuthTokenMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuthTokenMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The EmailAuthFunc type is an adapter to allow the use of ordinary
 // function as EmailAuth mutator.
 type EmailAuthFunc func(context.Context, *ent.EmailAuthMutation) (ent.Value, error)
@@ -35,6 +48,19 @@ func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	return f(ctx, mv)
 }
 
+// The UserMetaFunc type is an adapter to allow the use of ordinary
+// function as UserMeta mutator.
+type UserMetaFunc func(context.Context, *ent.UserMetaMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UserMetaFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.UserMetaMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMetaMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The UserProfileFunc type is an adapter to allow the use of ordinary
 // function as UserProfile mutator.
 type UserProfileFunc func(context.Context, *ent.UserProfileMutation) (ent.Value, error)
@@ -44,6 +70,19 @@ func (f UserProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	mv, ok := m.(*ent.UserProfileMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserProfileMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The VelogConfigFunc type is an adapter to allow the use of ordinary
+// function as VelogConfig mutator.
+type VelogConfigFunc func(context.Context, *ent.VelogConfigMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f VelogConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.VelogConfigMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.VelogConfigMutation", m)
 	}
 	return f(ctx, mv)
 }

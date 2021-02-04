@@ -8,6 +8,29 @@ import (
 )
 
 var (
+	// AuthTokensColumns holds the columns for the "auth_tokens" table.
+	AuthTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "disabled", Type: field.TypeBool},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "fk_user_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// AuthTokensTable holds the schema information for the "auth_tokens" table.
+	AuthTokensTable = &schema.Table{
+		Name:       "auth_tokens",
+		Columns:    AuthTokensColumns,
+		PrimaryKey: []*schema.Column{AuthTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "auth_tokens_users_auth_token",
+				Columns: []*schema.Column{AuthTokensColumns[4]},
+
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// EmailAuthsColumns holds the columns for the "email_auths" table.
 	EmailAuthsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -54,6 +77,30 @@ var (
 			},
 		},
 	}
+	// UserMetaColumns holds the columns for the "user_meta" table.
+	UserMetaColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "email_notification", Type: field.TypeBool},
+		{Name: "email_promotions", Type: field.TypeBool},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "fk_user_id", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// UserMetaTable holds the schema information for the "user_meta" table.
+	UserMetaTable = &schema.Table{
+		Name:       "user_meta",
+		Columns:    UserMetaColumns,
+		PrimaryKey: []*schema.Column{UserMetaColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "user_meta_users_user_meta",
+				Columns: []*schema.Column{UserMetaColumns[5]},
+
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// UserProfilesColumns holds the columns for the "user_profiles" table.
 	UserProfilesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -64,7 +111,7 @@ var (
 		{Name: "thumbnail", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "user_user_profile", Type: field.TypeUUID, Unique: true, Nullable: true},
+		{Name: "fk_user_id", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// UserProfilesTable holds the schema information for the "user_profiles" table.
 	UserProfilesTable = &schema.Table{
@@ -81,14 +128,44 @@ var (
 			},
 		},
 	}
+	// VelogConfigsColumns holds the columns for the "velog_configs" table.
+	VelogConfigsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "title", Type: field.TypeString, Nullable: true},
+		{Name: "logo_title", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "fk_user_id", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// VelogConfigsTable holds the schema information for the "velog_configs" table.
+	VelogConfigsTable = &schema.Table{
+		Name:       "velog_configs",
+		Columns:    VelogConfigsColumns,
+		PrimaryKey: []*schema.Column{VelogConfigsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "velog_configs_users_velog_config",
+				Columns: []*schema.Column{VelogConfigsColumns[5]},
+
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AuthTokensTable,
 		EmailAuthsTable,
 		UsersTable,
+		UserMetaTable,
 		UserProfilesTable,
+		VelogConfigsTable,
 	}
 )
 
 func init() {
+	AuthTokensTable.ForeignKeys[0].RefTable = UsersTable
+	UserMetaTable.ForeignKeys[0].RefTable = UsersTable
 	UserProfilesTable.ForeignKeys[0].RefTable = UsersTable
+	VelogConfigsTable.ForeignKeys[0].RefTable = UsersTable
 }

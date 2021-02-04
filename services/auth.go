@@ -6,13 +6,17 @@ import (
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/ent"
+	emailAuthEnt "github.com/OhMinsSup/story-server/ent/emailauth"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
+	userprofileEnt "github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/helpers/email"
 	"github.com/SKAhack/go-shortid"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 //func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
@@ -191,6 +195,76 @@ import (
 //		"refreshToken": tokens["refreshToken"],
 //	}, http.StatusOK, nil
 //}
+
+func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
+	code := ctx.Param("code")
+	client := ctx.MustGet("client").(*ent.Client)
+	context := context.Background()
+
+	emailAuth, err := client.EmailAuth.Query().Where(emailAuthEnt.CodeEQ(code)).First(context)
+	if ent.IsNotFound(err) {
+		log.Println("emailAuth", err)
+		return app.NotFoundErrorResponse(err.Error(), nil), nil
+	}
+	log.Println("emailAuth", emailAuth)
+	if emailAuth.Logged {
+		return app.ForbiddenErrorResponse("TOKEN_ALREADY_USE", nil), nil
+	}
+
+	// 발송한 이메일은 발송 후 하루 동안의 유효기간을 가짐 그 이후는 만료처리
+	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
+	currentTime := time.Now().Unix()
+	if currentTime > expireTime || emailAuth.Logged {
+		return app.ForbiddenErrorResponse("EXPIRED_CODE", nil), nil
+	}
+
+	user, err := client.User.Query().Where(userEnt.EmailEQ(emailAuth.Email)).First(context)
+	if ent.IsNotFound(err) {
+		// 해당 이메일로 등록한 유저가 없는 경우
+		subject := "email-register"
+		payload := helpers.JSON{
+			"email": emailAuth.Email,
+			"id":    emailAuth.ID,
+		}
+
+		// 회원가입시 서버에서 발급하는 register token 을 가지고 회원가입 절차를 가짐
+		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
+		if err != nil {
+			return &app.ResponseException{
+				Code:          http.StatusConflict,
+				ResultCode:    -1,
+				ResultMessage: "",
+				Message:       app.GenerateTokenError,
+				Data:          nil,
+			}, nil
+		}
+
+		return &app.ResponseException{
+			Code:          http.StatusOK,
+			ResultCode:    0,
+			Message:       "",
+			ResultMessage: "",
+			Data: helpers.JSON{
+				"email":         emailAuth.Email,
+				"registerToken": registerToken,
+			},
+		}, nil
+	}
+
+	userProfile, err := client.UserProfile.Query().Where(userprofileEnt.HasUserWith(userEnt.IDEQ(user.ID))).First(context)
+	log.Println(userProfile)
+	// 토큰 생성
+	//tokens := user.GenerateUserToken(db)
+	//helpers.SetCookie(ctx, tokens["accessToken"].(string), tokens["refreshToken"].(string))
+
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data:          nil,
+	}, nil
+}
 
 // SendEmailService 이메일 로그인및 회원가입을 하기위한 이메일 발송
 func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseException, error) {

@@ -5,10 +5,13 @@ package ent
 import (
 	"time"
 
+	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/schema"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
+	"github.com/OhMinsSup/story-server/ent/velogconfig"
 	"github.com/google/uuid"
 )
 
@@ -16,6 +19,26 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	authtokenFields := schema.AuthToken{}.Fields()
+	_ = authtokenFields
+	// authtokenDescDisabled is the schema descriptor for disabled field.
+	authtokenDescDisabled := authtokenFields[1].Descriptor()
+	// authtoken.DefaultDisabled holds the default value on creation for the disabled field.
+	authtoken.DefaultDisabled = authtokenDescDisabled.Default.(bool)
+	// authtokenDescCreatedAt is the schema descriptor for created_at field.
+	authtokenDescCreatedAt := authtokenFields[2].Descriptor()
+	// authtoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	authtoken.DefaultCreatedAt = authtokenDescCreatedAt.Default.(func() time.Time)
+	// authtokenDescUpdatedAt is the schema descriptor for updated_at field.
+	authtokenDescUpdatedAt := authtokenFields[3].Descriptor()
+	// authtoken.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	authtoken.DefaultUpdatedAt = authtokenDescUpdatedAt.Default.(func() time.Time)
+	// authtoken.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	authtoken.UpdateDefaultUpdatedAt = authtokenDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// authtokenDescID is the schema descriptor for id field.
+	authtokenDescID := authtokenFields[0].Descriptor()
+	// authtoken.DefaultID holds the default value on creation for the id field.
+	authtoken.DefaultID = authtokenDescID.Default.(func() uuid.UUID)
 	emailauthFields := schema.EmailAuth{}.Fields()
 	_ = emailauthFields
 	// emailauthDescLogged is the schema descriptor for logged field.
@@ -64,6 +87,30 @@ func init() {
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.
 	user.DefaultID = userDescID.Default.(func() uuid.UUID)
+	usermetaFields := schema.UserMeta{}.Fields()
+	_ = usermetaFields
+	// usermetaDescEmailNotification is the schema descriptor for email_notification field.
+	usermetaDescEmailNotification := usermetaFields[1].Descriptor()
+	// usermeta.DefaultEmailNotification holds the default value on creation for the email_notification field.
+	usermeta.DefaultEmailNotification = usermetaDescEmailNotification.Default.(bool)
+	// usermetaDescEmailPromotions is the schema descriptor for email_promotions field.
+	usermetaDescEmailPromotions := usermetaFields[2].Descriptor()
+	// usermeta.DefaultEmailPromotions holds the default value on creation for the email_promotions field.
+	usermeta.DefaultEmailPromotions = usermetaDescEmailPromotions.Default.(bool)
+	// usermetaDescCreatedAt is the schema descriptor for created_at field.
+	usermetaDescCreatedAt := usermetaFields[3].Descriptor()
+	// usermeta.DefaultCreatedAt holds the default value on creation for the created_at field.
+	usermeta.DefaultCreatedAt = usermetaDescCreatedAt.Default.(func() time.Time)
+	// usermetaDescUpdatedAt is the schema descriptor for updated_at field.
+	usermetaDescUpdatedAt := usermetaFields[4].Descriptor()
+	// usermeta.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	usermeta.DefaultUpdatedAt = usermetaDescUpdatedAt.Default.(func() time.Time)
+	// usermeta.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	usermeta.UpdateDefaultUpdatedAt = usermetaDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// usermetaDescID is the schema descriptor for id field.
+	usermetaDescID := usermetaFields[0].Descriptor()
+	// usermeta.DefaultID holds the default value on creation for the id field.
+	usermeta.DefaultID = usermetaDescID.Default.(func() uuid.UUID)
 	userprofileFields := schema.UserProfile{}.Fields()
 	_ = userprofileFields
 	// userprofileDescDisplayName is the schema descriptor for display_name field.
@@ -88,4 +135,20 @@ func init() {
 	userprofileDescID := userprofileFields[0].Descriptor()
 	// userprofile.DefaultID holds the default value on creation for the id field.
 	userprofile.DefaultID = userprofileDescID.Default.(func() uuid.UUID)
+	velogconfigFields := schema.VelogConfig{}.Fields()
+	_ = velogconfigFields
+	// velogconfigDescCreatedAt is the schema descriptor for created_at field.
+	velogconfigDescCreatedAt := velogconfigFields[3].Descriptor()
+	// velogconfig.DefaultCreatedAt holds the default value on creation for the created_at field.
+	velogconfig.DefaultCreatedAt = velogconfigDescCreatedAt.Default.(func() time.Time)
+	// velogconfigDescUpdatedAt is the schema descriptor for updated_at field.
+	velogconfigDescUpdatedAt := velogconfigFields[4].Descriptor()
+	// velogconfig.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	velogconfig.DefaultUpdatedAt = velogconfigDescUpdatedAt.Default.(func() time.Time)
+	// velogconfig.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	velogconfig.UpdateDefaultUpdatedAt = velogconfigDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// velogconfigDescID is the schema descriptor for id field.
+	velogconfigDescID := velogconfigFields[0].Descriptor()
+	// velogconfig.DefaultID holds the default value on creation for the id field.
+	velogconfig.DefaultID = velogconfigDescID.Default.(func() uuid.UUID)
 }

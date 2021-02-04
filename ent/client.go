@@ -10,9 +10,12 @@ import (
 	"github.com/OhMinsSup/story-server/ent/migrate"
 	"github.com/google/uuid"
 
+	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/user"
+	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
+	"github.com/OhMinsSup/story-server/ent/velogconfig"
 
 	"github.com/facebook/ent/dialect"
 	"github.com/facebook/ent/dialect/sql"
@@ -24,12 +27,18 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AuthToken is the client for interacting with the AuthToken builders.
+	AuthToken *AuthTokenClient
 	// EmailAuth is the client for interacting with the EmailAuth builders.
 	EmailAuth *EmailAuthClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserMeta is the client for interacting with the UserMeta builders.
+	UserMeta *UserMetaClient
 	// UserProfile is the client for interacting with the UserProfile builders.
 	UserProfile *UserProfileClient
+	// VelogConfig is the client for interacting with the VelogConfig builders.
+	VelogConfig *VelogConfigClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -43,9 +52,12 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AuthToken = NewAuthTokenClient(c.config)
 	c.EmailAuth = NewEmailAuthClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.UserMeta = NewUserMetaClient(c.config)
 	c.UserProfile = NewUserProfileClient(c.config)
+	c.VelogConfig = NewVelogConfigClient(c.config)
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -78,9 +90,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:         ctx,
 		config:      cfg,
+		AuthToken:   NewAuthTokenClient(cfg),
 		EmailAuth:   NewEmailAuthClient(cfg),
 		User:        NewUserClient(cfg),
+		UserMeta:    NewUserMetaClient(cfg),
 		UserProfile: NewUserProfileClient(cfg),
+		VelogConfig: NewVelogConfigClient(cfg),
 	}, nil
 }
 
@@ -96,16 +111,19 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
 		config:      cfg,
+		AuthToken:   NewAuthTokenClient(cfg),
 		EmailAuth:   NewEmailAuthClient(cfg),
 		User:        NewUserClient(cfg),
+		UserMeta:    NewUserMetaClient(cfg),
 		UserProfile: NewUserProfileClient(cfg),
+		VelogConfig: NewVelogConfigClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		EmailAuth.
+//		AuthToken.
 //		Query().
 //		Count(ctx)
 //
@@ -127,9 +145,116 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.AuthToken.Use(hooks...)
 	c.EmailAuth.Use(hooks...)
 	c.User.Use(hooks...)
+	c.UserMeta.Use(hooks...)
 	c.UserProfile.Use(hooks...)
+	c.VelogConfig.Use(hooks...)
+}
+
+// AuthTokenClient is a client for the AuthToken schema.
+type AuthTokenClient struct {
+	config
+}
+
+// NewAuthTokenClient returns a client for the AuthToken from the given config.
+func NewAuthTokenClient(c config) *AuthTokenClient {
+	return &AuthTokenClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `authtoken.Hooks(f(g(h())))`.
+func (c *AuthTokenClient) Use(hooks ...Hook) {
+	c.hooks.AuthToken = append(c.hooks.AuthToken, hooks...)
+}
+
+// Create returns a create builder for AuthToken.
+func (c *AuthTokenClient) Create() *AuthTokenCreate {
+	mutation := newAuthTokenMutation(c.config, OpCreate)
+	return &AuthTokenCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AuthToken entities.
+func (c *AuthTokenClient) CreateBulk(builders ...*AuthTokenCreate) *AuthTokenCreateBulk {
+	return &AuthTokenCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AuthToken.
+func (c *AuthTokenClient) Update() *AuthTokenUpdate {
+	mutation := newAuthTokenMutation(c.config, OpUpdate)
+	return &AuthTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AuthTokenClient) UpdateOne(at *AuthToken) *AuthTokenUpdateOne {
+	mutation := newAuthTokenMutation(c.config, OpUpdateOne, withAuthToken(at))
+	return &AuthTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AuthTokenClient) UpdateOneID(id uuid.UUID) *AuthTokenUpdateOne {
+	mutation := newAuthTokenMutation(c.config, OpUpdateOne, withAuthTokenID(id))
+	return &AuthTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AuthToken.
+func (c *AuthTokenClient) Delete() *AuthTokenDelete {
+	mutation := newAuthTokenMutation(c.config, OpDelete)
+	return &AuthTokenDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *AuthTokenClient) DeleteOne(at *AuthToken) *AuthTokenDeleteOne {
+	return c.DeleteOneID(at.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *AuthTokenClient) DeleteOneID(id uuid.UUID) *AuthTokenDeleteOne {
+	builder := c.Delete().Where(authtoken.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AuthTokenDeleteOne{builder}
+}
+
+// Query returns a query builder for AuthToken.
+func (c *AuthTokenClient) Query() *AuthTokenQuery {
+	return &AuthTokenQuery{config: c.config}
+}
+
+// Get returns a AuthToken entity by its id.
+func (c *AuthTokenClient) Get(ctx context.Context, id uuid.UUID) (*AuthToken, error) {
+	return c.Query().Where(authtoken.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AuthTokenClient) GetX(ctx context.Context, id uuid.UUID) *AuthToken {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a AuthToken.
+func (c *AuthTokenClient) QueryUser(at *AuthToken) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(authtoken.Table, authtoken.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, authtoken.UserTable, authtoken.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AuthTokenClient) Hooks() []Hook {
+	return c.hooks.AuthToken
 }
 
 // EmailAuthClient is a client for the EmailAuth schema.
@@ -319,9 +444,161 @@ func (c *UserClient) QueryUserProfile(u *User) *UserProfileQuery {
 	return query
 }
 
+// QueryVelogConfig queries the velog_config edge of a User.
+func (c *UserClient) QueryVelogConfig(u *User) *VelogConfigQuery {
+	query := &VelogConfigQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(velogconfig.Table, velogconfig.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.VelogConfigTable, user.VelogConfigColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUserMeta queries the user_meta edge of a User.
+func (c *UserClient) QueryUserMeta(u *User) *UserMetaQuery {
+	query := &UserMetaQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(usermeta.Table, usermeta.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.UserMetaTable, user.UserMetaColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAuthToken queries the auth_token edge of a User.
+func (c *UserClient) QueryAuthToken(u *User) *AuthTokenQuery {
+	query := &AuthTokenQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(authtoken.Table, authtoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokenTable, user.AuthTokenColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
+}
+
+// UserMetaClient is a client for the UserMeta schema.
+type UserMetaClient struct {
+	config
+}
+
+// NewUserMetaClient returns a client for the UserMeta from the given config.
+func NewUserMetaClient(c config) *UserMetaClient {
+	return &UserMetaClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `usermeta.Hooks(f(g(h())))`.
+func (c *UserMetaClient) Use(hooks ...Hook) {
+	c.hooks.UserMeta = append(c.hooks.UserMeta, hooks...)
+}
+
+// Create returns a create builder for UserMeta.
+func (c *UserMetaClient) Create() *UserMetaCreate {
+	mutation := newUserMetaMutation(c.config, OpCreate)
+	return &UserMetaCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserMeta entities.
+func (c *UserMetaClient) CreateBulk(builders ...*UserMetaCreate) *UserMetaCreateBulk {
+	return &UserMetaCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserMeta.
+func (c *UserMetaClient) Update() *UserMetaUpdate {
+	mutation := newUserMetaMutation(c.config, OpUpdate)
+	return &UserMetaUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserMetaClient) UpdateOne(um *UserMeta) *UserMetaUpdateOne {
+	mutation := newUserMetaMutation(c.config, OpUpdateOne, withUserMeta(um))
+	return &UserMetaUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserMetaClient) UpdateOneID(id uuid.UUID) *UserMetaUpdateOne {
+	mutation := newUserMetaMutation(c.config, OpUpdateOne, withUserMetaID(id))
+	return &UserMetaUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserMeta.
+func (c *UserMetaClient) Delete() *UserMetaDelete {
+	mutation := newUserMetaMutation(c.config, OpDelete)
+	return &UserMetaDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *UserMetaClient) DeleteOne(um *UserMeta) *UserMetaDeleteOne {
+	return c.DeleteOneID(um.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *UserMetaClient) DeleteOneID(id uuid.UUID) *UserMetaDeleteOne {
+	builder := c.Delete().Where(usermeta.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserMetaDeleteOne{builder}
+}
+
+// Query returns a query builder for UserMeta.
+func (c *UserMetaClient) Query() *UserMetaQuery {
+	return &UserMetaQuery{config: c.config}
+}
+
+// Get returns a UserMeta entity by its id.
+func (c *UserMetaClient) Get(ctx context.Context, id uuid.UUID) (*UserMeta, error) {
+	return c.Query().Where(usermeta.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserMetaClient) GetX(ctx context.Context, id uuid.UUID) *UserMeta {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a UserMeta.
+func (c *UserMetaClient) QueryUser(um *UserMeta) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := um.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(usermeta.Table, usermeta.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, usermeta.UserTable, usermeta.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(um.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserMetaClient) Hooks() []Hook {
+	return c.hooks.UserMeta
 }
 
 // UserProfileClient is a client for the UserProfile schema.
@@ -426,4 +703,108 @@ func (c *UserProfileClient) QueryUser(up *UserProfile) *UserQuery {
 // Hooks returns the client hooks.
 func (c *UserProfileClient) Hooks() []Hook {
 	return c.hooks.UserProfile
+}
+
+// VelogConfigClient is a client for the VelogConfig schema.
+type VelogConfigClient struct {
+	config
+}
+
+// NewVelogConfigClient returns a client for the VelogConfig from the given config.
+func NewVelogConfigClient(c config) *VelogConfigClient {
+	return &VelogConfigClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `velogconfig.Hooks(f(g(h())))`.
+func (c *VelogConfigClient) Use(hooks ...Hook) {
+	c.hooks.VelogConfig = append(c.hooks.VelogConfig, hooks...)
+}
+
+// Create returns a create builder for VelogConfig.
+func (c *VelogConfigClient) Create() *VelogConfigCreate {
+	mutation := newVelogConfigMutation(c.config, OpCreate)
+	return &VelogConfigCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of VelogConfig entities.
+func (c *VelogConfigClient) CreateBulk(builders ...*VelogConfigCreate) *VelogConfigCreateBulk {
+	return &VelogConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for VelogConfig.
+func (c *VelogConfigClient) Update() *VelogConfigUpdate {
+	mutation := newVelogConfigMutation(c.config, OpUpdate)
+	return &VelogConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *VelogConfigClient) UpdateOne(vc *VelogConfig) *VelogConfigUpdateOne {
+	mutation := newVelogConfigMutation(c.config, OpUpdateOne, withVelogConfig(vc))
+	return &VelogConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *VelogConfigClient) UpdateOneID(id uuid.UUID) *VelogConfigUpdateOne {
+	mutation := newVelogConfigMutation(c.config, OpUpdateOne, withVelogConfigID(id))
+	return &VelogConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for VelogConfig.
+func (c *VelogConfigClient) Delete() *VelogConfigDelete {
+	mutation := newVelogConfigMutation(c.config, OpDelete)
+	return &VelogConfigDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *VelogConfigClient) DeleteOne(vc *VelogConfig) *VelogConfigDeleteOne {
+	return c.DeleteOneID(vc.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *VelogConfigClient) DeleteOneID(id uuid.UUID) *VelogConfigDeleteOne {
+	builder := c.Delete().Where(velogconfig.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &VelogConfigDeleteOne{builder}
+}
+
+// Query returns a query builder for VelogConfig.
+func (c *VelogConfigClient) Query() *VelogConfigQuery {
+	return &VelogConfigQuery{config: c.config}
+}
+
+// Get returns a VelogConfig entity by its id.
+func (c *VelogConfigClient) Get(ctx context.Context, id uuid.UUID) (*VelogConfig, error) {
+	return c.Query().Where(velogconfig.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *VelogConfigClient) GetX(ctx context.Context, id uuid.UUID) *VelogConfig {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a VelogConfig.
+func (c *VelogConfigClient) QueryUser(vc *VelogConfig) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := vc.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(velogconfig.Table, velogconfig.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, velogconfig.UserTable, velogconfig.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(vc.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *VelogConfigClient) Hooks() []Hook {
+	return c.hooks.VelogConfig
 }

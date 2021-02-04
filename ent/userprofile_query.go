@@ -378,7 +378,7 @@ func (upq *UserProfileQuery) sqlAll(ctx context.Context) ([]*UserProfile, error)
 		ids := make([]uuid.UUID, 0, len(nodes))
 		nodeids := make(map[uuid.UUID][]*UserProfile)
 		for i := range nodes {
-			if fk := nodes[i].user_user_profile; fk != nil {
+			if fk := nodes[i].fk_user_id; fk != nil {
 				ids = append(ids, *fk)
 				nodeids[*fk] = append(nodeids[*fk], nodes[i])
 			}
@@ -391,7 +391,7 @@ func (upq *UserProfileQuery) sqlAll(ctx context.Context) ([]*UserProfile, error)
 		for _, n := range neighbors {
 			nodes, ok := nodeids[n.ID]
 			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "user_user_profile" returned %v`, n.ID)
+				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v`, n.ID)
 			}
 			for i := range nodes {
 				nodes[i].Edges.User = n

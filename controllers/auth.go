@@ -20,6 +20,12 @@ func SendEmailController(ctx *gin.Context) {
 	ctx.JSON(result.Code, result)
 }
 
+// CodeController 이메일에 포함된 코드값으로 인증을해서 로그인또는 회원가입 진행
+func CodeController(ctx *gin.Context) {
+	result, _ := services.CodeAuthService(ctx)
+	ctx.JSON(result.Code, result)
+}
+
 // LocalRegisterController
 func LocalRegisterController(ctx *gin.Context) {
 	//var body dto.LocalRegisterBody
@@ -31,29 +37,6 @@ func LocalRegisterController(ctx *gin.Context) {
 	//db := ctx.MustGet("db").(*gorm.DB)
 	//
 	//result, code, err := services.LocalRegisterService(body, db, ctx)
-	//if err != nil {
-	//	ctx.AbortWithError(code, err)
-	//	return
-	//}
-	//
-	//ctx.JSON(code, result)
-}
-
-// CodeController
-func CodeController(ctx *gin.Context) {
-	//// validation Code Params
-	//var params = dto.CodeParams{
-	//	Code: ctx.Param("code"),
-	//}
-	//
-	//if params.Code == "" {
-	//	ctx.AbortWithError(http.StatusBadRequest, errors.New("Code is Required"))
-	//	return
-	//}
-	//
-	//db := ctx.MustGet("db").(*gorm.DB)
-	//
-	//result, code, err := services.CodeService(params.Code, db, ctx)
 	//if err != nil {
 	//	ctx.AbortWithError(code, err)
 	//	return
