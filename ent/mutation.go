@@ -2535,7 +2535,7 @@ func (m *UserProfileMutation) About() (r string, exists bool) {
 // OldAbout returns the old "about" field's value of the UserProfile entity.
 // If the UserProfile object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserProfileMutation) OldAbout(ctx context.Context) (v string, err error) {
+func (m *UserProfileMutation) OldAbout(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, fmt.Errorf("OldAbout is only allowed on UpdateOne operations")
 	}
@@ -2549,9 +2549,22 @@ func (m *UserProfileMutation) OldAbout(ctx context.Context) (v string, err error
 	return oldValue.About, nil
 }
 
+// ClearAbout clears the value of the "about" field.
+func (m *UserProfileMutation) ClearAbout() {
+	m.about = nil
+	m.clearedFields[userprofile.FieldAbout] = struct{}{}
+}
+
+// AboutCleared returns if the "about" field was cleared in this mutation.
+func (m *UserProfileMutation) AboutCleared() bool {
+	_, ok := m.clearedFields[userprofile.FieldAbout]
+	return ok
+}
+
 // ResetAbout resets all changes to the "about" field.
 func (m *UserProfileMutation) ResetAbout() {
 	m.about = nil
+	delete(m.clearedFields, userprofile.FieldAbout)
 }
 
 // SetProfileLinks sets the "profile_links" field.
@@ -2585,9 +2598,22 @@ func (m *UserProfileMutation) OldProfileLinks(ctx context.Context) (v []string, 
 	return oldValue.ProfileLinks, nil
 }
 
+// ClearProfileLinks clears the value of the "profile_links" field.
+func (m *UserProfileMutation) ClearProfileLinks() {
+	m.profile_links = nil
+	m.clearedFields[userprofile.FieldProfileLinks] = struct{}{}
+}
+
+// ProfileLinksCleared returns if the "profile_links" field was cleared in this mutation.
+func (m *UserProfileMutation) ProfileLinksCleared() bool {
+	_, ok := m.clearedFields[userprofile.FieldProfileLinks]
+	return ok
+}
+
 // ResetProfileLinks resets all changes to the "profile_links" field.
 func (m *UserProfileMutation) ResetProfileLinks() {
 	m.profile_links = nil
+	delete(m.clearedFields, userprofile.FieldProfileLinks)
 }
 
 // SetThumbnail sets the "thumbnail" field.
@@ -2919,6 +2945,12 @@ func (m *UserProfileMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *UserProfileMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(userprofile.FieldAbout) {
+		fields = append(fields, userprofile.FieldAbout)
+	}
+	if m.FieldCleared(userprofile.FieldProfileLinks) {
+		fields = append(fields, userprofile.FieldProfileLinks)
+	}
 	if m.FieldCleared(userprofile.FieldThumbnail) {
 		fields = append(fields, userprofile.FieldThumbnail)
 	}
@@ -2936,6 +2968,12 @@ func (m *UserProfileMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UserProfileMutation) ClearField(name string) error {
 	switch name {
+	case userprofile.FieldAbout:
+		m.ClearAbout()
+		return nil
+	case userprofile.FieldProfileLinks:
+		m.ClearProfileLinks()
+		return nil
 	case userprofile.FieldThumbnail:
 		m.ClearThumbnail()
 		return nil

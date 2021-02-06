@@ -455,6 +455,20 @@ func AboutHasSuffix(v string) predicate.UserProfile {
 	})
 }
 
+// AboutIsNil applies the IsNil predicate on the "about" field.
+func AboutIsNil() predicate.UserProfile {
+	return predicate.UserProfile(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldAbout)))
+	})
+}
+
+// AboutNotNil applies the NotNil predicate on the "about" field.
+func AboutNotNil() predicate.UserProfile {
+	return predicate.UserProfile(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldAbout)))
+	})
+}
+
 // AboutEqualFold applies the EqualFold predicate on the "about" field.
 func AboutEqualFold(v string) predicate.UserProfile {
 	return predicate.UserProfile(func(s *sql.Selector) {
@@ -466,6 +480,20 @@ func AboutEqualFold(v string) predicate.UserProfile {
 func AboutContainsFold(v string) predicate.UserProfile {
 	return predicate.UserProfile(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldAbout), v))
+	})
+}
+
+// ProfileLinksIsNil applies the IsNil predicate on the "profile_links" field.
+func ProfileLinksIsNil() predicate.UserProfile {
+	return predicate.UserProfile(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldProfileLinks)))
+	})
+}
+
+// ProfileLinksNotNil applies the NotNil predicate on the "profile_links" field.
+func ProfileLinksNotNil() predicate.UserProfile {
+	return predicate.UserProfile(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldProfileLinks)))
 	})
 }
 

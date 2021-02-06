@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
+	"github.com/OhMinsSup/story-server/helpers"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -26,27 +27,20 @@ func CodeController(ctx *gin.Context) {
 	ctx.JSON(result.Code, result)
 }
 
-// LocalRegisterController
+// LocalRegisterController 유저 이메일 회원가입
 func LocalRegisterController(ctx *gin.Context) {
-	//var body dto.LocalRegisterBody
-	//if err := ctx.BindJSON(&body); err != nil {
-	//	ctx.AbortWithStatus(http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//db := ctx.MustGet("db").(*gorm.DB)
-	//
-	//result, code, err := services.LocalRegisterService(body, db, ctx)
-	//if err != nil {
-	//	ctx.AbortWithError(code, err)
-	//	return
-	//}
-	//
-	//ctx.JSON(code, result)
+	var body dto.LocalRegisterBody
+	if err := ctx.ShouldBind(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, app.BadRequestErrorResponse(err.Error(), nil))
+		return
+	}
+
+	result, _ := services.LocalRegisterService(body, ctx)
+	ctx.JSON(result.Code, result)
 }
 
-// LogoutController
+// LogoutController LogOut
 func LogoutController(ctx *gin.Context) {
-	//helpers.SetCookie(ctx, "", "")
-	//ctx.Status(http.StatusNoContent)
+	helpers.SetCookie(ctx, "", "")
+	ctx.JSON(http.StatusOK, nil)
 }

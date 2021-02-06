@@ -24,7 +24,7 @@ type UserProfile struct {
 	// ShortBio holds the value of the "short_bio" field.
 	ShortBio string `json:"short_bio,omitempty"`
 	// About holds the value of the "about" field.
-	About string `json:"about,omitempty"`
+	About *string `json:"about,omitempty"`
 	// ProfileLinks holds the value of the "profile_links" field.
 	ProfileLinks []string `json:"profile_links,omitempty"`
 	// Thumbnail holds the value of the "thumbnail" field.
@@ -114,7 +114,8 @@ func (up *UserProfile) assignValues(columns []string, values []interface{}) erro
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field about", values[i])
 			} else if value.Valid {
-				up.About = value.String
+				up.About = new(string)
+				*up.About = value.String
 			}
 		case userprofile.FieldProfileLinks:
 
@@ -187,8 +188,10 @@ func (up *UserProfile) String() string {
 	builder.WriteString(up.DisplayName)
 	builder.WriteString(", short_bio=")
 	builder.WriteString(up.ShortBio)
-	builder.WriteString(", about=")
-	builder.WriteString(up.About)
+	if v := up.About; v != nil {
+		builder.WriteString(", about=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", profile_links=")
 	builder.WriteString(fmt.Sprintf("%v", up.ProfileLinks))
 	if v := up.Thumbnail; v != nil {

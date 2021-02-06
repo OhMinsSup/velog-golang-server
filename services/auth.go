@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
@@ -18,6 +19,289 @@ import (
 	"strings"
 	"time"
 )
+
+func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.ResponseException, error) {
+	client := ctx.MustGet("client").(*ent.Client)
+	bg := context.Background()
+
+	// email register token deocoded
+	decoded, err := helpers.DecodeToken(body.RegisterToken)
+	if err != nil {
+		return app.ForbiddenErrorResponse(err.Error(), nil), nil
+	}
+
+	// velog 서버에서 발행한 정보가 email-register 가 아닌 다른 값인 경우에는 회원가입시 발급한 코드값이 아님
+	if decoded["subject"] != "email-register" {
+		return app.ForbiddenErrorResponse(errors.New("Not valid token information.").Error(), nil), nil
+	}
+
+	// decoded data (email, id)
+	payload := decoded["payload"].(helpers.JSON)
+
+	// check duplicates
+	exists, err := client.User.
+		Query().
+		Where(userEnt.Or(
+			userEnt.UsernameEQ(body.UserName),
+			userEnt.EmailEQ(payload["email"].(string)),
+		)).
+		First(bg)
+
+	// 어떤 정보가 이미 존재하는지 에러 메세지를 리턴
+	if exists != nil {
+		var existMessage string
+		if exists.Username == body.UserName {
+			existMessage = "username"
+		} else {
+			existMessage = "email"
+		}
+
+		return &app.ResponseException{
+			Code:       http.StatusConflict,
+			ResultCode: app.ResultErrorCodeAlreadyExists,
+			Message:    app.ErrorStatus(existMessage),
+			Data:       nil,
+		}, nil
+	}
+
+	// disable code
+	emailAuth, err := client.EmailAuth.
+		Update().
+		Where(emailAuthEnt.CodeEQ(payload["id"].(string))).
+		SetLogged(true).
+		Save(bg)
+
+	log.Println(emailAuth)
+	if err != nil {
+		return app.DBQueryErrorResponse(err.Error(), nil), nil
+	}
+
+	tx, err := client.Tx(bg)
+	if err != nil {
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	// create user
+	user, err := tx.User.
+		Create().
+		SetUsername(body.UserName).
+		SetEmail(payload["email"].(string)).
+		SetIsCertified(true).
+		Save(bg)
+
+	// 유저 생성이 실패한 경
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	userProfile, err := tx.UserProfile.
+		Create().
+		SetDisplayName(body.DisplayName).
+		SetShortBio(body.ShortBio).
+		SetUser(user).
+		Save(bg)
+
+	// 유저 프로필 생성이 실패한 경
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	velogConfig, err := tx.VelogConfig.
+		Create().
+		SetUser(user).
+		Save(bg)
+
+	// velog config 생성이 실패한 경
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	userMeta, err := tx.UserMeta.
+		Create().
+		SetUser(user).
+		Save(bg)
+
+	// user meta 생성이 실패한 경
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	log.Println(user)
+	log.Println(userProfile)
+	log.Println(velogConfig)
+	log.Println(userMeta)
+
+	// 토큰 생성
+	accessToken, refreshToken, _ := helpers.GenerateUserToken(user, client, bg)
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data: helpers.JSON{
+			"id":           user.ID,
+			"accessToken":  accessToken,
+			"refreshToken": refreshToken,
+		},
+	}, tx.Commit()
+}
+
+func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
+	code := ctx.Param("code")
+	client := ctx.MustGet("client").(*ent.Client)
+	bg := context.Background()
+
+	emailAuth, err := client.EmailAuth.Query().Where(emailAuthEnt.CodeEQ(code)).First(bg)
+	if ent.IsNotFound(err) {
+		log.Println("emailAuth", err)
+		return app.NotFoundErrorResponse(err.Error(), nil), nil
+	}
+	log.Println("emailAuth", emailAuth)
+	if emailAuth.Logged {
+		return app.ForbiddenErrorResponse("TOKEN_ALREADY_USE", nil), nil
+	}
+
+	// 발송한 이메일은 발송 후 하루 동안의 유효기간을 가짐 그 이후는 만료처리
+	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
+	currentTime := time.Now().Unix()
+	if currentTime > expireTime || emailAuth.Logged {
+		return app.ForbiddenErrorResponse("EXPIRED_CODE", nil), nil
+	}
+
+	user, err := client.User.Query().Where(userEnt.EmailEQ(emailAuth.Email)).First(bg)
+	if ent.IsNotFound(err) {
+		// 해당 이메일로 등록한 유저가 없는 경우
+		subject := "email-register"
+		payload := helpers.JSON{
+			"email": emailAuth.Email,
+			"id":    emailAuth.ID,
+		}
+
+		// 회원가입시 서버에서 발급하는 register token 을 가지고 회원가입 절차를 가짐
+		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
+		if err != nil {
+			return &app.ResponseException{
+				Code:          http.StatusConflict,
+				ResultCode:    -1,
+				ResultMessage: "",
+				Message:       app.GenerateTokenError,
+				Data:          nil,
+			}, nil
+		}
+
+		return &app.ResponseException{
+			Code:          http.StatusOK,
+			ResultCode:    0,
+			Message:       "",
+			ResultMessage: "",
+			Data: helpers.JSON{
+				"email":         emailAuth.Email,
+				"registerToken": registerToken,
+			},
+		}, nil
+	}
+
+	userProfile, err := client.UserProfile.
+		Query().
+		Where(
+			userprofileEnt.
+				HasUserWith(userEnt.IDEQ(user.ID))).
+		First(bg)
+
+	log.Println(userProfile)
+	// 토큰 생성
+	accessToken, refreshToken, _ := helpers.GenerateUserToken(user, client, bg)
+	helpers.SetCookie(ctx, accessToken, refreshToken)
+
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data: helpers.JSON{
+			"id":           user.ID,
+			"accessToken":  accessToken,
+			"refreshToken": refreshToken,
+		},
+	}, nil
+}
+
+// SendEmailService 이메일 로그인및 회원가입을 하기위한 이메일 발송
+func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseException, error) {
+	client := ctx.MustGet("client").(*ent.Client)
+	bg := context.Background()
+
+	user, _ := client.User.Query().Where(userEnt.EmailEQ(body.Email)).First(bg)
+
+	tx, err := client.Tx(bg)
+	if err != nil {
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	// 인증 code Id 값
+	shortId := shortid.Generator()
+
+	emailAuth, err := tx.
+		EmailAuth.
+		Create().
+		SetEmail(strings.ToLower(body.Email)).
+		SetCode(shortId.Generate()).
+		Save(bg)
+
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	var registered bool
+	var template email.AuthTemplate
+	// 템플릿에 필요한 데이터 바인딩
+	template.Subject = "이메일 인증"
+	template.Template = "velog-email"
+	if user != nil {
+		template.Keyword = "로그인"
+		template.Url = "http://127.0.0.1:3000/email-login?code=" + emailAuth.Code
+		registered = false
+	} else {
+		template.Keyword = "회원가입"
+		template.Url = "http://127.0.0.1:3000/register?code=" + emailAuth.Code
+		registered = true
+	}
+
+	// 메일을 생성해서 보낸다
+	_, err = email.SendTemplateMessage(body.Email, template)
+	// 이메일 발송에 실패한 경우
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.BadRequestErrorResponse(err.Error(), nil), nil
+	}
+
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data: helpers.JSON{
+			"registered": registered,
+		},
+	}, tx.Commit()
+}
 
 //func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 //	authRepository := repository.NewAuthRepository(db)
@@ -80,253 +364,3 @@ import (
 //	}, http.StatusOK, nil
 //}
 //
-//// LocalRegisterService - 유저 회원가입 서비스 로직
-//func LocalRegisterService(body dto.LocalRegisterBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-//	authRepository := repository.NewAuthRepository(db)
-//	// email register token deocoded
-//	decoded, err := helpers.DecodeToken(body.RegisterToken)
-//	if err != nil {
-//		return nil, http.StatusInternalServerError, err
-//	}
-//
-//	// email-register 가 아닌 다른 값인 경우에는 회원가입시 발급한 코드값이 아님
-//	if decoded["subject"] != "email-register" {
-//		return nil, http.StatusBadRequest, helpers.ErrorInvalidToken
-//	}
-//
-//	// decoded data (email, id)
-//	payload := decoded["payload"].(helpers.JSON)
-//
-//	userData := dto.LocalRegisterDTO{
-//		Email:       strings.ToLower(payload["email"].(string)),
-//		Username:    body.UserName,
-//		UserID:      payload["id"].(string),
-//		DisplayName: body.DisplayName,
-//		ShortBio:    body.ShortBio,
-//	}
-//
-//	// username, email 이미 존재하는지 체크
-//	_, code, err := authRepository.ExistsByEmailAndUsername(userData.Username, userData.Email)
-//	if err != nil {
-//		return nil, code, err
-//	}
-//
-//	var emailAuth models.EmailAuth
-//	// register token 에서 userId을 emailAuth 모델에 존재하는지 체크 존재하는 경우
-//	if exists := db.Where("id = ?", payload["id"].(string)).First(&emailAuth); exists != nil {
-//		// 존재하는 경우 Logged 를 변경
-//		emailAuth.Logged = true
-//		db.Save(&emailAuth)
-//	}
-//
-//	// 유저 생성
-//	user, code, err := authRepository.CreateUser(userData)
-//	if err != nil {
-//		return nil, code, err
-//	}
-//
-//	tokens := user.GenerateUserToken(db)
-//	helpers.SetCookie(ctx, tokens["accessToken"].(string), tokens["refreshToken"].(string))
-//
-//	return helpers.JSON{
-//		"id":           user.ID,
-//		"accessToken":  tokens["accessToken"],
-//		"refreshToken": tokens["refreshToken"],
-//	}, http.StatusOK, nil
-//}
-//
-//// CodeService 이메일 코드로 회원가입을 한 유저의 경우 로그인 아닌 경우 회원가입 분기
-//func CodeService(code string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
-//	authRepository := repository.NewAuthRepository(db)
-//
-//	// 코드가 현재 서버에서 발급된 코드인지 확인
-//	existsCode, statusCode, err := authRepository.ExistsCode(code)
-//	if err != nil {
-//		return nil, statusCode, err
-//	}
-//
-//	// 이미 인증한 코드의 경우에는 401 error
-//	if existsCode.Logged {
-//		return nil, http.StatusForbidden, helpers.ErrorTokenAlreadyUse
-//	}
-//
-//	// 발송한 이메일은 발송 후 하루 동안의 유효기간을 가짐 그 이후는 만료처리
-//	expireTime := existsCode.CreatedAt.AddDate(0, 0, 1).Unix()
-//	currentTime := time.Now().Unix()
-//	if currentTime > expireTime || existsCode.Logged {
-//		return nil, http.StatusForbidden, helpers.ErrorTokenExpiredCode
-//	}
-//
-//	// check user with code
-//	var user models.User
-//	if err := db.Where("email = ?", strings.ToLower(existsCode.Email)).First(&user).Error; err != nil {
-//		// 해당 이메일로 등록한 유저가 없는 경우
-//		subject := "email-register"
-//		payload := helpers.JSON{
-//			"email": existsCode.Email,
-//			"id":    existsCode.ID,
-//		}
-//
-//		// 회원가입시 서버에서 발급하는 register token을 가지고 회원가입 절차를 가짐
-//		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
-//		if err != nil {
-//			return nil, http.StatusConflict, err
-//		}
-//
-//		return helpers.JSON{
-//			"email":         existsCode.Email,
-//			"registerToken": registerToken,
-//		}, http.StatusOK, nil
-//	}
-//
-//	var userProfile models.UserProfile
-//	if err := db.Where("user_id = ?", user.ID).First(&userProfile).Error; err != nil {
-//		return nil, http.StatusNotFound, helpers.ErrorUserProfileDefine
-//	}
-//
-//	// 토큰 생성
-//	tokens := user.GenerateUserToken(db)
-//	helpers.SetCookie(ctx, tokens["accessToken"].(string), tokens["refreshToken"].(string))
-//
-//	// 해당 이메일로 등록한 유저가 있는 경우
-//	return helpers.JSON{
-//		"id":           user.ID,
-//		"accessToken":  tokens["accessToken"],
-//		"refreshToken": tokens["refreshToken"],
-//	}, http.StatusOK, nil
-//}
-
-func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
-	code := ctx.Param("code")
-	client := ctx.MustGet("client").(*ent.Client)
-	context := context.Background()
-
-	emailAuth, err := client.EmailAuth.Query().Where(emailAuthEnt.CodeEQ(code)).First(context)
-	if ent.IsNotFound(err) {
-		log.Println("emailAuth", err)
-		return app.NotFoundErrorResponse(err.Error(), nil), nil
-	}
-	log.Println("emailAuth", emailAuth)
-	if emailAuth.Logged {
-		return app.ForbiddenErrorResponse("TOKEN_ALREADY_USE", nil), nil
-	}
-
-	// 발송한 이메일은 발송 후 하루 동안의 유효기간을 가짐 그 이후는 만료처리
-	expireTime := emailAuth.CreatedAt.AddDate(0, 0, 1).Unix()
-	currentTime := time.Now().Unix()
-	if currentTime > expireTime || emailAuth.Logged {
-		return app.ForbiddenErrorResponse("EXPIRED_CODE", nil), nil
-	}
-
-	user, err := client.User.Query().Where(userEnt.EmailEQ(emailAuth.Email)).First(context)
-	if ent.IsNotFound(err) {
-		// 해당 이메일로 등록한 유저가 없는 경우
-		subject := "email-register"
-		payload := helpers.JSON{
-			"email": emailAuth.Email,
-			"id":    emailAuth.ID,
-		}
-
-		// 회원가입시 서버에서 발급하는 register token 을 가지고 회원가입 절차를 가짐
-		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
-		if err != nil {
-			return &app.ResponseException{
-				Code:          http.StatusConflict,
-				ResultCode:    -1,
-				ResultMessage: "",
-				Message:       app.GenerateTokenError,
-				Data:          nil,
-			}, nil
-		}
-
-		return &app.ResponseException{
-			Code:          http.StatusOK,
-			ResultCode:    0,
-			Message:       "",
-			ResultMessage: "",
-			Data: helpers.JSON{
-				"email":         emailAuth.Email,
-				"registerToken": registerToken,
-			},
-		}, nil
-	}
-
-	userProfile, err := client.UserProfile.Query().Where(userprofileEnt.HasUserWith(userEnt.IDEQ(user.ID))).First(context)
-	log.Println(userProfile)
-	// 토큰 생성
-	//tokens := user.GenerateUserToken(db)
-	//helpers.SetCookie(ctx, tokens["accessToken"].(string), tokens["refreshToken"].(string))
-
-	return &app.ResponseException{
-		Code:          http.StatusOK,
-		ResultCode:    0,
-		Message:       "",
-		ResultMessage: "",
-		Data:          nil,
-	}, nil
-}
-
-// SendEmailService 이메일 로그인및 회원가입을 하기위한 이메일 발송
-func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseException, error) {
-	client := ctx.MustGet("client").(*ent.Client)
-	context := context.Background()
-
-	user, _ := client.User.Query().Where(userEnt.EmailEQ(body.Email)).First(context)
-
-	tx, err := client.Tx(ctx)
-	if err != nil {
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
-	}
-
-	// 인증 code Id 값
-	shortId := shortid.Generator()
-
-	emailAuth, err := tx.
-		EmailAuth.
-		Create().
-		SetEmail(strings.ToLower(body.Email)).
-		SetCode(shortId.Generate()).
-		Save(context)
-
-	if err != nil {
-		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
-		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
-	}
-
-	var registered bool
-	var template email.AuthTemplate
-	// 템플릿에 필요한 데이터 바인딩
-	template.Subject = "이메일 인증"
-	template.Template = "velog-email"
-	if user != nil {
-		template.Keyword = "로그인"
-		template.Url = "http://127.0.0.1:3000/email-login?code=" + emailAuth.Code
-		registered = false
-	} else {
-		template.Keyword = "회원가입"
-		template.Url = "http://127.0.0.1:3000/register?code=" + emailAuth.Code
-		registered = true
-	}
-
-	// 메일을 생성해서 보낸다
-	_, err = email.SendTemplateMessage(body.Email, template)
-	// 이메일 발송에 실패한 경우
-	if err != nil {
-		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
-		}
-		return app.BadRequestErrorResponse(err.Error(), nil), nil
-	}
-
-	return &app.ResponseException{
-		Code:          http.StatusOK,
-		ResultCode:    0,
-		Message:       "",
-		ResultMessage: "",
-		Data: helpers.JSON{
-			"registered": registered,
-		},
-	}, tx.Commit()
-}

@@ -28,6 +28,11 @@ const (
 	GenerateTokenError = ErrorStatus("GenerateTokenError")
 )
 
+const (
+	ResultErrorCodeExists        = 40000
+	ResultErrorCodeAlreadyExists = 40001
+)
+
 func AlreadyExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusOK,

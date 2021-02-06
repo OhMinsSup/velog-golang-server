@@ -48,9 +48,29 @@ func (upu *UserProfileUpdate) SetAbout(s string) *UserProfileUpdate {
 	return upu
 }
 
+// SetNillableAbout sets the "about" field if the given value is not nil.
+func (upu *UserProfileUpdate) SetNillableAbout(s *string) *UserProfileUpdate {
+	if s != nil {
+		upu.SetAbout(*s)
+	}
+	return upu
+}
+
+// ClearAbout clears the value of the "about" field.
+func (upu *UserProfileUpdate) ClearAbout() *UserProfileUpdate {
+	upu.mutation.ClearAbout()
+	return upu
+}
+
 // SetProfileLinks sets the "profile_links" field.
 func (upu *UserProfileUpdate) SetProfileLinks(s []string) *UserProfileUpdate {
 	upu.mutation.SetProfileLinks(s)
+	return upu
+}
+
+// ClearProfileLinks clears the value of the "profile_links" field.
+func (upu *UserProfileUpdate) ClearProfileLinks() *UserProfileUpdate {
+	upu.mutation.ClearProfileLinks()
 	return upu
 }
 
@@ -225,10 +245,22 @@ func (upu *UserProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: userprofile.FieldAbout,
 		})
 	}
+	if upu.mutation.AboutCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: userprofile.FieldAbout,
+		})
+	}
 	if value, ok := upu.mutation.ProfileLinks(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
 			Value:  value,
+			Column: userprofile.FieldProfileLinks,
+		})
+	}
+	if upu.mutation.ProfileLinksCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
 			Column: userprofile.FieldProfileLinks,
 		})
 	}
@@ -323,9 +355,29 @@ func (upuo *UserProfileUpdateOne) SetAbout(s string) *UserProfileUpdateOne {
 	return upuo
 }
 
+// SetNillableAbout sets the "about" field if the given value is not nil.
+func (upuo *UserProfileUpdateOne) SetNillableAbout(s *string) *UserProfileUpdateOne {
+	if s != nil {
+		upuo.SetAbout(*s)
+	}
+	return upuo
+}
+
+// ClearAbout clears the value of the "about" field.
+func (upuo *UserProfileUpdateOne) ClearAbout() *UserProfileUpdateOne {
+	upuo.mutation.ClearAbout()
+	return upuo
+}
+
 // SetProfileLinks sets the "profile_links" field.
 func (upuo *UserProfileUpdateOne) SetProfileLinks(s []string) *UserProfileUpdateOne {
 	upuo.mutation.SetProfileLinks(s)
+	return upuo
+}
+
+// ClearProfileLinks clears the value of the "profile_links" field.
+func (upuo *UserProfileUpdateOne) ClearProfileLinks() *UserProfileUpdateOne {
+	upuo.mutation.ClearProfileLinks()
 	return upuo
 }
 
@@ -498,10 +550,22 @@ func (upuo *UserProfileUpdateOne) sqlSave(ctx context.Context) (_node *UserProfi
 			Column: userprofile.FieldAbout,
 		})
 	}
+	if upuo.mutation.AboutCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: userprofile.FieldAbout,
+		})
+	}
 	if value, ok := upuo.mutation.ProfileLinks(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeJSON,
 			Value:  value,
+			Column: userprofile.FieldProfileLinks,
+		})
+	}
+	if upuo.mutation.ProfileLinksCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
 			Column: userprofile.FieldProfileLinks,
 		})
 	}

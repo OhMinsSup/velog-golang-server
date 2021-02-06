@@ -40,6 +40,14 @@ func (upc *UserProfileCreate) SetAbout(s string) *UserProfileCreate {
 	return upc
 }
 
+// SetNillableAbout sets the "about" field if the given value is not nil.
+func (upc *UserProfileCreate) SetNillableAbout(s *string) *UserProfileCreate {
+	if s != nil {
+		upc.SetAbout(*s)
+	}
+	return upc
+}
+
 // SetProfileLinks sets the "profile_links" field.
 func (upc *UserProfileCreate) SetProfileLinks(s []string) *UserProfileCreate {
 	upc.mutation.SetProfileLinks(s)
@@ -189,12 +197,6 @@ func (upc *UserProfileCreate) check() error {
 			return &ValidationError{Name: "short_bio", err: fmt.Errorf("ent: validator failed for field \"short_bio\": %w", err)}
 		}
 	}
-	if _, ok := upc.mutation.About(); !ok {
-		return &ValidationError{Name: "about", err: errors.New("ent: missing required field \"about\"")}
-	}
-	if _, ok := upc.mutation.ProfileLinks(); !ok {
-		return &ValidationError{Name: "profile_links", err: errors.New("ent: missing required field \"profile_links\"")}
-	}
 	if _, ok := upc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New("ent: missing required field \"created_at\"")}
 	}
@@ -255,7 +257,7 @@ func (upc *UserProfileCreate) createSpec() (*UserProfile, *sqlgraph.CreateSpec) 
 			Value:  value,
 			Column: userprofile.FieldAbout,
 		})
-		_node.About = value
+		_node.About = &value
 	}
 	if value, ok := upc.mutation.ProfileLinks(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

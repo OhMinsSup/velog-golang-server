@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"github.com/OhMinsSup/story-server/ent"
 	"github.com/dgrijalva/jwt-go"
 	"log"
@@ -13,12 +14,68 @@ var (
 	refreshTokenName = "refresh_token"
 )
 
-func GenerateUserToken(user *ent.User, client *ent.Client) (string, string) {
-	return "", ""
+func GenerateUserToken(user *ent.User, client *ent.Client, bg context.Context) (string, string, error) {
+	log.Println(user)
+
+	tx, err := client.Tx(bg)
+	if err != nil {
+		log.Println(err)
+		return "", "", err
+	}
+	authToken, err := tx.AuthToken.
+		Create().
+		SetUser(user).
+		Save(bg)
+
+	log.Println(authToken)
+	log.Println(err)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			log.Println("token generate error ::", err)
+			log.Println("tx error ::", rerr)
+		}
+		return "", "", err
+	}
+
+	accessSubject := "access_token"
+	accessPayload := JSON{
+		"user_id": user.ID,
+	}
+
+	refreshSubject := "refresh_token"
+	refreshPayload := JSON{
+		"user_id":  user.ID,
+		"token_id": authToken.ID,
+	}
+
+	accessToken, _ := GenerateAccessToken(accessPayload, accessSubject)
+	refreshToken, _ := GenerateRefreshToken(refreshPayload, refreshSubject)
+
+	return accessToken, refreshToken, tx.Commit()
 }
 
-func RefreshUserToken(user *ent.User, client *ent.Client) (string, string) {
-	return "", ""
+func RefreshUserToken(user *ent.User, client *ent.Client, tokenId, originalRefreshToken string, refreshTokenExp int64) (string, string) {
+	now := time.Now().Unix()
+	diff := refreshTokenExp - now
+
+	refreshToken := originalRefreshToken
+	accessSubject := "access_token"
+	accessPayload := JSON{
+		"user_id": user.ID,
+	}
+	accessToken, _ := GenerateAccessToken(accessPayload, accessSubject)
+	if diff < 60*60*24*15 {
+		log.Println("refreshing....")
+		refreshSubject := "refresh_token"
+		refreshPayload := JSON{
+			"user_id":  user.ID,
+			"token_id": tokenId,
+		}
+
+		refreshToken, _ = GenerateRefreshToken(refreshPayload, refreshSubject)
+	}
+
+	return accessToken, refreshToken
 }
 
 func generateToken(payload JSON, subject string, expire time.Duration) (string, error) {
