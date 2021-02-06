@@ -25,3 +25,16 @@ entgo에서 대해서 조금 찾아봤는데 code frist로 개발되어서 그�
 - sendEmail API 생성
 
 ## EP.3 유저 코드 인증 기능 구현
+오늘은 유저 회원가입및 코드 인증부분을 구현했다. 일단 코드로 register token을 발급 받는 부분은 정상적으로 실행을 하고 있지만
+로그인 부분은 오류가 있을 것 같다.
+
+왜냐하며 로컬 회원가입중 authToken 테이블을 생성하는 부분에서 sql 에러가 발생했다.
+```bash
+insert node to table "auth_tokens": pq: insert or update on table "auth_tokens" violates foreign key constraint "auth_tokens_users_auth_token"
+```
+내가 table 설계를 잘못한 것 같다.... 음... 정상적으로 한 것 같은데... 이건 다음에 수정해야겠다.
+
+### 오늘 한 일
+
+- 로컬 회원가입 API
+- 코드 인증 API
