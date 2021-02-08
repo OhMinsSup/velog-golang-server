@@ -150,14 +150,14 @@ func (uc *UserCreate) SetUserMeta(u *UserMeta) *UserCreate {
 	return uc.SetUserMetaID(u.ID)
 }
 
-// AddAuthTokenIDs adds the "auth_token" edge to the AuthToken entity by IDs.
+// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by IDs.
 func (uc *UserCreate) AddAuthTokenIDs(ids ...uuid.UUID) *UserCreate {
 	uc.mutation.AddAuthTokenIDs(ids...)
 	return uc
 }
 
-// AddAuthToken adds the "auth_token" edges to the AuthToken entity.
-func (uc *UserCreate) AddAuthToken(a ...*AuthToken) *UserCreate {
+// AddAuthTokens adds the "auth_tokens" edges to the AuthToken entity.
+func (uc *UserCreate) AddAuthTokens(a ...*AuthToken) *UserCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -385,12 +385,12 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.AuthTokenIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.AuthTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

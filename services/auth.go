@@ -102,10 +102,12 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 		SetDisplayName(body.DisplayName).
 		SetShortBio(body.ShortBio).
 		SetUser(user).
+		SetUserID(user.ID).
 		Save(bg)
+	log.Println("ent model user profile", userProfile)
 
 	// 유저 프로필 생성이 실패한 경
-	if err != nil {
+	if  err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = fmt.Errorf("%v: %v", err, rerr)
 		}
@@ -115,7 +117,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	velogConfig, err := tx.VelogConfig.
 		Create().
 		SetUser(user).
+		SetUserID(user.ID).
 		Save(bg)
+	log.Println("ent model velog config", velogConfig)
 
 	// velog config 생성이 실패한 경
 	if err != nil {
@@ -128,7 +132,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	userMeta, err := tx.UserMeta.
 		Create().
 		SetUser(user).
+		SetUserID(user.ID).
 		Save(bg)
+	log.Println("ent model user meta", userMeta)
 
 	// user meta 생성이 실패한 경
 	if err != nil {
@@ -138,13 +144,15 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 		return app.TransactionsErrorResponse(err.Error(), nil), nil
 	}
 
-	log.Println(user)
-	log.Println(userProfile)
-	log.Println(velogConfig)
-	log.Println(userMeta)
-
 	// 토큰 생성
 	accessToken, refreshToken, _ := helpers.GenerateUserToken(user, client, bg)
+	if accessToken == "" || refreshToken == "" {
+		if err := tx.Rollback(); err != nil {
+			return app.TransactionsErrorResponse(err.Error(), nil), nil
+		}
+		return app.InteralServerErrorResponse("token is not created", nil), nil
+	}
+
 	return &app.ResponseException{
 		Code:          http.StatusOK,
 		ResultCode:    0,

@@ -1034,9 +1034,9 @@ type UserMutation struct {
 	clearedvelog_config bool
 	user_meta           *uuid.UUID
 	cleareduser_meta    bool
-	auth_token          map[uuid.UUID]struct{}
-	removedauth_token   map[uuid.UUID]struct{}
-	clearedauth_token   bool
+	auth_tokens         map[uuid.UUID]struct{}
+	removedauth_tokens  map[uuid.UUID]struct{}
+	clearedauth_tokens  bool
 	done                bool
 	oldValue            func(context.Context) (*User, error)
 	predicates          []predicate.User
@@ -1437,57 +1437,57 @@ func (m *UserMutation) ResetUserMeta() {
 	m.cleareduser_meta = false
 }
 
-// AddAuthTokenIDs adds the "auth_token" edge to the AuthToken entity by ids.
+// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by ids.
 func (m *UserMutation) AddAuthTokenIDs(ids ...uuid.UUID) {
-	if m.auth_token == nil {
-		m.auth_token = make(map[uuid.UUID]struct{})
+	if m.auth_tokens == nil {
+		m.auth_tokens = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.auth_token[ids[i]] = struct{}{}
+		m.auth_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// ClearAuthToken clears the "auth_token" edge to the AuthToken entity.
-func (m *UserMutation) ClearAuthToken() {
-	m.clearedauth_token = true
+// ClearAuthTokens clears the "auth_tokens" edge to the AuthToken entity.
+func (m *UserMutation) ClearAuthTokens() {
+	m.clearedauth_tokens = true
 }
 
-// AuthTokenCleared returns if the "auth_token" edge to the AuthToken entity was cleared.
-func (m *UserMutation) AuthTokenCleared() bool {
-	return m.clearedauth_token
+// AuthTokensCleared returns if the "auth_tokens" edge to the AuthToken entity was cleared.
+func (m *UserMutation) AuthTokensCleared() bool {
+	return m.clearedauth_tokens
 }
 
-// RemoveAuthTokenIDs removes the "auth_token" edge to the AuthToken entity by IDs.
+// RemoveAuthTokenIDs removes the "auth_tokens" edge to the AuthToken entity by IDs.
 func (m *UserMutation) RemoveAuthTokenIDs(ids ...uuid.UUID) {
-	if m.removedauth_token == nil {
-		m.removedauth_token = make(map[uuid.UUID]struct{})
+	if m.removedauth_tokens == nil {
+		m.removedauth_tokens = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.removedauth_token[ids[i]] = struct{}{}
+		m.removedauth_tokens[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedAuthToken returns the removed IDs of the "auth_token" edge to the AuthToken entity.
-func (m *UserMutation) RemovedAuthTokenIDs() (ids []uuid.UUID) {
-	for id := range m.removedauth_token {
+// RemovedAuthTokens returns the removed IDs of the "auth_tokens" edge to the AuthToken entity.
+func (m *UserMutation) RemovedAuthTokensIDs() (ids []uuid.UUID) {
+	for id := range m.removedauth_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// AuthTokenIDs returns the "auth_token" edge IDs in the mutation.
-func (m *UserMutation) AuthTokenIDs() (ids []uuid.UUID) {
-	for id := range m.auth_token {
+// AuthTokensIDs returns the "auth_tokens" edge IDs in the mutation.
+func (m *UserMutation) AuthTokensIDs() (ids []uuid.UUID) {
+	for id := range m.auth_tokens {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetAuthToken resets all changes to the "auth_token" edge.
-func (m *UserMutation) ResetAuthToken() {
-	m.auth_token = nil
-	m.clearedauth_token = false
-	m.removedauth_token = nil
+// ResetAuthTokens resets all changes to the "auth_tokens" edge.
+func (m *UserMutation) ResetAuthTokens() {
+	m.auth_tokens = nil
+	m.clearedauth_tokens = false
+	m.removedauth_tokens = nil
 }
 
 // Op returns the operation name.
@@ -1690,8 +1690,8 @@ func (m *UserMutation) AddedEdges() []string {
 	if m.user_meta != nil {
 		edges = append(edges, user.EdgeUserMeta)
 	}
-	if m.auth_token != nil {
-		edges = append(edges, user.EdgeAuthToken)
+	if m.auth_tokens != nil {
+		edges = append(edges, user.EdgeAuthTokens)
 	}
 	return edges
 }
@@ -1712,9 +1712,9 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user_meta; id != nil {
 			return []ent.Value{*id}
 		}
-	case user.EdgeAuthToken:
-		ids := make([]ent.Value, 0, len(m.auth_token))
-		for id := range m.auth_token {
+	case user.EdgeAuthTokens:
+		ids := make([]ent.Value, 0, len(m.auth_tokens))
+		for id := range m.auth_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -1725,8 +1725,8 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removedauth_token != nil {
-		edges = append(edges, user.EdgeAuthToken)
+	if m.removedauth_tokens != nil {
+		edges = append(edges, user.EdgeAuthTokens)
 	}
 	return edges
 }
@@ -1735,9 +1735,9 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case user.EdgeAuthToken:
-		ids := make([]ent.Value, 0, len(m.removedauth_token))
-		for id := range m.removedauth_token {
+	case user.EdgeAuthTokens:
+		ids := make([]ent.Value, 0, len(m.removedauth_tokens))
+		for id := range m.removedauth_tokens {
 			ids = append(ids, id)
 		}
 		return ids
@@ -1757,8 +1757,8 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.cleareduser_meta {
 		edges = append(edges, user.EdgeUserMeta)
 	}
-	if m.clearedauth_token {
-		edges = append(edges, user.EdgeAuthToken)
+	if m.clearedauth_tokens {
+		edges = append(edges, user.EdgeAuthTokens)
 	}
 	return edges
 }
@@ -1773,8 +1773,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedvelog_config
 	case user.EdgeUserMeta:
 		return m.cleareduser_meta
-	case user.EdgeAuthToken:
-		return m.clearedauth_token
+	case user.EdgeAuthTokens:
+		return m.clearedauth_tokens
 	}
 	return false
 }
@@ -1809,8 +1809,8 @@ func (m *UserMutation) ResetEdge(name string) error {
 	case user.EdgeUserMeta:
 		m.ResetUserMeta()
 		return nil
-	case user.EdgeAuthToken:
-		m.ResetAuthToken()
+	case user.EdgeAuthTokens:
+		m.ResetAuthTokens()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

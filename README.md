@@ -38,3 +38,14 @@ insert node to table "auth_tokens": pq: insert or update on table "auth_tokens" 
 
 - 로컬 회원가입 API
 - 코드 인증 API
+
+## EP.4 유저 회원가입 API
+오늘은 저번 이야기에서 유저 토큰이 발급이 안되는 이슈를 해결했다. 이슈의 원인은 entgo에서는 1:N N:M등 다대다 관계에서는
+column을 설정할 때 s를 붙여야하고 user 모델에서 토큰을 추가해줘야하는 이슈였다.
+
+하지만 한가지 이슈가 더 발생했는데, authToken을 생성하면 fk_user_id에 값이 들어가야하는데 왠지 모르게 값이 안들어간다...
+내가 생각했을 때는 내가 잘못한 것 같은데 한번 더 이유를 찾아봐야겠다.
+
+### 오늘 한 일
+
+- 로컬 회원가입 API - (저번 이야기 이슈 처리)

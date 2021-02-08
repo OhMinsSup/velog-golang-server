@@ -22,17 +22,32 @@ func GenerateUserToken(user *ent.User, client *ent.Client, bg context.Context) (
 		log.Println(err)
 		return "", "", err
 	}
+
 	authToken, err := tx.AuthToken.
 		Create().
-		SetUser(user).
 		Save(bg)
 
-	log.Println(authToken)
-	log.Println(err)
 	if err != nil {
+		log.Println("auth token generate error ::", err)
 		if rerr := tx.Rollback(); rerr != nil {
-			log.Println("token generate error ::", err)
 			log.Println("tx error ::", rerr)
+			return "", "", rerr
+		}
+		return "", "", err
+	}
+
+	updated, err := tx.User.
+		Update().
+		AddAuthTokens(authToken).
+		AddAuthTokenIDs(authToken.ID).
+		Save(bg)
+
+	log.Println(updated)
+	if err != nil {
+		log.Println("user update error ::", err)
+		if rerr := tx.Rollback(); rerr != nil {
+			log.Println("tx error ::", rerr)
+			return "", "", rerr
 		}
 		return "", "", err
 	}

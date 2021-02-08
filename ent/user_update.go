@@ -135,14 +135,14 @@ func (uu *UserUpdate) SetUserMeta(u *UserMeta) *UserUpdate {
 	return uu.SetUserMetaID(u.ID)
 }
 
-// AddAuthTokenIDs adds the "auth_token" edge to the AuthToken entity by IDs.
+// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by IDs.
 func (uu *UserUpdate) AddAuthTokenIDs(ids ...uuid.UUID) *UserUpdate {
 	uu.mutation.AddAuthTokenIDs(ids...)
 	return uu
 }
 
-// AddAuthToken adds the "auth_token" edges to the AuthToken entity.
-func (uu *UserUpdate) AddAuthToken(a ...*AuthToken) *UserUpdate {
+// AddAuthTokens adds the "auth_tokens" edges to the AuthToken entity.
+func (uu *UserUpdate) AddAuthTokens(a ...*AuthToken) *UserUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -173,20 +173,20 @@ func (uu *UserUpdate) ClearUserMeta() *UserUpdate {
 	return uu
 }
 
-// ClearAuthToken clears all "auth_token" edges to the AuthToken entity.
-func (uu *UserUpdate) ClearAuthToken() *UserUpdate {
-	uu.mutation.ClearAuthToken()
+// ClearAuthTokens clears all "auth_tokens" edges to the AuthToken entity.
+func (uu *UserUpdate) ClearAuthTokens() *UserUpdate {
+	uu.mutation.ClearAuthTokens()
 	return uu
 }
 
-// RemoveAuthTokenIDs removes the "auth_token" edge to AuthToken entities by IDs.
+// RemoveAuthTokenIDs removes the "auth_tokens" edge to AuthToken entities by IDs.
 func (uu *UserUpdate) RemoveAuthTokenIDs(ids ...uuid.UUID) *UserUpdate {
 	uu.mutation.RemoveAuthTokenIDs(ids...)
 	return uu
 }
 
-// RemoveAuthToken removes "auth_token" edges to AuthToken entities.
-func (uu *UserUpdate) RemoveAuthToken(a ...*AuthToken) *UserUpdate {
+// RemoveAuthTokens removes "auth_tokens" edges to AuthToken entities.
+func (uu *UserUpdate) RemoveAuthTokens(a ...*AuthToken) *UserUpdate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -432,12 +432,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uu.mutation.AuthTokenCleared() {
+	if uu.mutation.AuthTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -448,12 +448,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.RemovedAuthTokenIDs(); len(nodes) > 0 && !uu.mutation.AuthTokenCleared() {
+	if nodes := uu.mutation.RemovedAuthTokensIDs(); len(nodes) > 0 && !uu.mutation.AuthTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -467,12 +467,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.AuthTokenIDs(); len(nodes) > 0 {
+	if nodes := uu.mutation.AuthTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -607,14 +607,14 @@ func (uuo *UserUpdateOne) SetUserMeta(u *UserMeta) *UserUpdateOne {
 	return uuo.SetUserMetaID(u.ID)
 }
 
-// AddAuthTokenIDs adds the "auth_token" edge to the AuthToken entity by IDs.
+// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by IDs.
 func (uuo *UserUpdateOne) AddAuthTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
 	uuo.mutation.AddAuthTokenIDs(ids...)
 	return uuo
 }
 
-// AddAuthToken adds the "auth_token" edges to the AuthToken entity.
-func (uuo *UserUpdateOne) AddAuthToken(a ...*AuthToken) *UserUpdateOne {
+// AddAuthTokens adds the "auth_tokens" edges to the AuthToken entity.
+func (uuo *UserUpdateOne) AddAuthTokens(a ...*AuthToken) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -645,20 +645,20 @@ func (uuo *UserUpdateOne) ClearUserMeta() *UserUpdateOne {
 	return uuo
 }
 
-// ClearAuthToken clears all "auth_token" edges to the AuthToken entity.
-func (uuo *UserUpdateOne) ClearAuthToken() *UserUpdateOne {
-	uuo.mutation.ClearAuthToken()
+// ClearAuthTokens clears all "auth_tokens" edges to the AuthToken entity.
+func (uuo *UserUpdateOne) ClearAuthTokens() *UserUpdateOne {
+	uuo.mutation.ClearAuthTokens()
 	return uuo
 }
 
-// RemoveAuthTokenIDs removes the "auth_token" edge to AuthToken entities by IDs.
+// RemoveAuthTokenIDs removes the "auth_tokens" edge to AuthToken entities by IDs.
 func (uuo *UserUpdateOne) RemoveAuthTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
 	uuo.mutation.RemoveAuthTokenIDs(ids...)
 	return uuo
 }
 
-// RemoveAuthToken removes "auth_token" edges to AuthToken entities.
-func (uuo *UserUpdateOne) RemoveAuthToken(a ...*AuthToken) *UserUpdateOne {
+// RemoveAuthTokens removes "auth_tokens" edges to AuthToken entities.
+func (uuo *UserUpdateOne) RemoveAuthTokens(a ...*AuthToken) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
@@ -902,12 +902,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uuo.mutation.AuthTokenCleared() {
+	if uuo.mutation.AuthTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -918,12 +918,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.RemovedAuthTokenIDs(); len(nodes) > 0 && !uuo.mutation.AuthTokenCleared() {
+	if nodes := uuo.mutation.RemovedAuthTokensIDs(); len(nodes) > 0 && !uuo.mutation.AuthTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -937,12 +937,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.AuthTokenIDs(); len(nodes) > 0 {
+	if nodes := uuo.mutation.AuthTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AuthTokenTable,
-			Columns: []string{user.AuthTokenColumn},
+			Table:   user.AuthTokensTable,
+			Columns: []string{user.AuthTokensColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

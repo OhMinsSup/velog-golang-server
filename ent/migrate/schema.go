@@ -23,7 +23,7 @@ var (
 		PrimaryKey: []*schema.Column{AuthTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:  "auth_tokens_users_auth_token",
+				Symbol:  "auth_tokens_users_auth_tokens",
 				Columns: []*schema.Column{AuthTokensColumns[4]},
 
 				RefColumns: []*schema.Column{UsersColumns[0]},

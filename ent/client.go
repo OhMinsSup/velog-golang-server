@@ -476,15 +476,15 @@ func (c *UserClient) QueryUserMeta(u *User) *UserMetaQuery {
 	return query
 }
 
-// QueryAuthToken queries the auth_token edge of a User.
-func (c *UserClient) QueryAuthToken(u *User) *AuthTokenQuery {
+// QueryAuthTokens queries the auth_tokens edge of a User.
+func (c *UserClient) QueryAuthTokens(u *User) *AuthTokenQuery {
 	query := &AuthTokenQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(authtoken.Table, authtoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokenTable, user.AuthTokenColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokensTable, user.AuthTokensColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

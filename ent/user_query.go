@@ -33,7 +33,7 @@ type UserQuery struct {
 	withUserProfile *UserProfileQuery
 	withVelogConfig *VelogConfigQuery
 	withUserMeta    *UserMetaQuery
-	withAuthToken   *AuthTokenQuery
+	withAuthTokens  *AuthTokenQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -129,8 +129,8 @@ func (uq *UserQuery) QueryUserMeta() *UserMetaQuery {
 	return query
 }
 
-// QueryAuthToken chains the current query on the "auth_token" edge.
-func (uq *UserQuery) QueryAuthToken() *AuthTokenQuery {
+// QueryAuthTokens chains the current query on the "auth_tokens" edge.
+func (uq *UserQuery) QueryAuthTokens() *AuthTokenQuery {
 	query := &AuthTokenQuery{config: uq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := uq.prepareQuery(ctx); err != nil {
@@ -143,7 +143,7 @@ func (uq *UserQuery) QueryAuthToken() *AuthTokenQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(authtoken.Table, authtoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokenTable, user.AuthTokenColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokensTable, user.AuthTokensColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -335,7 +335,7 @@ func (uq *UserQuery) Clone() *UserQuery {
 		withUserProfile: uq.withUserProfile.Clone(),
 		withVelogConfig: uq.withVelogConfig.Clone(),
 		withUserMeta:    uq.withUserMeta.Clone(),
-		withAuthToken:   uq.withAuthToken.Clone(),
+		withAuthTokens:  uq.withAuthTokens.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -375,14 +375,14 @@ func (uq *UserQuery) WithUserMeta(opts ...func(*UserMetaQuery)) *UserQuery {
 	return uq
 }
 
-// WithAuthToken tells the query-builder to eager-load the nodes that are connected to
-// the "auth_token" edge. The optional arguments are used to configure the query builder of the edge.
-func (uq *UserQuery) WithAuthToken(opts ...func(*AuthTokenQuery)) *UserQuery {
+// WithAuthTokens tells the query-builder to eager-load the nodes that are connected to
+// the "auth_tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithAuthTokens(opts ...func(*AuthTokenQuery)) *UserQuery {
 	query := &AuthTokenQuery{config: uq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	uq.withAuthToken = query
+	uq.withAuthTokens = query
 	return uq
 }
 
@@ -455,7 +455,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			uq.withUserProfile != nil,
 			uq.withVelogConfig != nil,
 			uq.withUserMeta != nil,
-			uq.withAuthToken != nil,
+			uq.withAuthTokens != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -562,17 +562,17 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 		}
 	}
 
-	if query := uq.withAuthToken; query != nil {
+	if query := uq.withAuthTokens; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
 		nodeids := make(map[uuid.UUID]*User)
 		for i := range nodes {
 			fks = append(fks, nodes[i].ID)
 			nodeids[nodes[i].ID] = nodes[i]
-			nodes[i].Edges.AuthToken = []*AuthToken{}
+			nodes[i].Edges.AuthTokens = []*AuthToken{}
 		}
 		query.withFKs = true
 		query.Where(predicate.AuthToken(func(s *sql.Selector) {
-			s.Where(sql.InValues(user.AuthTokenColumn, fks...))
+			s.Where(sql.InValues(user.AuthTokensColumn, fks...))
 		}))
 		neighbors, err := query.All(ctx)
 		if err != nil {
@@ -587,7 +587,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			if !ok {
 				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v for node %v`, *fk, n.ID)
 			}
-			node.Edges.AuthToken = append(node.Edges.AuthToken, n)
+			node.Edges.AuthTokens = append(node.Edges.AuthTokens, n)
 		}
 	}
 

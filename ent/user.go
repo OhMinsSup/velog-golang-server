@@ -43,8 +43,8 @@ type UserEdges struct {
 	VelogConfig *VelogConfig
 	// UserMeta holds the value of the user_meta edge.
 	UserMeta *UserMeta
-	// AuthToken holds the value of the auth_token edge.
-	AuthToken []*AuthToken
+	// AuthTokens holds the value of the auth_tokens edge.
+	AuthTokens []*AuthToken
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [4]bool
@@ -92,13 +92,13 @@ func (e UserEdges) UserMetaOrErr() (*UserMeta, error) {
 	return nil, &NotLoadedError{edge: "user_meta"}
 }
 
-// AuthTokenOrErr returns the AuthToken value or an error if the edge
+// AuthTokensOrErr returns the AuthTokens value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) AuthTokenOrErr() ([]*AuthToken, error) {
+func (e UserEdges) AuthTokensOrErr() ([]*AuthToken, error) {
 	if e.loadedTypes[3] {
-		return e.AuthToken, nil
+		return e.AuthTokens, nil
 	}
-	return nil, &NotLoadedError{edge: "auth_token"}
+	return nil, &NotLoadedError{edge: "auth_tokens"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -186,9 +186,9 @@ func (u *User) QueryUserMeta() *UserMetaQuery {
 	return (&UserClient{config: u.config}).QueryUserMeta(u)
 }
 
-// QueryAuthToken queries the "auth_token" edge of the User entity.
-func (u *User) QueryAuthToken() *AuthTokenQuery {
-	return (&UserClient{config: u.config}).QueryAuthToken(u)
+// QueryAuthTokens queries the "auth_tokens" edge of the User entity.
+func (u *User) QueryAuthTokens() *AuthTokenQuery {
+	return (&UserClient{config: u.config}).QueryAuthTokens(u)
 }
 
 // Update returns a builder for updating this User.
