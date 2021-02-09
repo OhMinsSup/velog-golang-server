@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"context"
 	"github.com/OhMinsSup/story-server/ent"
 	"github.com/dgrijalva/jwt-go"
 	"log"
@@ -14,44 +13,7 @@ var (
 	refreshTokenName = "refresh_token"
 )
 
-func GenerateUserToken(user *ent.User, client *ent.Client, bg context.Context) (string, string, error) {
-	log.Println(user)
-
-	tx, err := client.Tx(bg)
-	if err != nil {
-		log.Println(err)
-		return "", "", err
-	}
-
-	authToken, err := tx.AuthToken.
-		Create().
-		Save(bg)
-
-	if err != nil {
-		log.Println("auth token generate error ::", err)
-		if rerr := tx.Rollback(); rerr != nil {
-			log.Println("tx error ::", rerr)
-			return "", "", rerr
-		}
-		return "", "", err
-	}
-
-	updated, err := tx.User.
-		Update().
-		AddAuthTokens(authToken).
-		AddAuthTokenIDs(authToken.ID).
-		Save(bg)
-
-	log.Println(updated)
-	if err != nil {
-		log.Println("user update error ::", err)
-		if rerr := tx.Rollback(); rerr != nil {
-			log.Println("tx error ::", rerr)
-			return "", "", rerr
-		}
-		return "", "", err
-	}
-
+func GenerateUserToken(user *ent.User, authToken *ent.AuthToken) (string, string) {
 	accessSubject := "access_token"
 	accessPayload := JSON{
 		"user_id": user.ID,
@@ -66,7 +28,7 @@ func GenerateUserToken(user *ent.User, client *ent.Client, bg context.Context) (
 	accessToken, _ := GenerateAccessToken(accessPayload, accessSubject)
 	refreshToken, _ := GenerateRefreshToken(refreshPayload, refreshSubject)
 
-	return accessToken, refreshToken, tx.Commit()
+	return accessToken, refreshToken
 }
 
 func RefreshUserToken(user *ent.User, client *ent.Client, tokenId, originalRefreshToken string, refreshTokenExp int64) (string, string) {
