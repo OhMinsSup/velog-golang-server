@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/predicate"
+	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -30,10 +30,10 @@ type UserQuery struct {
 	fields     []string
 	predicates []predicate.User
 	// eager-loading edges.
-	withUserProfile *UserProfileQuery
-	withVelogConfig *VelogConfigQuery
-	withUserMeta    *UserMetaQuery
-	withAuthTokens  *AuthTokenQuery
+	withUserProfile   *UserProfileQuery
+	withVelogConfig   *VelogConfigQuery
+	withUserMeta      *UserMetaQuery
+	withSocialAccount *SocialAccountQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -129,9 +129,9 @@ func (uq *UserQuery) QueryUserMeta() *UserMetaQuery {
 	return query
 }
 
-// QueryAuthTokens chains the current query on the "auth_tokens" edge.
-func (uq *UserQuery) QueryAuthTokens() *AuthTokenQuery {
-	query := &AuthTokenQuery{config: uq.config}
+// QuerySocialAccount chains the current query on the "social_account" edge.
+func (uq *UserQuery) QuerySocialAccount() *SocialAccountQuery {
+	query := &SocialAccountQuery{config: uq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := uq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -142,8 +142,8 @@ func (uq *UserQuery) QueryAuthTokens() *AuthTokenQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(authtoken.Table, authtoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokensTable, user.AuthTokensColumn),
+			sqlgraph.To(socialaccount.Table, socialaccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.SocialAccountTable, user.SocialAccountColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -327,15 +327,15 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:          uq.config,
-		limit:           uq.limit,
-		offset:          uq.offset,
-		order:           append([]OrderFunc{}, uq.order...),
-		predicates:      append([]predicate.User{}, uq.predicates...),
-		withUserProfile: uq.withUserProfile.Clone(),
-		withVelogConfig: uq.withVelogConfig.Clone(),
-		withUserMeta:    uq.withUserMeta.Clone(),
-		withAuthTokens:  uq.withAuthTokens.Clone(),
+		config:            uq.config,
+		limit:             uq.limit,
+		offset:            uq.offset,
+		order:             append([]OrderFunc{}, uq.order...),
+		predicates:        append([]predicate.User{}, uq.predicates...),
+		withUserProfile:   uq.withUserProfile.Clone(),
+		withVelogConfig:   uq.withVelogConfig.Clone(),
+		withUserMeta:      uq.withUserMeta.Clone(),
+		withSocialAccount: uq.withSocialAccount.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -375,14 +375,14 @@ func (uq *UserQuery) WithUserMeta(opts ...func(*UserMetaQuery)) *UserQuery {
 	return uq
 }
 
-// WithAuthTokens tells the query-builder to eager-load the nodes that are connected to
-// the "auth_tokens" edge. The optional arguments are used to configure the query builder of the edge.
-func (uq *UserQuery) WithAuthTokens(opts ...func(*AuthTokenQuery)) *UserQuery {
-	query := &AuthTokenQuery{config: uq.config}
+// WithSocialAccount tells the query-builder to eager-load the nodes that are connected to
+// the "social_account" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithSocialAccount(opts ...func(*SocialAccountQuery)) *UserQuery {
+	query := &SocialAccountQuery{config: uq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	uq.withAuthTokens = query
+	uq.withSocialAccount = query
 	return uq
 }
 
@@ -455,7 +455,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			uq.withUserProfile != nil,
 			uq.withVelogConfig != nil,
 			uq.withUserMeta != nil,
-			uq.withAuthTokens != nil,
+			uq.withSocialAccount != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -562,17 +562,16 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 		}
 	}
 
-	if query := uq.withAuthTokens; query != nil {
+	if query := uq.withSocialAccount; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
 		nodeids := make(map[uuid.UUID]*User)
 		for i := range nodes {
 			fks = append(fks, nodes[i].ID)
 			nodeids[nodes[i].ID] = nodes[i]
-			nodes[i].Edges.AuthTokens = []*AuthToken{}
 		}
 		query.withFKs = true
-		query.Where(predicate.AuthToken(func(s *sql.Selector) {
-			s.Where(sql.InValues(user.AuthTokensColumn, fks...))
+		query.Where(predicate.SocialAccount(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.SocialAccountColumn, fks...))
 		}))
 		neighbors, err := query.All(ctx)
 		if err != nil {
@@ -587,7 +586,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			if !ok {
 				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v for node %v`, *fk, n.ID)
 			}
-			node.Edges.AuthTokens = append(node.Edges.AuthTokens, n)
+			node.Edges.SocialAccount = n
 		}
 	}
 

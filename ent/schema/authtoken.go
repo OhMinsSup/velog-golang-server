@@ -2,7 +2,6 @@ package schema
 
 import (
 	"github.com/facebook/ent"
-	"github.com/facebook/ent/schema/edge"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
 	"time"
@@ -20,14 +19,11 @@ func (AuthToken) Fields() []ent.Field {
 		field.Bool("disabled").Default(false),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+		field.UUID("fk_user_id", uuid.UUID{}),
 	}
 }
 
 // Edges of the AuthToken.
 func (AuthToken) Edges() []ent.Edge {
-	return []ent.Edge{
-		edge.From("user", User.Type).
-			Ref("auth_tokens").
-			Unique(),
-	}
+	return nil
 }

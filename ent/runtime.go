@@ -8,6 +8,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/schema"
+	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -59,6 +60,34 @@ func init() {
 	emailauthDescID := emailauthFields[0].Descriptor()
 	// emailauth.DefaultID holds the default value on creation for the id field.
 	emailauth.DefaultID = emailauthDescID.Default.(func() uuid.UUID)
+	socialaccountFields := schema.SocialAccount{}.Fields()
+	_ = socialaccountFields
+	// socialaccountDescSocialID is the schema descriptor for social_id field.
+	socialaccountDescSocialID := socialaccountFields[1].Descriptor()
+	// socialaccount.SocialIDValidator is a validator for the "social_id" field. It is called by the builders before save.
+	socialaccount.SocialIDValidator = socialaccountDescSocialID.Validators[0].(func(string) error)
+	// socialaccountDescAccessToken is the schema descriptor for access_token field.
+	socialaccountDescAccessToken := socialaccountFields[2].Descriptor()
+	// socialaccount.AccessTokenValidator is a validator for the "access_token" field. It is called by the builders before save.
+	socialaccount.AccessTokenValidator = socialaccountDescAccessToken.Validators[0].(func(string) error)
+	// socialaccountDescProvider is the schema descriptor for provider field.
+	socialaccountDescProvider := socialaccountFields[3].Descriptor()
+	// socialaccount.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
+	socialaccount.ProviderValidator = socialaccountDescProvider.Validators[0].(func(string) error)
+	// socialaccountDescCreatedAt is the schema descriptor for created_at field.
+	socialaccountDescCreatedAt := socialaccountFields[4].Descriptor()
+	// socialaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
+	socialaccount.DefaultCreatedAt = socialaccountDescCreatedAt.Default.(func() time.Time)
+	// socialaccountDescUpdatedAt is the schema descriptor for updated_at field.
+	socialaccountDescUpdatedAt := socialaccountFields[5].Descriptor()
+	// socialaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	socialaccount.DefaultUpdatedAt = socialaccountDescUpdatedAt.Default.(func() time.Time)
+	// socialaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	socialaccount.UpdateDefaultUpdatedAt = socialaccountDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// socialaccountDescID is the schema descriptor for id field.
+	socialaccountDescID := socialaccountFields[0].Descriptor()
+	// socialaccount.DefaultID holds the default value on creation for the id field.
+	socialaccount.DefaultID = socialaccountDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUsername is the schema descriptor for username field.

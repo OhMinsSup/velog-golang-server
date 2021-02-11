@@ -1,10 +1,36 @@
 package controllers
 
 import (
+	"github.com/OhMinsSup/story-server/helpers/social"
 	"github.com/gin-gonic/gin"
+	"net/http"
+	"strings"
 )
 
-func SocialProfileController (ctx *gin.Context) {
+func SocialRedirectController(ctx *gin.Context) {
+	provider := ctx.Param("provider")
+	next := ctx.Query("next")
+
+	providerType := []string{
+		"facebook",
+		"github",
+		"kakao",
+	}
+
+	if !strings.Contains(strings.Join(providerType, ","), provider) {
+		ctx.JSON(http.StatusBadRequest, "PROVIDER_VALID")
+		return
+	}
+
+	loginUrl := social.GenerateSocialLink(provider, next)
+	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
+}
+
+func SocialFacebookCallbackController (ctx *gin.Context) {
+
+}
+
+func SocialProfileController(ctx *gin.Context) {
 	//registerToken, err := ctx.Cookie("register_token")
 	//if err != nil {
 	//	ctx.AbortWithError(http.StatusUnauthorized, err)
@@ -47,24 +73,24 @@ func SocialRegisterController(ctx *gin.Context) {
 	//ctx.JSON(code, result)
 }
 
-func SocialRedirect(ctx *gin.Context) {
-	//provider := ctx.Param("provider")
-	//next := ctx.Query("next")
-	//
-	//providerType := []string{
-	//	"facebook",
-	//	"github",
-	//	"google",
-	//}
-	//
-	//if !strings.Contains(strings.Join(providerType, ","), provider) {
-	//	ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValid)
-	//	return
-	//}
-	//
-	//loginUrl := social.GenerateSocialLink(provider, next)
-	//ctx.Redirect(http.StatusMovedPermanently, loginUrl)
-}
+//func SocialRedirect(ctx *gin.Context) {
+//provider := ctx.Param("provider")
+//next := ctx.Query("next")
+//
+//providerType := []string{
+//	"facebook",
+//	"github",
+//	"google",
+//}
+//
+//if !strings.Contains(strings.Join(providerType, ","), provider) {
+//	ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValid)
+//	return
+//}
+//
+//loginUrl := social.GenerateSocialLink(provider, next)
+//ctx.Redirect(http.StatusMovedPermanently, loginUrl)
+//}
 
 func FacebookCallback(ctx *gin.Context) {
 	//code := ctx.Query("code")

@@ -16,6 +16,8 @@ type Tx struct {
 	AuthToken *AuthTokenClient
 	// EmailAuth is the client for interacting with the EmailAuth builders.
 	EmailAuth *EmailAuthClient
+	// SocialAccount is the client for interacting with the SocialAccount builders.
+	SocialAccount *SocialAccountClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// UserMeta is the client for interacting with the UserMeta builders.
@@ -161,6 +163,7 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.AuthToken = NewAuthTokenClient(tx.config)
 	tx.EmailAuth = NewEmailAuthClient(tx.config)
+	tx.SocialAccount = NewSocialAccountClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.UserMeta = NewUserMetaClient(tx.config)
 	tx.UserProfile = NewUserProfileClient(tx.config)

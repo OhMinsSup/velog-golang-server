@@ -30,8 +30,8 @@ const (
 	EdgeVelogConfig = "velog_config"
 	// EdgeUserMeta holds the string denoting the user_meta edge name in mutations.
 	EdgeUserMeta = "user_meta"
-	// EdgeAuthTokens holds the string denoting the auth_tokens edge name in mutations.
-	EdgeAuthTokens = "auth_tokens"
+	// EdgeSocialAccount holds the string denoting the social_account edge name in mutations.
+	EdgeSocialAccount = "social_account"
 
 	// Table holds the table name of the user in the database.
 	Table = "users"
@@ -56,13 +56,13 @@ const (
 	UserMetaInverseTable = "user_meta"
 	// UserMetaColumn is the table column denoting the user_meta relation/edge.
 	UserMetaColumn = "fk_user_id"
-	// AuthTokensTable is the table the holds the auth_tokens relation/edge.
-	AuthTokensTable = "auth_tokens"
-	// AuthTokensInverseTable is the table name for the AuthToken entity.
-	// It exists in this package in order to avoid circular dependency with the "authtoken" package.
-	AuthTokensInverseTable = "auth_tokens"
-	// AuthTokensColumn is the table column denoting the auth_tokens relation/edge.
-	AuthTokensColumn = "fk_user_id"
+	// SocialAccountTable is the table the holds the social_account relation/edge.
+	SocialAccountTable = "social_accounts"
+	// SocialAccountInverseTable is the table name for the SocialAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "socialaccount" package.
+	SocialAccountInverseTable = "social_accounts"
+	// SocialAccountColumn is the table column denoting the social_account relation/edge.
+	SocialAccountColumn = "fk_user_id"
 )
 
 // Columns holds all SQL columns for user fields.

@@ -11,6 +11,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
 	"github.com/OhMinsSup/story-server/ent/predicate"
+	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -29,12 +30,13 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAuthToken   = "AuthToken"
-	TypeEmailAuth   = "EmailAuth"
-	TypeUser        = "User"
-	TypeUserMeta    = "UserMeta"
-	TypeUserProfile = "UserProfile"
-	TypeVelogConfig = "VelogConfig"
+	TypeAuthToken     = "AuthToken"
+	TypeEmailAuth     = "EmailAuth"
+	TypeSocialAccount = "SocialAccount"
+	TypeUser          = "User"
+	TypeUserMeta      = "UserMeta"
+	TypeUserProfile   = "UserProfile"
+	TypeVelogConfig   = "VelogConfig"
 )
 
 // AuthTokenMutation represents an operation that mutates the AuthToken nodes in the graph.
@@ -46,9 +48,8 @@ type AuthTokenMutation struct {
 	disabled      *bool
 	created_at    *time.Time
 	updated_at    *time.Time
+	fk_user_id    *uuid.UUID
 	clearedFields map[string]struct{}
-	user          *uuid.UUID
-	cleareduser   bool
 	done          bool
 	oldValue      func(context.Context) (*AuthToken, error)
 	predicates    []predicate.AuthToken
@@ -247,43 +248,40 @@ func (m *AuthTokenMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetUserID sets the "user" edge to the User entity by id.
-func (m *AuthTokenMutation) SetUserID(id uuid.UUID) {
-	m.user = &id
+// SetFkUserID sets the "fk_user_id" field.
+func (m *AuthTokenMutation) SetFkUserID(u uuid.UUID) {
+	m.fk_user_id = &u
 }
 
-// ClearUser clears the "user" edge to the User entity.
-func (m *AuthTokenMutation) ClearUser() {
-	m.cleareduser = true
-}
-
-// UserCleared returns if the "user" edge to the User entity was cleared.
-func (m *AuthTokenMutation) UserCleared() bool {
-	return m.cleareduser
-}
-
-// UserID returns the "user" edge ID in the mutation.
-func (m *AuthTokenMutation) UserID() (id uuid.UUID, exists bool) {
-	if m.user != nil {
-		return *m.user, true
+// FkUserID returns the value of the "fk_user_id" field in the mutation.
+func (m *AuthTokenMutation) FkUserID() (r uuid.UUID, exists bool) {
+	v := m.fk_user_id
+	if v == nil {
+		return
 	}
-	return
+	return *v, true
 }
 
-// UserIDs returns the "user" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *AuthTokenMutation) UserIDs() (ids []uuid.UUID) {
-	if id := m.user; id != nil {
-		ids = append(ids, *id)
+// OldFkUserID returns the old "fk_user_id" field's value of the AuthToken entity.
+// If the AuthToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthTokenMutation) OldFkUserID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldFkUserID is only allowed on UpdateOne operations")
 	}
-	return
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldFkUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFkUserID: %w", err)
+	}
+	return oldValue.FkUserID, nil
 }
 
-// ResetUser resets all changes to the "user" edge.
-func (m *AuthTokenMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
+// ResetFkUserID resets all changes to the "fk_user_id" field.
+func (m *AuthTokenMutation) ResetFkUserID() {
+	m.fk_user_id = nil
 }
 
 // Op returns the operation name.
@@ -300,7 +298,7 @@ func (m *AuthTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AuthTokenMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m.disabled != nil {
 		fields = append(fields, authtoken.FieldDisabled)
 	}
@@ -309,6 +307,9 @@ func (m *AuthTokenMutation) Fields() []string {
 	}
 	if m.updated_at != nil {
 		fields = append(fields, authtoken.FieldUpdatedAt)
+	}
+	if m.fk_user_id != nil {
+		fields = append(fields, authtoken.FieldFkUserID)
 	}
 	return fields
 }
@@ -324,6 +325,8 @@ func (m *AuthTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case authtoken.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case authtoken.FieldFkUserID:
+		return m.FkUserID()
 	}
 	return nil, false
 }
@@ -339,6 +342,8 @@ func (m *AuthTokenMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldCreatedAt(ctx)
 	case authtoken.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case authtoken.FieldFkUserID:
+		return m.OldFkUserID(ctx)
 	}
 	return nil, fmt.Errorf("unknown AuthToken field %s", name)
 }
@@ -368,6 +373,13 @@ func (m *AuthTokenMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUpdatedAt(v)
+		return nil
+	case authtoken.FieldFkUserID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFkUserID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown AuthToken field %s", name)
@@ -427,83 +439,58 @@ func (m *AuthTokenMutation) ResetField(name string) error {
 	case authtoken.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
+	case authtoken.FieldFkUserID:
+		m.ResetFkUserID()
+		return nil
 	}
 	return fmt.Errorf("unknown AuthToken field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AuthTokenMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.user != nil {
-		edges = append(edges, authtoken.EdgeUser)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *AuthTokenMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case authtoken.EdgeUser:
-		if id := m.user; id != nil {
-			return []ent.Value{*id}
-		}
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AuthTokenMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *AuthTokenMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AuthTokenMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.cleareduser {
-		edges = append(edges, authtoken.EdgeUser)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *AuthTokenMutation) EdgeCleared(name string) bool {
-	switch name {
-	case authtoken.EdgeUser:
-		return m.cleareduser
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *AuthTokenMutation) ClearEdge(name string) error {
-	switch name {
-	case authtoken.EdgeUser:
-		m.ClearUser()
-		return nil
-	}
 	return fmt.Errorf("unknown AuthToken unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *AuthTokenMutation) ResetEdge(name string) error {
-	switch name {
-	case authtoken.EdgeUser:
-		m.ResetUser()
-		return nil
-	}
 	return fmt.Errorf("unknown AuthToken edge %s", name)
 }
 
@@ -1016,30 +1003,607 @@ func (m *EmailAuthMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown EmailAuth edge %s", name)
 }
 
+// SocialAccountMutation represents an operation that mutates the SocialAccount nodes in the graph.
+type SocialAccountMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	social_id     *string
+	access_token  *string
+	provider      *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	user          *uuid.UUID
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*SocialAccount, error)
+	predicates    []predicate.SocialAccount
+}
+
+var _ ent.Mutation = (*SocialAccountMutation)(nil)
+
+// socialaccountOption allows management of the mutation configuration using functional options.
+type socialaccountOption func(*SocialAccountMutation)
+
+// newSocialAccountMutation creates new mutation for the SocialAccount entity.
+func newSocialAccountMutation(c config, op Op, opts ...socialaccountOption) *SocialAccountMutation {
+	m := &SocialAccountMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSocialAccount,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSocialAccountID sets the ID field of the mutation.
+func withSocialAccountID(id uuid.UUID) socialaccountOption {
+	return func(m *SocialAccountMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *SocialAccount
+		)
+		m.oldValue = func(ctx context.Context) (*SocialAccount, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().SocialAccount.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSocialAccount sets the old SocialAccount of the mutation.
+func withSocialAccount(node *SocialAccount) socialaccountOption {
+	return func(m *SocialAccountMutation) {
+		m.oldValue = func(context.Context) (*SocialAccount, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SocialAccountMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SocialAccountMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of SocialAccount entities.
+func (m *SocialAccountMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *SocialAccountMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetSocialID sets the "social_id" field.
+func (m *SocialAccountMutation) SetSocialID(s string) {
+	m.social_id = &s
+}
+
+// SocialID returns the value of the "social_id" field in the mutation.
+func (m *SocialAccountMutation) SocialID() (r string, exists bool) {
+	v := m.social_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSocialID returns the old "social_id" field's value of the SocialAccount entity.
+// If the SocialAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SocialAccountMutation) OldSocialID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldSocialID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldSocialID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSocialID: %w", err)
+	}
+	return oldValue.SocialID, nil
+}
+
+// ResetSocialID resets all changes to the "social_id" field.
+func (m *SocialAccountMutation) ResetSocialID() {
+	m.social_id = nil
+}
+
+// SetAccessToken sets the "access_token" field.
+func (m *SocialAccountMutation) SetAccessToken(s string) {
+	m.access_token = &s
+}
+
+// AccessToken returns the value of the "access_token" field in the mutation.
+func (m *SocialAccountMutation) AccessToken() (r string, exists bool) {
+	v := m.access_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccessToken returns the old "access_token" field's value of the SocialAccount entity.
+// If the SocialAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SocialAccountMutation) OldAccessToken(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldAccessToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldAccessToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccessToken: %w", err)
+	}
+	return oldValue.AccessToken, nil
+}
+
+// ResetAccessToken resets all changes to the "access_token" field.
+func (m *SocialAccountMutation) ResetAccessToken() {
+	m.access_token = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *SocialAccountMutation) SetProvider(s string) {
+	m.provider = &s
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *SocialAccountMutation) Provider() (r string, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the SocialAccount entity.
+// If the SocialAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SocialAccountMutation) OldProvider(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *SocialAccountMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *SocialAccountMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *SocialAccountMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the SocialAccount entity.
+// If the SocialAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SocialAccountMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *SocialAccountMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SocialAccountMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SocialAccountMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the SocialAccount entity.
+// If the SocialAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SocialAccountMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SocialAccountMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *SocialAccountMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *SocialAccountMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared returns if the "user" edge to the User entity was cleared.
+func (m *SocialAccountMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *SocialAccountMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *SocialAccountMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *SocialAccountMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Op returns the operation name.
+func (m *SocialAccountMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (SocialAccount).
+func (m *SocialAccountMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SocialAccountMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.social_id != nil {
+		fields = append(fields, socialaccount.FieldSocialID)
+	}
+	if m.access_token != nil {
+		fields = append(fields, socialaccount.FieldAccessToken)
+	}
+	if m.provider != nil {
+		fields = append(fields, socialaccount.FieldProvider)
+	}
+	if m.created_at != nil {
+		fields = append(fields, socialaccount.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, socialaccount.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SocialAccountMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case socialaccount.FieldSocialID:
+		return m.SocialID()
+	case socialaccount.FieldAccessToken:
+		return m.AccessToken()
+	case socialaccount.FieldProvider:
+		return m.Provider()
+	case socialaccount.FieldCreatedAt:
+		return m.CreatedAt()
+	case socialaccount.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SocialAccountMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case socialaccount.FieldSocialID:
+		return m.OldSocialID(ctx)
+	case socialaccount.FieldAccessToken:
+		return m.OldAccessToken(ctx)
+	case socialaccount.FieldProvider:
+		return m.OldProvider(ctx)
+	case socialaccount.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case socialaccount.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown SocialAccount field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SocialAccountMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case socialaccount.FieldSocialID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSocialID(v)
+		return nil
+	case socialaccount.FieldAccessToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccessToken(v)
+		return nil
+	case socialaccount.FieldProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case socialaccount.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case socialaccount.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SocialAccount field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SocialAccountMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SocialAccountMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SocialAccountMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown SocialAccount numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SocialAccountMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SocialAccountMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SocialAccountMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown SocialAccount nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SocialAccountMutation) ResetField(name string) error {
+	switch name {
+	case socialaccount.FieldSocialID:
+		m.ResetSocialID()
+		return nil
+	case socialaccount.FieldAccessToken:
+		m.ResetAccessToken()
+		return nil
+	case socialaccount.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case socialaccount.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case socialaccount.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown SocialAccount field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SocialAccountMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, socialaccount.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SocialAccountMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case socialaccount.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SocialAccountMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SocialAccountMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SocialAccountMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, socialaccount.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SocialAccountMutation) EdgeCleared(name string) bool {
+	switch name {
+	case socialaccount.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SocialAccountMutation) ClearEdge(name string) error {
+	switch name {
+	case socialaccount.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown SocialAccount unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SocialAccountMutation) ResetEdge(name string) error {
+	switch name {
+	case socialaccount.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown SocialAccount edge %s", name)
+}
+
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                  Op
-	typ                 string
-	id                  *uuid.UUID
-	username            *string
-	email               *string
-	is_certified        *bool
-	created_at          *time.Time
-	updated_at          *time.Time
-	clearedFields       map[string]struct{}
-	user_profile        *uuid.UUID
-	cleareduser_profile bool
-	velog_config        *uuid.UUID
-	clearedvelog_config bool
-	user_meta           *uuid.UUID
-	cleareduser_meta    bool
-	auth_tokens         map[uuid.UUID]struct{}
-	removedauth_tokens  map[uuid.UUID]struct{}
-	clearedauth_tokens  bool
-	done                bool
-	oldValue            func(context.Context) (*User, error)
-	predicates          []predicate.User
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	username              *string
+	email                 *string
+	is_certified          *bool
+	created_at            *time.Time
+	updated_at            *time.Time
+	clearedFields         map[string]struct{}
+	user_profile          *uuid.UUID
+	cleareduser_profile   bool
+	velog_config          *uuid.UUID
+	clearedvelog_config   bool
+	user_meta             *uuid.UUID
+	cleareduser_meta      bool
+	social_account        *uuid.UUID
+	clearedsocial_account bool
+	done                  bool
+	oldValue              func(context.Context) (*User, error)
+	predicates            []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -1437,57 +2001,43 @@ func (m *UserMutation) ResetUserMeta() {
 	m.cleareduser_meta = false
 }
 
-// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by ids.
-func (m *UserMutation) AddAuthTokenIDs(ids ...uuid.UUID) {
-	if m.auth_tokens == nil {
-		m.auth_tokens = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.auth_tokens[ids[i]] = struct{}{}
-	}
+// SetSocialAccountID sets the "social_account" edge to the SocialAccount entity by id.
+func (m *UserMutation) SetSocialAccountID(id uuid.UUID) {
+	m.social_account = &id
 }
 
-// ClearAuthTokens clears the "auth_tokens" edge to the AuthToken entity.
-func (m *UserMutation) ClearAuthTokens() {
-	m.clearedauth_tokens = true
+// ClearSocialAccount clears the "social_account" edge to the SocialAccount entity.
+func (m *UserMutation) ClearSocialAccount() {
+	m.clearedsocial_account = true
 }
 
-// AuthTokensCleared returns if the "auth_tokens" edge to the AuthToken entity was cleared.
-func (m *UserMutation) AuthTokensCleared() bool {
-	return m.clearedauth_tokens
+// SocialAccountCleared returns if the "social_account" edge to the SocialAccount entity was cleared.
+func (m *UserMutation) SocialAccountCleared() bool {
+	return m.clearedsocial_account
 }
 
-// RemoveAuthTokenIDs removes the "auth_tokens" edge to the AuthToken entity by IDs.
-func (m *UserMutation) RemoveAuthTokenIDs(ids ...uuid.UUID) {
-	if m.removedauth_tokens == nil {
-		m.removedauth_tokens = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.removedauth_tokens[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedAuthTokens returns the removed IDs of the "auth_tokens" edge to the AuthToken entity.
-func (m *UserMutation) RemovedAuthTokensIDs() (ids []uuid.UUID) {
-	for id := range m.removedauth_tokens {
-		ids = append(ids, id)
+// SocialAccountID returns the "social_account" edge ID in the mutation.
+func (m *UserMutation) SocialAccountID() (id uuid.UUID, exists bool) {
+	if m.social_account != nil {
+		return *m.social_account, true
 	}
 	return
 }
 
-// AuthTokensIDs returns the "auth_tokens" edge IDs in the mutation.
-func (m *UserMutation) AuthTokensIDs() (ids []uuid.UUID) {
-	for id := range m.auth_tokens {
-		ids = append(ids, id)
+// SocialAccountIDs returns the "social_account" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SocialAccountID instead. It exists only for internal usage by the builders.
+func (m *UserMutation) SocialAccountIDs() (ids []uuid.UUID) {
+	if id := m.social_account; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetAuthTokens resets all changes to the "auth_tokens" edge.
-func (m *UserMutation) ResetAuthTokens() {
-	m.auth_tokens = nil
-	m.clearedauth_tokens = false
-	m.removedauth_tokens = nil
+// ResetSocialAccount resets all changes to the "social_account" edge.
+func (m *UserMutation) ResetSocialAccount() {
+	m.social_account = nil
+	m.clearedsocial_account = false
 }
 
 // Op returns the operation name.
@@ -1690,8 +2240,8 @@ func (m *UserMutation) AddedEdges() []string {
 	if m.user_meta != nil {
 		edges = append(edges, user.EdgeUserMeta)
 	}
-	if m.auth_tokens != nil {
-		edges = append(edges, user.EdgeAuthTokens)
+	if m.social_account != nil {
+		edges = append(edges, user.EdgeSocialAccount)
 	}
 	return edges
 }
@@ -1712,12 +2262,10 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user_meta; id != nil {
 			return []ent.Value{*id}
 		}
-	case user.EdgeAuthTokens:
-		ids := make([]ent.Value, 0, len(m.auth_tokens))
-		for id := range m.auth_tokens {
-			ids = append(ids, id)
+	case user.EdgeSocialAccount:
+		if id := m.social_account; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	}
 	return nil
 }
@@ -1725,9 +2273,6 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 4)
-	if m.removedauth_tokens != nil {
-		edges = append(edges, user.EdgeAuthTokens)
-	}
 	return edges
 }
 
@@ -1735,12 +2280,6 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case user.EdgeAuthTokens:
-		ids := make([]ent.Value, 0, len(m.removedauth_tokens))
-		for id := range m.removedauth_tokens {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
@@ -1757,8 +2296,8 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.cleareduser_meta {
 		edges = append(edges, user.EdgeUserMeta)
 	}
-	if m.clearedauth_tokens {
-		edges = append(edges, user.EdgeAuthTokens)
+	if m.clearedsocial_account {
+		edges = append(edges, user.EdgeSocialAccount)
 	}
 	return edges
 }
@@ -1773,8 +2312,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedvelog_config
 	case user.EdgeUserMeta:
 		return m.cleareduser_meta
-	case user.EdgeAuthTokens:
-		return m.clearedauth_tokens
+	case user.EdgeSocialAccount:
+		return m.clearedsocial_account
 	}
 	return false
 }
@@ -1791,6 +2330,9 @@ func (m *UserMutation) ClearEdge(name string) error {
 		return nil
 	case user.EdgeUserMeta:
 		m.ClearUserMeta()
+		return nil
+	case user.EdgeSocialAccount:
+		m.ClearSocialAccount()
 		return nil
 	}
 	return fmt.Errorf("unknown User unique edge %s", name)
@@ -1809,8 +2351,8 @@ func (m *UserMutation) ResetEdge(name string) error {
 	case user.EdgeUserMeta:
 		m.ResetUserMeta()
 		return nil
-	case user.EdgeAuthTokens:
-		m.ResetAuthTokens()
+	case user.EdgeSocialAccount:
+		m.ResetSocialAccount()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

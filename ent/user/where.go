@@ -615,25 +615,25 @@ func HasUserMetaWith(preds ...predicate.UserMeta) predicate.User {
 	})
 }
 
-// HasAuthTokens applies the HasEdge predicate on the "auth_tokens" edge.
-func HasAuthTokens() predicate.User {
+// HasSocialAccount applies the HasEdge predicate on the "social_account" edge.
+func HasSocialAccount() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthTokensTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AuthTokensTable, AuthTokensColumn),
+			sqlgraph.To(SocialAccountTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, SocialAccountTable, SocialAccountColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAuthTokensWith applies the HasEdge predicate on the "auth_tokens" edge with a given conditions (other predicates).
-func HasAuthTokensWith(preds ...predicate.AuthToken) predicate.User {
+// HasSocialAccountWith applies the HasEdge predicate on the "social_account" edge with a given conditions (other predicates).
+func HasSocialAccountWith(preds ...predicate.SocialAccount) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(AuthTokensInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AuthTokensTable, AuthTokensColumn),
+			sqlgraph.To(SocialAccountInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, SocialAccountTable, SocialAccountColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/OhMinsSup/story-server/ent/authtoken"
+	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -150,19 +150,23 @@ func (uc *UserCreate) SetUserMeta(u *UserMeta) *UserCreate {
 	return uc.SetUserMetaID(u.ID)
 }
 
-// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by IDs.
-func (uc *UserCreate) AddAuthTokenIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddAuthTokenIDs(ids...)
+// SetSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID.
+func (uc *UserCreate) SetSocialAccountID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetSocialAccountID(id)
 	return uc
 }
 
-// AddAuthTokens adds the "auth_tokens" edges to the AuthToken entity.
-func (uc *UserCreate) AddAuthTokens(a ...*AuthToken) *UserCreate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableSocialAccountID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetSocialAccountID(*id)
 	}
-	return uc.AddAuthTokenIDs(ids...)
+	return uc
+}
+
+// SetSocialAccount sets the "social_account" edge to the SocialAccount entity.
+func (uc *UserCreate) SetSocialAccount(s *SocialAccount) *UserCreate {
+	return uc.SetSocialAccountID(s.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -385,17 +389,17 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.AuthTokensIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.SocialAccountIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
+			Table:   user.SocialAccountTable,
+			Columns: []string{user.SocialAccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
+					Column: socialaccount.FieldID,
 				},
 			},
 		}

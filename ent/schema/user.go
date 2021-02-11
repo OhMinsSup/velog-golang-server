@@ -42,7 +42,7 @@ func (User) Edges() []ent.Edge {
 			StorageKey(edge.Column("fk_user_id")).Unique(),
 		edge.To("user_meta", UserMeta.Type).
 			StorageKey(edge.Column("fk_user_id")).Unique(),
-		edge.To("auth_tokens", AuthToken.Type).
-			StorageKey(edge.Column("fk_user_id")),
+		edge.To("social_account", SocialAccount.Type).
+			StorageKey(edge.Column("fk_user_id")).Unique(),
 	}
 }

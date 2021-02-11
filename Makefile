@@ -5,7 +5,7 @@ export APP=story-server
 export LDFLAGS="-w -s"
 export APP_ENV="production"
 
-- sync:
+- db-sync:
 	go generate ./ent
 
 - run:

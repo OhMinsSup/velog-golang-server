@@ -7,7 +7,6 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/facebook/ent/dialect/sql"
-	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -112,6 +111,13 @@ func CreatedAt(v time.Time) predicate.AuthToken {
 func UpdatedAt(v time.Time) predicate.AuthToken {
 	return predicate.AuthToken(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldUpdatedAt), v))
+	})
+}
+
+// FkUserID applies equality check predicate on the "fk_user_id" field. It's identical to FkUserIDEQ.
+func FkUserID(v uuid.UUID) predicate.AuthToken {
+	return predicate.AuthToken(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldFkUserID), v))
 	})
 }
 
@@ -281,31 +287,79 @@ func UpdatedAtLTE(v time.Time) predicate.AuthToken {
 	})
 }
 
-// HasUser applies the HasEdge predicate on the "user" edge.
-func HasUser() predicate.AuthToken {
+// FkUserIDEQ applies the EQ predicate on the "fk_user_id" field.
+func FkUserIDEQ(v uuid.UUID) predicate.AuthToken {
 	return predicate.AuthToken(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UserTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
+		s.Where(sql.EQ(s.C(FieldFkUserID), v))
 	})
 }
 
-// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.AuthToken {
+// FkUserIDNEQ applies the NEQ predicate on the "fk_user_id" field.
+func FkUserIDNEQ(v uuid.UUID) predicate.AuthToken {
 	return predicate.AuthToken(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
+		s.Where(sql.NEQ(s.C(FieldFkUserID), v))
+	})
+}
+
+// FkUserIDIn applies the In predicate on the "fk_user_id" field.
+func FkUserIDIn(vs ...uuid.UUID) predicate.AuthToken {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.AuthToken(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldFkUserID), v...))
+	})
+}
+
+// FkUserIDNotIn applies the NotIn predicate on the "fk_user_id" field.
+func FkUserIDNotIn(vs ...uuid.UUID) predicate.AuthToken {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.AuthToken(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldFkUserID), v...))
+	})
+}
+
+// FkUserIDGT applies the GT predicate on the "fk_user_id" field.
+func FkUserIDGT(v uuid.UUID) predicate.AuthToken {
+	return predicate.AuthToken(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldFkUserID), v))
+	})
+}
+
+// FkUserIDGTE applies the GTE predicate on the "fk_user_id" field.
+func FkUserIDGTE(v uuid.UUID) predicate.AuthToken {
+	return predicate.AuthToken(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldFkUserID), v))
+	})
+}
+
+// FkUserIDLT applies the LT predicate on the "fk_user_id" field.
+func FkUserIDLT(v uuid.UUID) predicate.AuthToken {
+	return predicate.AuthToken(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldFkUserID), v))
+	})
+}
+
+// FkUserIDLTE applies the LTE predicate on the "fk_user_id" field.
+func FkUserIDLTE(v uuid.UUID) predicate.AuthToken {
+	return predicate.AuthToken(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldFkUserID), v))
 	})
 }
 

@@ -81,28 +81,12 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 		return app.TransactionsErrorResponse(err.Error(), nil), nil
 	}
 
-
-	authToken, err := tx.AuthToken.
-		Create().
-		Save(bg)
-
-	// 토큰 생성이 실패한 경우
-	if err != nil {
-		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
-		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
-	}
-
-
 	// create user
 	user, err := tx.User.
 		Create().
 		SetUsername(body.UserName).
 		SetEmail(payload["email"].(string)).
 		SetIsCertified(true).
-		AddAuthTokens(authToken).
-		AddAuthTokenIDs(authToken.ID).
 		Save(bg)
 
 	// 유저 생성이 실패한 경
@@ -123,7 +107,7 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	log.Println("ent model user profile", userProfile)
 
 	// 유저 프로필 생성이 실패한 경
-	if  err != nil {
+	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = fmt.Errorf("%v: %v", err, rerr)
 		}
@@ -153,6 +137,19 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	log.Println("ent model user meta", userMeta)
 
 	// user meta 생성이 실패한 경
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			err = fmt.Errorf("%v: %v", err, rerr)
+		}
+		return app.TransactionsErrorResponse(err.Error(), nil), nil
+	}
+
+	authToken, err := tx.AuthToken.
+		Create().
+		SetFkUserID(user.ID).
+		Save(bg)
+
+	// 토큰 생성이 실패한 경우
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = fmt.Errorf("%v: %v", err, rerr)
@@ -249,27 +246,15 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 	if err != nil {
 		return app.TransactionsErrorResponse(err.Error(), nil), nil
 	}
+
 	log.Println(userProfile)
 
 	authToken, err := tx.AuthToken.
 		Create().
+		SetFkUserID(user.ID).
 		Save(bg)
 
 	// 토큰 생성이 실패한 경우
-	if err != nil {
-		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
-		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
-	}
-
-	update, err := user.Update().
-		AddAuthTokenIDs(authToken.ID).
-		AddAuthTokens(authToken).
-		Save(bg)
-
-	log.Println(update)
-	// 유저 생성이 실패한 경
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			err = fmt.Errorf("%v: %v", err, rerr)
@@ -294,8 +279,8 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 		ResultMessage: "",
 		Data: helpers.JSON{
 			"id":           user.ID,
-			"accessToken":  "accessToken",
-			"refreshToken": "refreshToken",
+			"accessToken":  accessToken,
+			"refreshToken": refreshToken,
 		},
 	}, nil
 }

@@ -19,19 +19,11 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-
-	// EdgeUser holds the string denoting the user edge name in mutations.
-	EdgeUser = "user"
+	// FieldFkUserID holds the string denoting the fk_user_id field in the database.
+	FieldFkUserID = "fk_user_id"
 
 	// Table holds the table name of the authtoken in the database.
 	Table = "auth_tokens"
-	// UserTable is the table the holds the user relation/edge.
-	UserTable = "auth_tokens"
-	// UserInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "users"
-	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "fk_user_id"
 )
 
 // Columns holds all SQL columns for authtoken fields.
@@ -40,22 +32,13 @@ var Columns = []string{
 	FieldDisabled,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the AuthToken type.
-var ForeignKeys = []string{
-	"fk_user_id",
+	FieldFkUserID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}

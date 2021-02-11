@@ -35,6 +35,19 @@ func (f EmailAuthFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return f(ctx, mv)
 }
 
+// The SocialAccountFunc type is an adapter to allow the use of ordinary
+// function as SocialAccount mutator.
+type SocialAccountFunc func(context.Context, *ent.SocialAccountMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SocialAccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.SocialAccountMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SocialAccountMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

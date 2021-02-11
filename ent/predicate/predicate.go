@@ -12,6 +12,9 @@ type AuthToken func(*sql.Selector)
 // EmailAuth is the predicate function for emailauth builders.
 type EmailAuth func(*sql.Selector)
 
+// SocialAccount is the predicate function for socialaccount builders.
+type SocialAccount func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
 

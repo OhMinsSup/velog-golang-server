@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/predicate"
+	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -135,19 +135,23 @@ func (uu *UserUpdate) SetUserMeta(u *UserMeta) *UserUpdate {
 	return uu.SetUserMetaID(u.ID)
 }
 
-// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by IDs.
-func (uu *UserUpdate) AddAuthTokenIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.AddAuthTokenIDs(ids...)
+// SetSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID.
+func (uu *UserUpdate) SetSocialAccountID(id uuid.UUID) *UserUpdate {
+	uu.mutation.SetSocialAccountID(id)
 	return uu
 }
 
-// AddAuthTokens adds the "auth_tokens" edges to the AuthToken entity.
-func (uu *UserUpdate) AddAuthTokens(a ...*AuthToken) *UserUpdate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID if the given value is not nil.
+func (uu *UserUpdate) SetNillableSocialAccountID(id *uuid.UUID) *UserUpdate {
+	if id != nil {
+		uu = uu.SetSocialAccountID(*id)
 	}
-	return uu.AddAuthTokenIDs(ids...)
+	return uu
+}
+
+// SetSocialAccount sets the "social_account" edge to the SocialAccount entity.
+func (uu *UserUpdate) SetSocialAccount(s *SocialAccount) *UserUpdate {
+	return uu.SetSocialAccountID(s.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -173,25 +177,10 @@ func (uu *UserUpdate) ClearUserMeta() *UserUpdate {
 	return uu
 }
 
-// ClearAuthTokens clears all "auth_tokens" edges to the AuthToken entity.
-func (uu *UserUpdate) ClearAuthTokens() *UserUpdate {
-	uu.mutation.ClearAuthTokens()
+// ClearSocialAccount clears the "social_account" edge to the SocialAccount entity.
+func (uu *UserUpdate) ClearSocialAccount() *UserUpdate {
+	uu.mutation.ClearSocialAccount()
 	return uu
-}
-
-// RemoveAuthTokenIDs removes the "auth_tokens" edge to AuthToken entities by IDs.
-func (uu *UserUpdate) RemoveAuthTokenIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.RemoveAuthTokenIDs(ids...)
-	return uu
-}
-
-// RemoveAuthTokens removes "auth_tokens" edges to AuthToken entities.
-func (uu *UserUpdate) RemoveAuthTokens(a ...*AuthToken) *UserUpdate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return uu.RemoveAuthTokenIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -432,52 +421,33 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uu.mutation.AuthTokensCleared() {
+	if uu.mutation.SocialAccountCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
+			Table:   user.SocialAccountTable,
+			Columns: []string{user.SocialAccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
+					Column: socialaccount.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.RemovedAuthTokensIDs(); len(nodes) > 0 && !uu.mutation.AuthTokensCleared() {
+	if nodes := uu.mutation.SocialAccountIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
+			Table:   user.SocialAccountTable,
+			Columns: []string{user.SocialAccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := uu.mutation.AuthTokensIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
+					Column: socialaccount.FieldID,
 				},
 			},
 		}
@@ -607,19 +577,23 @@ func (uuo *UserUpdateOne) SetUserMeta(u *UserMeta) *UserUpdateOne {
 	return uuo.SetUserMetaID(u.ID)
 }
 
-// AddAuthTokenIDs adds the "auth_tokens" edge to the AuthToken entity by IDs.
-func (uuo *UserUpdateOne) AddAuthTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.AddAuthTokenIDs(ids...)
+// SetSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID.
+func (uuo *UserUpdateOne) SetSocialAccountID(id uuid.UUID) *UserUpdateOne {
+	uuo.mutation.SetSocialAccountID(id)
 	return uuo
 }
 
-// AddAuthTokens adds the "auth_tokens" edges to the AuthToken entity.
-func (uuo *UserUpdateOne) AddAuthTokens(a ...*AuthToken) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableSocialAccountID(id *uuid.UUID) *UserUpdateOne {
+	if id != nil {
+		uuo = uuo.SetSocialAccountID(*id)
 	}
-	return uuo.AddAuthTokenIDs(ids...)
+	return uuo
+}
+
+// SetSocialAccount sets the "social_account" edge to the SocialAccount entity.
+func (uuo *UserUpdateOne) SetSocialAccount(s *SocialAccount) *UserUpdateOne {
+	return uuo.SetSocialAccountID(s.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -645,25 +619,10 @@ func (uuo *UserUpdateOne) ClearUserMeta() *UserUpdateOne {
 	return uuo
 }
 
-// ClearAuthTokens clears all "auth_tokens" edges to the AuthToken entity.
-func (uuo *UserUpdateOne) ClearAuthTokens() *UserUpdateOne {
-	uuo.mutation.ClearAuthTokens()
+// ClearSocialAccount clears the "social_account" edge to the SocialAccount entity.
+func (uuo *UserUpdateOne) ClearSocialAccount() *UserUpdateOne {
+	uuo.mutation.ClearSocialAccount()
 	return uuo
-}
-
-// RemoveAuthTokenIDs removes the "auth_tokens" edge to AuthToken entities by IDs.
-func (uuo *UserUpdateOne) RemoveAuthTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.RemoveAuthTokenIDs(ids...)
-	return uuo
-}
-
-// RemoveAuthTokens removes "auth_tokens" edges to AuthToken entities.
-func (uuo *UserUpdateOne) RemoveAuthTokens(a ...*AuthToken) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return uuo.RemoveAuthTokenIDs(ids...)
 }
 
 // Save executes the query and returns the updated User entity.
@@ -902,52 +861,33 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if uuo.mutation.AuthTokensCleared() {
+	if uuo.mutation.SocialAccountCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
+			Table:   user.SocialAccountTable,
+			Columns: []string{user.SocialAccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
+					Column: socialaccount.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.RemovedAuthTokensIDs(); len(nodes) > 0 && !uuo.mutation.AuthTokensCleared() {
+	if nodes := uuo.mutation.SocialAccountIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
+			Table:   user.SocialAccountTable,
+			Columns: []string{user.SocialAccountColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := uuo.mutation.AuthTokensIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.AuthTokensTable,
-			Columns: []string{user.AuthTokensColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: authtoken.FieldID,
+					Column: socialaccount.FieldID,
 				},
 			},
 		}

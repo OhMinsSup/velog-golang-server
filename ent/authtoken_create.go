@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -64,29 +63,16 @@ func (atc *AuthTokenCreate) SetNillableUpdatedAt(t *time.Time) *AuthTokenCreate 
 	return atc
 }
 
+// SetFkUserID sets the "fk_user_id" field.
+func (atc *AuthTokenCreate) SetFkUserID(u uuid.UUID) *AuthTokenCreate {
+	atc.mutation.SetFkUserID(u)
+	return atc
+}
+
 // SetID sets the "id" field.
 func (atc *AuthTokenCreate) SetID(u uuid.UUID) *AuthTokenCreate {
 	atc.mutation.SetID(u)
 	return atc
-}
-
-// SetUserID sets the "user" edge to the User entity by ID.
-func (atc *AuthTokenCreate) SetUserID(id uuid.UUID) *AuthTokenCreate {
-	atc.mutation.SetUserID(id)
-	return atc
-}
-
-// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (atc *AuthTokenCreate) SetNillableUserID(id *uuid.UUID) *AuthTokenCreate {
-	if id != nil {
-		atc = atc.SetUserID(*id)
-	}
-	return atc
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (atc *AuthTokenCreate) SetUser(u *User) *AuthTokenCreate {
-	return atc.SetUserID(u.ID)
 }
 
 // Mutation returns the AuthTokenMutation object of the builder.
@@ -170,6 +156,9 @@ func (atc *AuthTokenCreate) check() error {
 	if _, ok := atc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New("ent: missing required field \"updated_at\"")}
 	}
+	if _, ok := atc.mutation.FkUserID(); !ok {
+		return &ValidationError{Name: "fk_user_id", err: errors.New("ent: missing required field \"fk_user_id\"")}
+	}
 	return nil
 }
 
@@ -223,24 +212,13 @@ func (atc *AuthTokenCreate) createSpec() (*AuthToken, *sqlgraph.CreateSpec) {
 		})
 		_node.UpdatedAt = value
 	}
-	if nodes := atc.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   authtoken.UserTable,
-			Columns: []string{authtoken.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
+	if value, ok := atc.mutation.FkUserID(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeUUID,
+			Value:  value,
+			Column: authtoken.FieldFkUserID,
+		})
+		_node.FkUserID = value
 	}
 	return _node, _spec
 }

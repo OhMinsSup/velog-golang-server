@@ -12,6 +12,7 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
+	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -31,6 +32,8 @@ type Client struct {
 	AuthToken *AuthTokenClient
 	// EmailAuth is the client for interacting with the EmailAuth builders.
 	EmailAuth *EmailAuthClient
+	// SocialAccount is the client for interacting with the SocialAccount builders.
+	SocialAccount *SocialAccountClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// UserMeta is the client for interacting with the UserMeta builders.
@@ -54,6 +57,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.AuthToken = NewAuthTokenClient(c.config)
 	c.EmailAuth = NewEmailAuthClient(c.config)
+	c.SocialAccount = NewSocialAccountClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.UserMeta = NewUserMetaClient(c.config)
 	c.UserProfile = NewUserProfileClient(c.config)
@@ -88,14 +92,15 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}
 	cfg := config{driver: tx, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		ctx:         ctx,
-		config:      cfg,
-		AuthToken:   NewAuthTokenClient(cfg),
-		EmailAuth:   NewEmailAuthClient(cfg),
-		User:        NewUserClient(cfg),
-		UserMeta:    NewUserMetaClient(cfg),
-		UserProfile: NewUserProfileClient(cfg),
-		VelogConfig: NewVelogConfigClient(cfg),
+		ctx:           ctx,
+		config:        cfg,
+		AuthToken:     NewAuthTokenClient(cfg),
+		EmailAuth:     NewEmailAuthClient(cfg),
+		SocialAccount: NewSocialAccountClient(cfg),
+		User:          NewUserClient(cfg),
+		UserMeta:      NewUserMetaClient(cfg),
+		UserProfile:   NewUserProfileClient(cfg),
+		VelogConfig:   NewVelogConfigClient(cfg),
 	}, nil
 }
 
@@ -110,13 +115,14 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	}
 	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		config:      cfg,
-		AuthToken:   NewAuthTokenClient(cfg),
-		EmailAuth:   NewEmailAuthClient(cfg),
-		User:        NewUserClient(cfg),
-		UserMeta:    NewUserMetaClient(cfg),
-		UserProfile: NewUserProfileClient(cfg),
-		VelogConfig: NewVelogConfigClient(cfg),
+		config:        cfg,
+		AuthToken:     NewAuthTokenClient(cfg),
+		EmailAuth:     NewEmailAuthClient(cfg),
+		SocialAccount: NewSocialAccountClient(cfg),
+		User:          NewUserClient(cfg),
+		UserMeta:      NewUserMetaClient(cfg),
+		UserProfile:   NewUserProfileClient(cfg),
+		VelogConfig:   NewVelogConfigClient(cfg),
 	}, nil
 }
 
@@ -147,6 +153,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	c.AuthToken.Use(hooks...)
 	c.EmailAuth.Use(hooks...)
+	c.SocialAccount.Use(hooks...)
 	c.User.Use(hooks...)
 	c.UserMeta.Use(hooks...)
 	c.UserProfile.Use(hooks...)
@@ -234,22 +241,6 @@ func (c *AuthTokenClient) GetX(ctx context.Context, id uuid.UUID) *AuthToken {
 		panic(err)
 	}
 	return obj
-}
-
-// QueryUser queries the user edge of a AuthToken.
-func (c *AuthTokenClient) QueryUser(at *AuthToken) *UserQuery {
-	query := &UserQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := at.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(authtoken.Table, authtoken.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, authtoken.UserTable, authtoken.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // Hooks returns the client hooks.
@@ -343,6 +334,110 @@ func (c *EmailAuthClient) GetX(ctx context.Context, id uuid.UUID) *EmailAuth {
 // Hooks returns the client hooks.
 func (c *EmailAuthClient) Hooks() []Hook {
 	return c.hooks.EmailAuth
+}
+
+// SocialAccountClient is a client for the SocialAccount schema.
+type SocialAccountClient struct {
+	config
+}
+
+// NewSocialAccountClient returns a client for the SocialAccount from the given config.
+func NewSocialAccountClient(c config) *SocialAccountClient {
+	return &SocialAccountClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `socialaccount.Hooks(f(g(h())))`.
+func (c *SocialAccountClient) Use(hooks ...Hook) {
+	c.hooks.SocialAccount = append(c.hooks.SocialAccount, hooks...)
+}
+
+// Create returns a create builder for SocialAccount.
+func (c *SocialAccountClient) Create() *SocialAccountCreate {
+	mutation := newSocialAccountMutation(c.config, OpCreate)
+	return &SocialAccountCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SocialAccount entities.
+func (c *SocialAccountClient) CreateBulk(builders ...*SocialAccountCreate) *SocialAccountCreateBulk {
+	return &SocialAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SocialAccount.
+func (c *SocialAccountClient) Update() *SocialAccountUpdate {
+	mutation := newSocialAccountMutation(c.config, OpUpdate)
+	return &SocialAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SocialAccountClient) UpdateOne(sa *SocialAccount) *SocialAccountUpdateOne {
+	mutation := newSocialAccountMutation(c.config, OpUpdateOne, withSocialAccount(sa))
+	return &SocialAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SocialAccountClient) UpdateOneID(id uuid.UUID) *SocialAccountUpdateOne {
+	mutation := newSocialAccountMutation(c.config, OpUpdateOne, withSocialAccountID(id))
+	return &SocialAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SocialAccount.
+func (c *SocialAccountClient) Delete() *SocialAccountDelete {
+	mutation := newSocialAccountMutation(c.config, OpDelete)
+	return &SocialAccountDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *SocialAccountClient) DeleteOne(sa *SocialAccount) *SocialAccountDeleteOne {
+	return c.DeleteOneID(sa.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *SocialAccountClient) DeleteOneID(id uuid.UUID) *SocialAccountDeleteOne {
+	builder := c.Delete().Where(socialaccount.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SocialAccountDeleteOne{builder}
+}
+
+// Query returns a query builder for SocialAccount.
+func (c *SocialAccountClient) Query() *SocialAccountQuery {
+	return &SocialAccountQuery{config: c.config}
+}
+
+// Get returns a SocialAccount entity by its id.
+func (c *SocialAccountClient) Get(ctx context.Context, id uuid.UUID) (*SocialAccount, error) {
+	return c.Query().Where(socialaccount.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SocialAccountClient) GetX(ctx context.Context, id uuid.UUID) *SocialAccount {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a SocialAccount.
+func (c *SocialAccountClient) QueryUser(sa *SocialAccount) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := sa.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(socialaccount.Table, socialaccount.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, socialaccount.UserTable, socialaccount.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(sa.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *SocialAccountClient) Hooks() []Hook {
+	return c.hooks.SocialAccount
 }
 
 // UserClient is a client for the User schema.
@@ -476,15 +571,15 @@ func (c *UserClient) QueryUserMeta(u *User) *UserMetaQuery {
 	return query
 }
 
-// QueryAuthTokens queries the auth_tokens edge of a User.
-func (c *UserClient) QueryAuthTokens(u *User) *AuthTokenQuery {
-	query := &AuthTokenQuery{config: c.config}
+// QuerySocialAccount queries the social_account edge of a User.
+func (c *UserClient) QuerySocialAccount(u *User) *SocialAccountQuery {
+	query := &SocialAccountQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(authtoken.Table, authtoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthTokensTable, user.AuthTokensColumn),
+			sqlgraph.To(socialaccount.Table, socialaccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.SocialAccountTable, user.SocialAccountColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

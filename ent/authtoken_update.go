@@ -9,7 +9,6 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/predicate"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
@@ -49,34 +48,15 @@ func (atu *AuthTokenUpdate) SetUpdatedAt(t time.Time) *AuthTokenUpdate {
 	return atu
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (atu *AuthTokenUpdate) SetUserID(id uuid.UUID) *AuthTokenUpdate {
-	atu.mutation.SetUserID(id)
+// SetFkUserID sets the "fk_user_id" field.
+func (atu *AuthTokenUpdate) SetFkUserID(u uuid.UUID) *AuthTokenUpdate {
+	atu.mutation.SetFkUserID(u)
 	return atu
-}
-
-// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (atu *AuthTokenUpdate) SetNillableUserID(id *uuid.UUID) *AuthTokenUpdate {
-	if id != nil {
-		atu = atu.SetUserID(*id)
-	}
-	return atu
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (atu *AuthTokenUpdate) SetUser(u *User) *AuthTokenUpdate {
-	return atu.SetUserID(u.ID)
 }
 
 // Mutation returns the AuthTokenMutation object of the builder.
 func (atu *AuthTokenUpdate) Mutation() *AuthTokenMutation {
 	return atu.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (atu *AuthTokenUpdate) ClearUser() *AuthTokenUpdate {
-	atu.mutation.ClearUser()
-	return atu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -171,40 +151,12 @@ func (atu *AuthTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: authtoken.FieldUpdatedAt,
 		})
 	}
-	if atu.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   authtoken.UserTable,
-			Columns: []string{authtoken.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := atu.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   authtoken.UserTable,
-			Columns: []string{authtoken.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if value, ok := atu.mutation.FkUserID(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeUUID,
+			Value:  value,
+			Column: authtoken.FieldFkUserID,
+		})
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, atu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -244,34 +196,15 @@ func (atuo *AuthTokenUpdateOne) SetUpdatedAt(t time.Time) *AuthTokenUpdateOne {
 	return atuo
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (atuo *AuthTokenUpdateOne) SetUserID(id uuid.UUID) *AuthTokenUpdateOne {
-	atuo.mutation.SetUserID(id)
+// SetFkUserID sets the "fk_user_id" field.
+func (atuo *AuthTokenUpdateOne) SetFkUserID(u uuid.UUID) *AuthTokenUpdateOne {
+	atuo.mutation.SetFkUserID(u)
 	return atuo
-}
-
-// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (atuo *AuthTokenUpdateOne) SetNillableUserID(id *uuid.UUID) *AuthTokenUpdateOne {
-	if id != nil {
-		atuo = atuo.SetUserID(*id)
-	}
-	return atuo
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (atuo *AuthTokenUpdateOne) SetUser(u *User) *AuthTokenUpdateOne {
-	return atuo.SetUserID(u.ID)
 }
 
 // Mutation returns the AuthTokenMutation object of the builder.
 func (atuo *AuthTokenUpdateOne) Mutation() *AuthTokenMutation {
 	return atuo.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (atuo *AuthTokenUpdateOne) ClearUser() *AuthTokenUpdateOne {
-	atuo.mutation.ClearUser()
-	return atuo
 }
 
 // Save executes the query and returns the updated AuthToken entity.
@@ -364,40 +297,12 @@ func (atuo *AuthTokenUpdateOne) sqlSave(ctx context.Context) (_node *AuthToken, 
 			Column: authtoken.FieldUpdatedAt,
 		})
 	}
-	if atuo.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   authtoken.UserTable,
-			Columns: []string{authtoken.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := atuo.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   authtoken.UserTable,
-			Columns: []string{authtoken.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if value, ok := atuo.mutation.FkUserID(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeUUID,
+			Value:  value,
+			Column: authtoken.FieldFkUserID,
+		})
 	}
 	_node = &AuthToken{config: atuo.config}
 	_spec.Assign = _node.assignValues

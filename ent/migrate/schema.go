@@ -14,22 +14,14 @@ var (
 		{Name: "disabled", Type: field.TypeBool},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "fk_user_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "fk_user_id", Type: field.TypeUUID},
 	}
 	// AuthTokensTable holds the schema information for the "auth_tokens" table.
 	AuthTokensTable = &schema.Table{
-		Name:       "auth_tokens",
-		Columns:    AuthTokensColumns,
-		PrimaryKey: []*schema.Column{AuthTokensColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:  "auth_tokens_users_auth_tokens",
-				Columns: []*schema.Column{AuthTokensColumns[4]},
-
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
+		Name:        "auth_tokens",
+		Columns:     AuthTokensColumns,
+		PrimaryKey:  []*schema.Column{AuthTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{},
 	}
 	// EmailAuthsColumns holds the columns for the "email_auths" table.
 	EmailAuthsColumns = []*schema.Column{
@@ -51,6 +43,31 @@ var (
 				Name:    "emailauth_code",
 				Unique:  false,
 				Columns: []*schema.Column{EmailAuthsColumns[1]},
+			},
+		},
+	}
+	// SocialAccountsColumns holds the columns for the "social_accounts" table.
+	SocialAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "social_id", Type: field.TypeString, Size: 255},
+		{Name: "access_token", Type: field.TypeString, Size: 255},
+		{Name: "provider", Type: field.TypeString, Size: 255},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "fk_user_id", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// SocialAccountsTable holds the schema information for the "social_accounts" table.
+	SocialAccountsTable = &schema.Table{
+		Name:       "social_accounts",
+		Columns:    SocialAccountsColumns,
+		PrimaryKey: []*schema.Column{SocialAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "social_accounts_users_social_account",
+				Columns: []*schema.Column{SocialAccountsColumns[6]},
+
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 	}
@@ -156,6 +173,7 @@ var (
 	Tables = []*schema.Table{
 		AuthTokensTable,
 		EmailAuthsTable,
+		SocialAccountsTable,
 		UsersTable,
 		UserMetaTable,
 		UserProfilesTable,
@@ -164,7 +182,7 @@ var (
 )
 
 func init() {
-	AuthTokensTable.ForeignKeys[0].RefTable = UsersTable
+	SocialAccountsTable.ForeignKeys[0].RefTable = UsersTable
 	UserMetaTable.ForeignKeys[0].RefTable = UsersTable
 	UserProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	VelogConfigsTable.ForeignKeys[0].RefTable = UsersTable

@@ -10,7 +10,6 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/predicate"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
@@ -25,9 +24,6 @@ type AuthTokenQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.AuthToken
-	// eager-loading edges.
-	withUser *UserQuery
-	withFKs  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -55,28 +51,6 @@ func (atq *AuthTokenQuery) Offset(offset int) *AuthTokenQuery {
 func (atq *AuthTokenQuery) Order(o ...OrderFunc) *AuthTokenQuery {
 	atq.order = append(atq.order, o...)
 	return atq
-}
-
-// QueryUser chains the current query on the "user" edge.
-func (atq *AuthTokenQuery) QueryUser() *UserQuery {
-	query := &UserQuery{config: atq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := atq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := atq.sqlQuery()
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(authtoken.Table, authtoken.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, authtoken.UserTable, authtoken.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first AuthToken entity from the query.
@@ -260,22 +234,10 @@ func (atq *AuthTokenQuery) Clone() *AuthTokenQuery {
 		offset:     atq.offset,
 		order:      append([]OrderFunc{}, atq.order...),
 		predicates: append([]predicate.AuthToken{}, atq.predicates...),
-		withUser:   atq.withUser.Clone(),
 		// clone intermediate query.
 		sql:  atq.sql.Clone(),
 		path: atq.path,
 	}
-}
-
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (atq *AuthTokenQuery) WithUser(opts ...func(*UserQuery)) *AuthTokenQuery {
-	query := &UserQuery{config: atq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	atq.withUser = query
-	return atq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -341,19 +303,9 @@ func (atq *AuthTokenQuery) prepareQuery(ctx context.Context) error {
 
 func (atq *AuthTokenQuery) sqlAll(ctx context.Context) ([]*AuthToken, error) {
 	var (
-		nodes       = []*AuthToken{}
-		withFKs     = atq.withFKs
-		_spec       = atq.querySpec()
-		loadedTypes = [1]bool{
-			atq.withUser != nil,
-		}
+		nodes = []*AuthToken{}
+		_spec = atq.querySpec()
 	)
-	if atq.withUser != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, authtoken.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &AuthToken{config: atq.config}
 		nodes = append(nodes, node)
@@ -364,7 +316,6 @@ func (atq *AuthTokenQuery) sqlAll(ctx context.Context) ([]*AuthToken, error) {
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if err := sqlgraph.QueryNodes(ctx, atq.driver, _spec); err != nil {
@@ -373,32 +324,6 @@ func (atq *AuthTokenQuery) sqlAll(ctx context.Context) ([]*AuthToken, error) {
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-
-	if query := atq.withUser; query != nil {
-		ids := make([]uuid.UUID, 0, len(nodes))
-		nodeids := make(map[uuid.UUID][]*AuthToken)
-		for i := range nodes {
-			if fk := nodes[i].fk_user_id; fk != nil {
-				ids = append(ids, *fk)
-				nodeids[*fk] = append(nodeids[*fk], nodes[i])
-			}
-		}
-		query.Where(user.IDIn(ids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := nodeids[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.User = n
-			}
-		}
-	}
-
 	return nodes, nil
 }
 

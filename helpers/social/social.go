@@ -46,6 +46,10 @@ func (s State) Github() string {
 	return "https://github.com/login/oauth/authorize?scope=user:email&client_id=" + id + "&redirect_uri=" + redirectUriWithNext
 }
 
+func (s State) Kakao() string  {
+	return ""
+}
+
 func Social(provider, next string) Action {
 	state := State{
 		Provider: provider,

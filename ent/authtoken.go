@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/google/uuid"
 )
@@ -24,33 +23,8 @@ type AuthToken struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the AuthTokenQuery when eager-loading is set.
-	Edges      AuthTokenEdges `json:"edges"`
-	fk_user_id *uuid.UUID
-}
-
-// AuthTokenEdges holds the relations/edges for other nodes in the graph.
-type AuthTokenEdges struct {
-	// User holds the value of the user edge.
-	User *User
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e AuthTokenEdges) UserOrErr() (*User, error) {
-	if e.loadedTypes[0] {
-		if e.User == nil {
-			// The edge user was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: user.Label}
-		}
-		return e.User, nil
-	}
-	return nil, &NotLoadedError{edge: "user"}
+	// FkUserID holds the value of the "fk_user_id" field.
+	FkUserID uuid.UUID `json:"fk_user_id,omitempty"`
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -62,9 +36,7 @@ func (*AuthToken) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullBool{}
 		case authtoken.FieldCreatedAt, authtoken.FieldUpdatedAt:
 			values[i] = &sql.NullTime{}
-		case authtoken.FieldID:
-			values[i] = &uuid.UUID{}
-		case authtoken.ForeignKeys[0]: // fk_user_id
+		case authtoken.FieldID, authtoken.FieldFkUserID:
 			values[i] = &uuid.UUID{}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type AuthToken", columns[i])
@@ -105,20 +77,15 @@ func (at *AuthToken) assignValues(columns []string, values []interface{}) error 
 			} else if value.Valid {
 				at.UpdatedAt = value.Time
 			}
-		case authtoken.ForeignKeys[0]:
+		case authtoken.FieldFkUserID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field fk_user_id", values[i])
 			} else if value != nil {
-				at.fk_user_id = value
+				at.FkUserID = *value
 			}
 		}
 	}
 	return nil
-}
-
-// QueryUser queries the "user" edge of the AuthToken entity.
-func (at *AuthToken) QueryUser() *UserQuery {
-	return (&AuthTokenClient{config: at.config}).QueryUser(at)
 }
 
 // Update returns a builder for updating this AuthToken.
@@ -150,6 +117,8 @@ func (at *AuthToken) String() string {
 	builder.WriteString(at.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", updated_at=")
 	builder.WriteString(at.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", fk_user_id=")
+	builder.WriteString(fmt.Sprintf("%v", at.FkUserID))
 	builder.WriteByte(')')
 	return builder.String()
 }
