@@ -58,10 +58,10 @@ func GetFacebookAccessToken(code string) string {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	type FacebookOAuthParams struct {
-		Code         string `url:"code",json:"code"`
-		ClientID     string `url:"client_id"json:"client_id"`
-		ClientSecret string `url:"client_secret"json:"client_secret"`
-		RedirectUri  string `url:"redirect_uri"json:"redirect_uri"`
+		Code         string `url:"code" json:"code"`
+		ClientID     string `url:"client_id" json:"client_id"`
+		ClientSecret string `url:"client_secret" json:"client_secret"`
+		RedirectUri  string `url:"redirect_uri" json:"redirect_uri"`
 	}
 
 	params := FacebookOAuthParams{
@@ -132,7 +132,7 @@ func GetFacebookAccessToken(code string) string {
 	return token.AccessToken
 }
 
-func GetFacebookProfile(token string) FacebookProfile {
+func GetFacebookProfile(token string) *FacebookProfile {
 	req, err := http.NewRequest("GET", "https://graph.facebook.com/v4.0/me?fields=id,name,email,picture", nil)
 	if err != nil {
 		panic(err)
@@ -150,5 +150,5 @@ func GetFacebookProfile(token string) FacebookProfile {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		panic(err)
 	}
-	return result
+	return &result
 }

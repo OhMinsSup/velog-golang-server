@@ -1,42 +1,40 @@
 package services
 
 import (
-	"context"
 	"github.com/OhMinsSup/story-server/app"
-	"github.com/OhMinsSup/story-server/ent"
-	socialaccountEnt "github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/helpers/social"
 	"github.com/gin-gonic/gin"
-	"log"
+	"github.com/google/go-github/github"
+	"net/http"
 )
 
-func getSocialData(client *ent.Client, provider, code string) {
-	var accessToken string
+func getSocialInfo(provider, code string) (*social.FacebookProfile, *github.User, string) {
 	switch provider {
 	case "facebook":
-		accessToken = social.GetFacebookAccessToken(code)
-		break
+		accessToken := social.GetFacebookAccessToken(code)
+		profile := social.GetFacebookProfile(accessToken)
+
+		if profile != nil {
+			return nil, nil, ""
+		}
+
+		return profile, nil, accessToken
 	case "github":
-		accessToken = social.GetGithubAccessToken(code)
-		break
+		accessToken := social.GetGithubAccessToken(code)
+		profile := social.GetGithubProfile(accessToken)
+
+		if profile != nil {
+			return nil, nil, ""
+		}
+
+		return nil, profile, accessToken
 	case "kakao":
-		accessToken = ""
-		break
+		return nil, nil, ""
 	case "google":
-		accessToken = ""
-		break
+		return nil, nil, ""
+	default:
+		return nil, nil, ""
 	}
-
-	bg := context.Background()
-
-	socialAccount, err := client.SocialAccount.
-		Query().
-		Where(
-			socialaccountEnt.And(
-				socialaccountEnt.SocialIDEQ(""),
-				socialaccountEnt.ProviderEQ(provider))).First(bg)
-
-	log.Println(accessToken)
 }
 
 func SocialCallbackService(ctx *gin.Context) (*app.ResponseException, error) {
@@ -45,5 +43,28 @@ func SocialCallbackService(ctx *gin.Context) (*app.ResponseException, error) {
 		return app.BadRequestErrorResponse("CODE IS EMPTY", nil), nil
 	}
 
-	return nil, nil
+	provider := ctx.Query("provider")
+	if provider == "" {
+		return app.BadRequestErrorResponse("PROVIDER IS EMPTY", nil), nil
+	}
+
+	facebookProfile, githubProfile, token := getSocialInfo(provider, code)
+	switch provider {
+	case "facebook":
+		ctx.Set("profile", facebookProfile)
+		break
+	case "github":
+		ctx.Set("profile", githubProfile)
+		break
+	}
+
+	ctx.Set("token", token)
+	ctx.Set("provider", provider)
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data:          nil,
+	}, nil
 }

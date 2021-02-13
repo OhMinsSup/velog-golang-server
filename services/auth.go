@@ -185,12 +185,14 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 	client := ctx.MustGet("client").(*ent.Client)
 	bg := context.Background()
 
-	emailAuth, err := client.EmailAuth.Query().Where(emailAuthEnt.CodeEQ(code)).First(bg)
+	emailAuth, err := client.EmailAuth.
+		Query().
+		Where(emailAuthEnt.CodeEQ(code)).First(bg)
+
 	if ent.IsNotFound(err) {
-		log.Println("emailAuth", err)
 		return app.NotFoundErrorResponse(err.Error(), nil), nil
 	}
-	log.Println("emailAuth", emailAuth)
+
 	if emailAuth.Logged {
 		return app.ForbiddenErrorResponse("TOKEN_ALREADY_USE", nil), nil
 	}

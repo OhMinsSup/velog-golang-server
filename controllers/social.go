@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/helpers/social"
+	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -26,8 +28,14 @@ func SocialRedirectController(ctx *gin.Context) {
 	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
 }
 
-func SocialFacebookCallbackController (ctx *gin.Context) {
+func SocialCallbackController (ctx *gin.Context) {
+	result, _  := services.SocialCallbackService(ctx)
+	if result.Code != http.StatusOK {
+		app.UnAuthorizedErrorResponse("Social Auth Error", nil)
+		return
+	}
 
+	ctx.Next()
 }
 
 func SocialProfileController(ctx *gin.Context) {
