@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/SKAhack/go-shortid"
 	"github.com/jinzhu/gorm"
@@ -91,7 +91,7 @@ func (a *AuthRepository) FindByEmailAndUsername(username, email string) (*models
 	var user models.User
 	err := a.db.Where("email = ?", email).Or("username = ?", username).First(&user).Error
 	if gorm.IsRecordNotFoundError(err) {
-		return nil, http.StatusConflict, helpers.ErrorAlreadyExists
+		return nil, http.StatusConflict, libs.ErrorAlreadyExists
 	}
 
 	return &user, http.StatusOK, nil
@@ -105,7 +105,7 @@ func (a *AuthRepository) ExistsByEmailAndUsername(username, email string) (bool,
 		return true, http.StatusOK, nil
 	}
 
-	return false, http.StatusConflict, helpers.ErrorAlreadyExists
+	return false, http.StatusConflict, libs.ErrorAlreadyExists
 }
 
 func (a *AuthRepository) SocialUser(userData dto.SocialUserParams) (*models.User, *models.UserProfile, int, error) {

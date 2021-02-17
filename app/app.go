@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/OhMinsSup/story-server/ent"
 	"github.com/OhMinsSup/story-server/ent/migrate"
-	"github.com/OhMinsSup/story-server/helpers"
-	"github.com/OhMinsSup/story-server/helpers/aws"
+	"github.com/OhMinsSup/story-server/libs"
+	"github.com/OhMinsSup/story-server/libs/aws"
 	"github.com/facebook/ent/dialect"
 	entsql "github.com/facebook/ent/dialect/sql"
 	"github.com/gin-contrib/cors"
@@ -19,11 +19,11 @@ func New() (*gin.Engine, *ent.Client) {
 	// initializes database
 	//db, _ := database.Initialize()
 
-	dbUser := helpers.GetEnvWithKey("POSTGRES_USER")
-	dbPassword := helpers.GetEnvWithKey("POSTGRES_PASSWORD")
-	dbName := helpers.GetEnvWithKey("POSTGRES_DB")
-	dbHost := helpers.GetEnvWithKey("POSTGRES_HOST")
-	dbPort := helpers.GetEnvWithKey("POSTGRES_PORT")
+	dbUser := libs.GetEnvWithKey("POSTGRES_USER")
+	dbPassword := libs.GetEnvWithKey("POSTGRES_PASSWORD")
+	dbName := libs.GetEnvWithKey("POSTGRES_DB")
+	dbHost := libs.GetEnvWithKey("POSTGRES_HOST")
+	dbPort := libs.GetEnvWithKey("POSTGRES_PORT")
 	// https://gobyexample.com/string-formatting
 	dbConfig := fmt.Sprintf("host=%v port=%v user=%v dbname=%v password=%v sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
 
@@ -66,7 +66,7 @@ func New() (*gin.Engine, *ent.Client) {
 
 	allowOrigins := []string{"https://storeis.vercel.app"}
 
-	if helpers.GetEnvWithKey("APP_ENV") == "development" {
+	if libs.GetEnvWithKey("APP_ENV") == "development" {
 		allowOrigins = append(allowOrigins, "http://localhost:3000")
 	}
 

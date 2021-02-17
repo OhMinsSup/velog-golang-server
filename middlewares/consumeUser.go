@@ -3,7 +3,7 @@ package middlewares
 import (
 	"errors"
 	"fmt"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -15,7 +15,7 @@ import (
 // refresh 토큰을 재발급하는 함수
 func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error) {
 	// refresh token 을 decode 를 한다
-	decodeTokenData, err := helpers.DecodeToken(refreshToken)
+	decodeTokenData, err := libs.DecodeToken(refreshToken)
 	if err != nil {
 		return "", errors.New("INVALID_TOKEN")
 	}
@@ -34,7 +34,7 @@ func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error)
 
 	// 토큰값으로 access, refresh 재발급
 	tokens := user.RefreshUserToken(tokenId, exp, refreshToken)
-	helpers.SetCookie(ctx, fmt.Sprintf("%v", tokens["accessToken"]), fmt.Sprintf("%v", tokens["refreshToken"]))
+	libs.SetCookie(ctx, fmt.Sprintf("%v", tokens["accessToken"]), fmt.Sprintf("%v", tokens["refreshToken"]))
 	return userId, nil
 }
 
@@ -88,7 +88,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		// access token 이 존재하는 경우 token 을 decoed 를 한다
-		decodeTokenData, err := helpers.DecodeToken(accessToken)
+		decodeTokenData, err := libs.DecodeToken(accessToken)
 		if err != nil {
 			context.Next()
 			return

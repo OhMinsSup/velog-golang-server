@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
 	"net/http"
@@ -78,7 +78,7 @@ func (c *CommentRepository) CreateComment(body dto.CommentParams, userId string)
 
 		if commentTarget.Level > 3 {
 			tx.Rollback()
-			return http.StatusBadRequest, helpers.ErrorMaxCommentLevel
+			return http.StatusBadRequest, libs.ErrorMaxCommentLevel
 		}
 
 		commentTarget.HasReplies = true
@@ -125,7 +125,7 @@ func (c *CommentRepository) UpdateComment(body dto.CommentParams, userId string)
 
 	if userId != comment.UserId {
 		tx.Rollback()
-		return http.StatusUnauthorized, helpers.ErrorPermission
+		return http.StatusUnauthorized, libs.ErrorPermission
 	}
 
 	if err := tx.Model(&comment).Updates(map[string]interface{}{
@@ -145,7 +145,7 @@ func (c *CommentRepository) DeleteComment(body dto.CommentParams, userId string)
 	}
 
 	if userId != comment.UserId {
-		return http.StatusUnauthorized, helpers.ErrorPermission
+		return http.StatusUnauthorized, libs.ErrorPermission
 	}
 
 	var postData dto.PostRawQueryUserProfileResult

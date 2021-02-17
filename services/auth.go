@@ -10,8 +10,8 @@ import (
 	emailAuthEnt "github.com/OhMinsSup/story-server/ent/emailauth"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	userprofileEnt "github.com/OhMinsSup/story-server/ent/userprofile"
-	"github.com/OhMinsSup/story-server/helpers"
-	"github.com/OhMinsSup/story-server/helpers/email"
+	"github.com/OhMinsSup/story-server/libs"
+	"github.com/OhMinsSup/story-server/libs/email"
 	"github.com/SKAhack/go-shortid"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -25,7 +25,7 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	bg := context.Background()
 
 	// email register token deocoded
-	decoded, err := helpers.DecodeToken(body.RegisterToken)
+	decoded, err := libs.DecodeToken(body.RegisterToken)
 	if err != nil {
 		return app.ForbiddenErrorResponse(err.Error(), nil), nil
 	}
@@ -36,7 +36,7 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	}
 
 	// decoded data (email, id)
-	payload := decoded["payload"].(helpers.JSON)
+	payload := decoded["payload"].(libs.JSON)
 
 	// check duplicates
 	exists, err := client.User.
@@ -158,7 +158,7 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	}
 
 	// 토큰 생성
-	accessToken, refreshToken := helpers.GenerateUserToken(user, authToken)
+	accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
 	if accessToken == "" || refreshToken == "" {
 		if err := tx.Rollback(); err != nil {
 			return app.TransactionsErrorResponse(err.Error(), nil), nil
@@ -166,13 +166,13 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 		return app.InteralServerErrorResponse("token is not created", nil), nil
 	}
 
-	helpers.SetCookie(ctx, accessToken, refreshToken)
+	libs.SetCookie(ctx, accessToken, refreshToken)
 	return &app.ResponseException{
 		Code:          http.StatusOK,
 		ResultCode:    0,
 		Message:       "",
 		ResultMessage: "",
-		Data: helpers.JSON{
+		Data: libs.JSON{
 			"id":           user.ID,
 			"accessToken":  accessToken,
 			"refreshToken": refreshToken,
@@ -208,13 +208,13 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 	if ent.IsNotFound(err) {
 		// 해당 이메일로 등록한 유저가 없는 경우
 		subject := "email-register"
-		payload := helpers.JSON{
+		payload := libs.JSON{
 			"email": emailAuth.Email,
 			"id":    emailAuth.ID,
 		}
 
 		// 회원가입시 서버에서 발급하는 register token 을 가지고 회원가입 절차를 가짐
-		registerToken, err := helpers.GenerateRegisterToken(payload, subject)
+		registerToken, err := libs.GenerateRegisterToken(payload, subject)
 		if err != nil {
 			return &app.ResponseException{
 				Code:          http.StatusConflict,
@@ -230,7 +230,7 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 			ResultCode:    0,
 			Message:       "",
 			ResultMessage: "",
-			Data: helpers.JSON{
+			Data: libs.JSON{
 				"email":         emailAuth.Email,
 				"registerToken": registerToken,
 			},
@@ -265,7 +265,7 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 	}
 
 	// 토큰 생성
-	accessToken, refreshToken := helpers.GenerateUserToken(user, authToken)
+	accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
 	if accessToken == "" || refreshToken == "" {
 		if err := tx.Rollback(); err != nil {
 			return app.TransactionsErrorResponse(err.Error(), nil), nil
@@ -273,13 +273,13 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 		return app.InteralServerErrorResponse("token is not created", nil), nil
 	}
 
-	helpers.SetCookie(ctx, accessToken, refreshToken)
+	libs.SetCookie(ctx, accessToken, refreshToken)
 	return &app.ResponseException{
 		Code:          http.StatusOK,
 		ResultCode:    0,
 		Message:       "",
 		ResultMessage: "",
-		Data: helpers.JSON{
+		Data: libs.JSON{
 			"id":           user.ID,
 			"accessToken":  accessToken,
 			"refreshToken": refreshToken,
@@ -346,23 +346,23 @@ func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseEx
 		ResultCode:    0,
 		Message:       "",
 		ResultMessage: "",
-		Data: helpers.JSON{
+		Data: libs.JSON{
 			"registered": registered,
 		},
 	}, tx.Commit()
 }
 
-//func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+//func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 //	authRepository := repository.NewAuthRepository(db)
 //
-//	decoded, err := helpers.DecodeToken(registerToken)
+//	decoded, err := libs.DecodeToken(registerToken)
 //	if err != nil {
 //		return nil, http.StatusForbidden, err
 //	}
 //
 //	// decoded data (email, id)
-//	payload := decoded["payload"].(helpers.JSON)
-//	profile := payload["profile"].(helpers.JSON)
+//	payload := decoded["payload"].(libs.JSON)
+//	profile := payload["profile"].(libs.JSON)
 //
 //	userData := dto.SocialUserParams{
 //		Email:       strings.ToLower(payload["email"].(string)),
@@ -387,7 +387,7 @@ func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseEx
 //	}
 //
 //	tokens := user.GenerateUserToken(db)
-//	env := helpers.GetEnvWithKey("APP_ENV")
+//	env := libs.GetEnvWithKey("APP_ENV")
 //	switch env {
 //	case "production":
 //		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
@@ -401,7 +401,7 @@ func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseEx
 //		break
 //	}
 //
-//	return helpers.JSON{
+//	return libs.JSON{
 //		"id":           user.ID,
 //		"username":     user.Username,
 //		"email":        user.Email,

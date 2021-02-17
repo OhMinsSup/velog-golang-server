@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -41,6 +41,6 @@ func LocalRegisterController(ctx *gin.Context) {
 
 // LogoutController LogOut
 func LogoutController(ctx *gin.Context) {
-	helpers.SetCookie(ctx, "", "")
+	libs.SetCookie(ctx, "", "")
 	ctx.JSON(http.StatusOK, nil)
 }

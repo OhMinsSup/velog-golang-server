@@ -1,4 +1,4 @@
-package helpers
+package libs
 
 import (
 	"github.com/OhMinsSup/story-server/ent"

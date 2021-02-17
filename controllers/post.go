@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -88,7 +88,7 @@ func GetPostController(ctx *gin.Context) {
 }
 
 func PostViewController(ctx *gin.Context) {
-	ip := helpers.CreateHash(ctx.ClientIP())
+	ip := libs.CreateHash(ctx.ClientIP())
 	postId := ctx.Param("post_id")
 
 	params := dto.PostViewParams{

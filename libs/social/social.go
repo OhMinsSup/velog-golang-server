@@ -2,6 +2,7 @@ package social
 
 import (
 	"encoding/json"
+	"github.com/OhMinsSup/story-server/libs"
 	"golang.org/x/oauth2"
 	"os"
 )
@@ -17,6 +18,7 @@ type Action interface {
 	Github() string
 	Facebook() string
 	Google() string
+	Kakao() string
 }
 
 func (s State) Google() string {
@@ -35,9 +37,9 @@ func (s State) Google() string {
 
 func (s State) Facebook() string {
 	id := os.Getenv("FACEBOOK_CLIENT_ID")
-	callbackUri := redirectPath + "facebook"
+	callbackUrl := redirectPath + "facebook"
 	state, _ := json.Marshal(s.Next)
-	return "https://www.facebook.com/v4.0/dialog/oauth?client_id=" + id + "&redirect_uri=" + callbackUri + "&state=" + string(state) + "&scope=email,public_profile"
+	return "https://www.facebook.com/v4.0/dialog/oauth?client_id=" + id + "&redirect_uri=" + callbackUrl + "&state=" + string(state) + "&scope=email,public_profile"
 }
 
 func (s State) Github() string {
@@ -46,8 +48,11 @@ func (s State) Github() string {
 	return "https://github.com/login/oauth/authorize?scope=user:email&client_id=" + id + "&redirect_uri=" + redirectUriWithNext
 }
 
-func (s State) Kakao() string  {
-	return ""
+func (s State) Kakao() string {
+	restKey := libs.GetEnvWithKey("KAKAO_REST_API_KEY")
+	state, _ := json.Marshal(s.Next)
+	redirectUriWithNext := redirectPath + "kakao"
+	return "https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=" + restKey + "&redirect_uri=" + redirectUriWithNext + "&state=" + string(state) + "&prompt=none"
 }
 
 func Social(provider, next string) Action {
@@ -67,6 +72,8 @@ func GenerateSocialLink(provider, next string) string {
 		return snapshot.Google()
 	case "github":
 		return snapshot.Github()
+	case "kakao":
+		return snapshot.Kakao()
 	default:
 		return ""
 	}

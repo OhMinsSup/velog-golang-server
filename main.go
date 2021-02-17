@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/OhMinsSup/story-server/apis"
 	"github.com/OhMinsSup/story-server/app"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"log"
 	"net/http"
 	"os"
@@ -18,7 +18,7 @@ func init() {
 }
 
 func main() {
-	port := helpers.GetEnvWithKey("PORT")
+	port := libs.GetEnvWithKey("PORT")
 	server, client := app.New()
 
 	apis.ApplyRoutes(server)

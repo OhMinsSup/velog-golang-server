@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -50,7 +50,7 @@ func TrendingTagListController(ctx *gin.Context) {
 	}
 
 	if !strings.Contains(strings.Join(sortingType, ","), sort) {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValid)
+		ctx.AbortWithError(http.StatusBadRequest, libs.ErrorProviderValid)
 		return
 	}
 

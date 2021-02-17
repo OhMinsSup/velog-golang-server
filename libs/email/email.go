@@ -2,7 +2,7 @@ package email
 
 import (
 	"context"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	mailgun2 "github.com/mailgun/mailgun-go/v4"
 	"log"
 	"time"
@@ -18,8 +18,8 @@ type AuthTemplate struct {
 
 // SendTemplateMessage mailgun에서 등록된 템플릿 이용해서 메일을 보낸다
 func SendTemplateMessage(email string, template AuthTemplate) (string, error) {
-	apiKey := helpers.GetEnvWithKey("MAILGUN_API_KEY")
-	domain := helpers.GetEnvWithKey("MAILGUN_DOMAIN_NAME")
+	apiKey := libs.GetEnvWithKey("MAILGUN_API_KEY")
+	domain := libs.GetEnvWithKey("MAILGUN_DOMAIN_NAME")
 
 	mailgun := mailgun2.NewMailgun(domain, apiKey)
 

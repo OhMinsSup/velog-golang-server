@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/app"
-	"github.com/OhMinsSup/story-server/helpers/social"
+	"github.com/OhMinsSup/story-server/libs"
+	"github.com/OhMinsSup/story-server/libs/social"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -28,138 +29,40 @@ func SocialRedirectController(ctx *gin.Context) {
 	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
 }
 
-func SocialCallbackController (ctx *gin.Context) {
-	result, _  := services.SocialCallbackService(ctx)
+func SocialFacebookCallbackController(ctx *gin.Context) {
+	result, _ := services.SocialCallbackService("facebook", ctx)
 	if result.Code != http.StatusOK {
 		app.UnAuthorizedErrorResponse("Social Auth Error", nil)
 		return
 	}
-
 	ctx.Next()
 }
 
-func SocialProfileController(ctx *gin.Context) {
-	//registerToken, err := ctx.Cookie("register_token")
-	//if err != nil {
-	//	ctx.AbortWithError(http.StatusUnauthorized, err)
-	//	return
-	//}
-	//
-	//decoded, err := helpers.DecodeToken(registerToken)
-	//if err != nil {
-	//	ctx.AbortWithError(http.StatusForbidden, err)
-	//	return
-	//}
-	//
-	//// decoded data (email, id)
-	//payload := decoded["payload"].(helpers.JSON)
-	//profile := payload["profile"].(helpers.JSON)
-	//
-	//ctx.JSON(http.StatusOK, profile)
+func SocialGithubCallbackController(ctx *gin.Context) {
+	result, _ := services.SocialCallbackService("github", ctx)
+	if result.Code != http.StatusOK {
+		app.UnAuthorizedErrorResponse("Social Auth Error", nil)
+		return
+	}
+	ctx.Next()
 }
 
-func SocialRegisterController(ctx *gin.Context) {
-	//registerToken, err := ctx.Cookie("register_token")
-	//if err != nil {
-	//	ctx.AbortWithStatus(http.StatusUnauthorized)
-	//	return
-	//}
-	//
-	//var body dto.SocialRegisterBody
-	//if err := ctx.BindJSON(&body); err != nil {
-	//	ctx.AbortWithStatus(http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//db := ctx.MustGet("db").(*gorm.DB)
-	//result, code, err := services.SocialRegisterService(body, registerToken, db, ctx)
-	//if err != nil {
-	//	ctx.AbortWithError(code, err)
-	//	return
-	//}
-	//
-	//ctx.JSON(code, result)
+func SocialKakaoCallbackController(ctx *gin.Context) {
+	result, _ := services.SocialCallbackService("kakao", ctx)
+	if result.Code != http.StatusOK {
+		app.UnAuthorizedErrorResponse("Social Auth Error", nil)
+		return
+	}
+	ctx.Next()
 }
 
-//func SocialRedirect(ctx *gin.Context) {
-//provider := ctx.Param("provider")
-//next := ctx.Query("next")
-//
-//providerType := []string{
-//	"facebook",
-//	"github",
-//	"google",
-//}
-//
-//if !strings.Contains(strings.Join(providerType, ","), provider) {
-//	ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorProviderValid)
-//	return
-//}
-//
-//loginUrl := social.GenerateSocialLink(provider, next)
-//ctx.Redirect(http.StatusMovedPermanently, loginUrl)
-//}
-
-func FacebookCallback(ctx *gin.Context) {
-	//code := ctx.Query("code")
-	//if code == "" {
-	//	ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorNotFound)
-	//	return
-	//}
-	//
-	//provider := "facebook"
-	//accessToken := social.GetFacebookAccessToken(code)
-	//profile := social.GetFacebookProfile(accessToken)
-	//db := ctx.MustGet("db").(*gorm.DB)
-	//
-	//var data models.SocialAccount
-	//if err := db.Where(&models.SocialAccount{
-	//	SocialId: fmt.Sprintf("%v", profile.ID),
-	//	Provider: provider,
-	//}).First(&data); err != nil {
-	//	ctx.Set("social", nil)
-	//	ctx.Set("isSocial", false)
-	//} else {
-	//	ctx.Set("social", data)
-	//	ctx.Set("isSocial", true)
-	//}
-	//
-	//ctx.Set("profile", profile)
-	//ctx.Set("accessToken", accessToken)
-	//ctx.Set("provider", provider)
-	//ctx.Next()
-	//return
-}
-
-func GithubCallback(ctx *gin.Context) {
-	//code := ctx.Query("code")
-	//if code == "" {
-	//	ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorNotFound)
-	//	return
-	//}
-	//
-	//provider := "github"
-	//accessToken := social.GetGithubAccessToken(code)
-	//profile := social.GetGithubProfile(accessToken)
-	//db := ctx.MustGet("db").(*gorm.DB)
-	//
-	//var data models.SocialAccount
-	//if err := db.Where(&models.SocialAccount{
-	//	SocialId: fmt.Sprintf("%v", profile.ID),
-	//	Provider: provider,
-	//}).First(&data); err != nil {
-	//	ctx.Set("social", nil)
-	//	ctx.Set("isSocial", false)
-	//} else {
-	//	ctx.Set("social", data)
-	//	ctx.Set("isSocial", true)
-	//}
-	//
-	//ctx.Set("profile", profile)
-	//ctx.Set("accessToken", accessToken)
-	//ctx.Set("provider", provider)
-	//ctx.Next()
-	//return
+func SocialCallbackController(ctx *gin.Context) {
+	token := ctx.MustGet("token").(string)
+	provider := ctx.MustGet("provider").(string)
+	ctx.JSON(200, libs.JSON{
+		"token":    token,
+		"provider": provider,
+	})
 }
 
 func GithubSocialCallback(ctx *gin.Context) {
@@ -169,7 +72,7 @@ func GithubSocialCallback(ctx *gin.Context) {
 	//provider := ctx.MustGet("provider").(string)
 	//
 	//if profile == nil || accessToken == "" {
-	//	ctx.AbortWithError(http.StatusForbidden, helpers.ErrorForbidden)
+	//	ctx.AbortWithError(http.StatusForbidden, libs.ErrorForbidden)
 	//	return
 	//}
 	//
@@ -178,14 +81,14 @@ func GithubSocialCallback(ctx *gin.Context) {
 	//if isSocial {
 	//	socialData := ctx.MustGet("social").(*models.SocialAccount)
 	//	if err := db.Where("user_id = ?", socialData.ID).First(&user).Error; err != nil {
-	//		ctx.AbortWithError(http.StatusNotFound, helpers.ErrorUserIsMissing)
+	//		ctx.AbortWithError(http.StatusNotFound, libs.ErrorUserIsMissing)
 	//		return
 	//	}
 	//
 	//	redirectUrl := ""
 	//	next := ""
 	//	tokens := user.GenerateUserToken(db)
-	//	env := helpers.GetEnvWithKey("APP_ENV")
+	//	env := libs.GetEnvWithKey("APP_ENV")
 	//	switch env {
 	//	case "production":
 	//		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
@@ -205,19 +108,19 @@ func GithubSocialCallback(ctx *gin.Context) {
 	//}
 	//
 	//if err := db.Where("email = ?", profile.Email).First(&user).Error; err != nil {
-	//	payload := helpers.JSON{
+	//	payload := libs.JSON{
 	//		"profile":     profile,
 	//		"provider":    provider,
 	//		"accessToken": accessToken,
 	//	}
 	//
-	//	registerToken, err := helpers.GenerateRegisterToken(payload, "")
+	//	registerToken, err := libs.GenerateRegisterToken(payload, "")
 	//	if err != nil {
 	//		ctx.AbortWithError(http.StatusConflict, err)
 	//		return
 	//	}
 	//
-	//	env := helpers.GetEnvWithKey("APP_ENV")
+	//	env := libs.GetEnvWithKey("APP_ENV")
 	//	redirectUrl := ""
 	//	switch env {
 	//	case "production":
@@ -237,7 +140,7 @@ func GithubSocialCallback(ctx *gin.Context) {
 	//
 	//tokens := user.GenerateUserToken(db)
 	//redirectUrl := ""
-	//env := helpers.GetEnvWithKey("APP_ENV")
+	//env := libs.GetEnvWithKey("APP_ENV")
 	//switch env {
 	//case "production":
 	//	ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
@@ -262,7 +165,7 @@ func FacebookSocialCallback(ctx *gin.Context) {
 	//provider := ctx.MustGet("provider").(string)
 	//
 	//if accessToken == "" {
-	//	ctx.AbortWithError(http.StatusForbidden, helpers.ErrorForbidden)
+	//	ctx.AbortWithError(http.StatusForbidden, libs.ErrorForbidden)
 	//	return
 	//}
 	//
@@ -271,12 +174,12 @@ func FacebookSocialCallback(ctx *gin.Context) {
 	//if isSocial {
 	//	socialData := ctx.MustGet("social").(*models.SocialAccount)
 	//	if err := db.Where("user_id = ?", socialData.ID).First(&user).Error; err != nil {
-	//		ctx.AbortWithError(http.StatusNotFound, helpers.ErrorUserIsMissing)
+	//		ctx.AbortWithError(http.StatusNotFound, libs.ErrorUserIsMissing)
 	//		return
 	//	}
 	//
 	//	tokens := user.GenerateUserToken(db)
-	//	env := helpers.GetEnvWithKey("APP_ENV")
+	//	env := libs.GetEnvWithKey("APP_ENV")
 	//	redirectUrl := ""
 	//	next := ""
 	//	switch env {
@@ -298,20 +201,20 @@ func FacebookSocialCallback(ctx *gin.Context) {
 	//}
 	//
 	//if err := db.Where("email = ?", profile.Email).First(&user).Error; err != nil {
-	//	payload := helpers.JSON{
+	//	payload := libs.JSON{
 	//		"profile":     profile,
 	//		"provider":    provider,
 	//		"accessToken": accessToken,
 	//	}
 	//
-	//	registerToken, err := helpers.GenerateRegisterToken(payload, "")
+	//	registerToken, err := libs.GenerateRegisterToken(payload, "")
 	//	if err != nil {
 	//		ctx.AbortWithError(http.StatusConflict, err)
 	//		return
 	//	}
 	//
 	//
-	//	env := helpers.GetEnvWithKey("APP_ENV")
+	//	env := libs.GetEnvWithKey("APP_ENV")
 	//	redirectUrl := ""
 	//	switch env {
 	//	case "production":
@@ -331,7 +234,7 @@ func FacebookSocialCallback(ctx *gin.Context) {
 	//}
 	//
 	//tokens := user.GenerateUserToken(db)
-	//env := helpers.GetEnvWithKey("APP_ENV")
+	//env := libs.GetEnvWithKey("APP_ENV")
 	//redirectUrl := ""
 	//switch env {
 	//case "production":

@@ -14,14 +14,15 @@ func ApplyRoutes(r *gin.RouterGroup) {
 		auth.POST("/register/local", controllers.LocalRegisterController)
 		auth.POST("/logout", controllers.LogoutController)
 		auth.GET("/social/redirect/:provider", controllers.SocialRedirectController)
-		auth.GET("/social/callback/github", controllers.SocialCallbackController)
-		auth.GET("/social/callback/facebook", controllers.SocialCallbackController)
+		auth.GET("/social/callback/github", controllers.SocialGithubCallbackController, controllers.SocialCallbackController)
+		auth.GET("/social/callback/facebook", controllers.SocialFacebookCallbackController, controllers.SocialCallbackController)
+		auth.GET("/social/callback/kakao", controllers.SocialKakaoCallbackController, controllers.SocialCallbackController)
 
 
 		// local
-		auth.POST("/register/social", controllers.SocialRegisterController)
+		//auth.POST("/register/social", controllers.SocialRegisterController)
 
 		// social
-		auth.GET("/social/profile", controllers.SocialProfileController)
+		//auth.GET("/social/profile", controllers.SocialProfileController)
 	}
 }

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/jinzhu/gorm"
 	"log"
 	"time"
@@ -26,8 +26,8 @@ type User struct {
 	PostComment []Comment   `gorm:"polymorphic:Owner;" json:"post_comment"`
 }
 
-func (u User) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (u User) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":           u.ID,
 		"username":     u.Username,
 		"email":        u.Email,
@@ -39,7 +39,7 @@ func (u User) Serialize() helpers.JSON {
 }
 
 // GenerateUserToken 유저의 access token 및 refresh token 을 발급한다
-func (u *User) GenerateUserToken(db *gorm.DB) helpers.JSON {
+func (u *User) GenerateUserToken(db *gorm.DB) libs.JSON {
 	authToken := AuthToken{
 		UserID: u.ID,
 	}
@@ -48,28 +48,28 @@ func (u *User) GenerateUserToken(db *gorm.DB) helpers.JSON {
 	db.Create(&authToken)
 
 	accessSubject := "access_token"
-	accessPayload := helpers.JSON{
+	accessPayload := libs.JSON{
 		"user_id": u.ID,
 	}
 
-	accessToken, _ := helpers.GenerateAccessToken(accessPayload, accessSubject)
+	accessToken, _ := libs.GenerateAccessToken(accessPayload, accessSubject)
 
 	refreshSubject := "refresh_token"
-	refreshPayload := helpers.JSON{
+	refreshPayload := libs.JSON{
 		"user_id":  u.ID,
 		"token_id": authToken.ID,
 	}
 
-	refreshToken, _ := helpers.GenerateRefreshToken(refreshPayload, refreshSubject)
+	refreshToken, _ := libs.GenerateRefreshToken(refreshPayload, refreshSubject)
 
-	return helpers.JSON{
+	return libs.JSON{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
 	}
 }
 
 // RefreshUserToken 유저의 access token 을 재발급하고 refresh token 이 만료되면 다시 발급한다
-func (u *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalRefreshToken string) helpers.JSON {
+func (u *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalRefreshToken string) libs.JSON {
 	now := time.Now().Unix()
 	diff := refreshTokenExp - now
 
@@ -77,24 +77,24 @@ func (u *User) RefreshUserToken(tokenId string, refreshTokenExp int64, originalR
 
 	// new access token generate
 	accessSubject := "access_token"
-	accessPayload := helpers.JSON{
+	accessPayload := libs.JSON{
 		"user_id": u.ID,
 	}
 
-	accessToken, _ := helpers.GenerateAccessToken(accessPayload, accessSubject)
+	accessToken, _ := libs.GenerateAccessToken(accessPayload, accessSubject)
 
 	if diff < 60*60*24*15 {
 		log.Println("refreshing....")
 		refreshSubject := "refresh_token"
-		refreshPayload := helpers.JSON{
+		refreshPayload := libs.JSON{
 			"user_id":  u.ID,
 			"token_id": tokenId,
 		}
 
-		refreshToken, _ = helpers.GenerateRefreshToken(refreshPayload, refreshSubject)
+		refreshToken, _ = libs.GenerateRefreshToken(refreshPayload, refreshSubject)
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
 	}
@@ -110,8 +110,8 @@ type UserProfile struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func (u UserProfile) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (u UserProfile) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":           u.ID,
 		"display_name": u.DisplayName,
 		"short_bio":    u.ShortBio,
@@ -142,8 +142,8 @@ type UserMeta struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
-func (u UserMeta) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (u UserMeta) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":                 u.ID,
 		"email_notification": u.EmailNotification,
 		"email_promotion":    u.EmailPromotion,
@@ -188,8 +188,8 @@ type VelogConfig struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (v VelogConfig) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (v VelogConfig) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":         v.ID,
 		"title":      v.Title,
 		"logo_image": v.LogoImage,

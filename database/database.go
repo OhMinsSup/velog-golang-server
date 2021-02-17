@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -15,12 +15,12 @@ import (
 
 // Initialize 데이터베이스 초기화
 func Initialize() (*gorm.DB, error) {
-	// viper package read .env
-	dbUser := helpers.GetEnvWithKey("POSTGRES_USER")
-	dbPassword := helpers.GetEnvWithKey("POSTGRES_PASSWORD")
-	dbName := helpers.GetEnvWithKey("POSTGRES_DB")
-	dbHost := helpers.GetEnvWithKey("POSTGRES_HOST")
-	dbPort := helpers.GetEnvWithKey("POSTGRES_PORT")
+	// viper package read .env.example
+	dbUser := libs.GetEnvWithKey("POSTGRES_USER")
+	dbPassword := libs.GetEnvWithKey("POSTGRES_PASSWORD")
+	dbName := libs.GetEnvWithKey("POSTGRES_DB")
+	dbHost := libs.GetEnvWithKey("POSTGRES_HOST")
+	dbPort := libs.GetEnvWithKey("POSTGRES_PORT")
 	// https://gobyexample.com/string-formatting
 	dbConfig := fmt.Sprintf("host=%v port=%v user=%v dbname=%v password=%v sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
 

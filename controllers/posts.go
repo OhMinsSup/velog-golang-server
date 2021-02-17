@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -20,7 +20,7 @@ func LikePostsController(ctx *gin.Context) {
 	}
 
 	if limit > 100 {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		ctx.AbortWithError(http.StatusBadRequest, libs.ErrorLimited)
 		return
 	}
 
@@ -49,7 +49,7 @@ func ReadingPostsController(ctx *gin.Context) {
 	}
 
 	if limit > 100 {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		ctx.AbortWithError(http.StatusBadRequest, libs.ErrorLimited)
 		return
 	}
 
@@ -84,7 +84,7 @@ func TrendingPostsController(ctx *gin.Context) {
 	}
 
 	if limit > 100 {
-		_ = ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		_ = ctx.AbortWithError(http.StatusBadRequest, libs.ErrorLimited)
 		return
 	}
 
@@ -115,7 +115,7 @@ func ListPostsController(ctx *gin.Context) {
 	}
 
 	if limit > 100 {
-		ctx.AbortWithError(http.StatusBadRequest, helpers.ErrorLimited)
+		ctx.AbortWithError(http.StatusBadRequest, libs.ErrorLimited)
 		return
 	}
 

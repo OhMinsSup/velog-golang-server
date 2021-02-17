@@ -2,14 +2,14 @@ package services
 
 import (
 	"fmt"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
 )
 
-func GetUserProfileService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func GetUserProfileService(db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	username := ctx.Param("username")
 	userId := ctx.Query("user_id")
 
@@ -19,12 +19,12 @@ func GetUserProfileService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, er
 		return nil, http.StatusInternalServerError, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"user": user,
 	}, 0, nil
 }
 
-func GetCurrentUserService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func GetCurrentUserService(db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 
 	userRepository := repository.NewUserRepository(db)
@@ -33,7 +33,7 @@ func GetCurrentUserService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, er
 		return nil, http.StatusInternalServerError, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"user": user,
 	}, 0, nil
 }

@@ -2,14 +2,14 @@ package services
 
 import (
 	"fmt"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
 )
 
-func UnLikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func UnLikePostService(postId string, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	if userId == "" {
 		return nil, http.StatusForbidden, nil
@@ -21,12 +21,12 @@ func UnLikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JS
 		return nil, code, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"liked": isLiked,
 	}, http.StatusOK, nil
 }
 
-func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	if userId == "" {
 		return nil, http.StatusForbidden, nil
@@ -38,7 +38,7 @@ func LikePostService(postId string, db *gorm.DB, ctx *gin.Context) (helpers.JSON
 		return nil, code, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"liked": isLiked,
 	}, http.StatusOK, nil
 }

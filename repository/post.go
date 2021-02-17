@@ -3,8 +3,8 @@ package repository
 import (
 	"fmt"
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
-	"github.com/OhMinsSup/story-server/helpers/fx"
+	"github.com/OhMinsSup/story-server/libs"
+	"github.com/OhMinsSup/story-server/libs/fx"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
@@ -23,7 +23,7 @@ func NewPostRepository(db *gorm.DB) *PostRepository {
 }
 
 // GetPost - 포스트 상세 보기 (쿼리 동작)
-func (p *PostRepository) GetPost(postId string) (helpers.JSON, int, error) {
+func (p *PostRepository) GetPost(postId string) (libs.JSON, int, error) {
 	var post dto.GetPostDTO
 	// 포스트 상세 정보 가져오기
 	if err := p.db.Raw(`
@@ -60,7 +60,7 @@ func (p *PostRepository) GetPost(postId string) (helpers.JSON, int, error) {
 		post.Tags = tag.Tags
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"post":          post,
 		"comment_count": commentCount,
 	}, http.StatusOK, nil
@@ -103,7 +103,7 @@ func (p *PostRepository) UpdatePost(body dto.WritePostBody, userId, postId strin
 	}
 
 	if currentPost.UserID != userId {
-		return "", http.StatusUnauthorized, helpers.ErrorPermission
+		return "", http.StatusUnauthorized, libs.ErrorPermission
 	}
 
 	// 업데이트
@@ -138,7 +138,7 @@ func (p *PostRepository) DeletePost(userId, postId string) (bool, int, error) {
 	}
 
 	if currentPost.UserID != userId {
-		return false, http.StatusUnauthorized, helpers.ErrorPermission
+		return false, http.StatusUnauthorized, libs.ErrorPermission
 	}
 
 	tx := p.db.Begin()
@@ -301,7 +301,7 @@ func (p *PostRepository) Like(postId, userId string) (bool, int, error) {
 	var currentPost models.Post
 	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		tx.Rollback()
-		return false, http.StatusNotFound, helpers.ErrorNotFound
+		return false, http.StatusNotFound, libs.ErrorNotFound
 	}
 
 	var alreadyLiked models.PostLike
@@ -326,7 +326,7 @@ func (p *PostRepository) Like(postId, userId string) (bool, int, error) {
 	var count int64
 	if err := tx.Model(&models.PostLike{}).Where("post_id = ?", postId).Count(&count).Error; err != nil {
 		tx.Rollback()
-		return false, http.StatusNotFound, helpers.ErrorNotFound
+		return false, http.StatusNotFound, libs.ErrorNotFound
 	}
 
 	currentPost.Likes = count
@@ -356,7 +356,7 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, int, error) {
 	var currentPost models.Post
 	if err := tx.Where("id = ?", postId).First(&currentPost).Error; err != nil {
 		tx.Rollback()
-		return false, http.StatusNotFound, helpers.ErrorNotFound
+		return false, http.StatusNotFound, libs.ErrorNotFound
 	}
 
 	var postLike models.PostLike
@@ -376,7 +376,7 @@ func (p *PostRepository) UnLike(postId, userId string) (bool, int, error) {
 	var count int64
 	if err := tx.Model(&models.PostLike{}).Where("post_id = ?", postId).Count(&count).Error; err != nil {
 		tx.Rollback()
-		return false, http.StatusNotFound, helpers.ErrorNotFound
+		return false, http.StatusNotFound, libs.ErrorNotFound
 	}
 
 	currentPost.Likes = count

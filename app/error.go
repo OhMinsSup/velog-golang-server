@@ -1,18 +1,18 @@
 package app
 
 import (
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"net/http"
 )
 
 type ErrorStatus string
 
 type ResponseException struct {
-	Code          int          `json:"code"`
-	Message       ErrorStatus  `json:"message"`
-	ResultCode    int          `json:"result_code"`
-	ResultMessage string       `json:"result_message"`
-	Data          helpers.JSON `json:"data"`
+	Code          int         `json:"code"`
+	Message       ErrorStatus `json:"message"`
+	ResultCode    int         `json:"result_code"`
+	ResultMessage string      `json:"result_message"`
+	Data          libs.JSON   `json:"data"`
 }
 
 const (
@@ -33,7 +33,7 @@ const (
 	ResultErrorCodeAlreadyExists = 40001
 )
 
-func AlreadyExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func AlreadyExistsErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusOK,
 		Message:       AlreadyExist,
@@ -44,7 +44,7 @@ func AlreadyExistsErrorResponse(msg string, data helpers.JSON) *ResponseExceptio
 	return &exception
 }
 
-func NotExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func NotExistsErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusOK,
 		Message:       NotExist,
@@ -55,7 +55,7 @@ func NotExistsErrorResponse(msg string, data helpers.JSON) *ResponseException {
 	return &exception
 }
 
-func DBQueryErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func DBQueryErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusInternalServerError,
 		Message:       DBQueryError,
@@ -66,7 +66,7 @@ func DBQueryErrorResponse(msg string, data helpers.JSON) *ResponseException {
 	return &exception
 }
 
-func TransactionsErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func TransactionsErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusInternalServerError,
 		Message:       TransactionsError,
@@ -77,7 +77,7 @@ func TransactionsErrorResponse(msg string, data helpers.JSON) *ResponseException
 	return &exception
 }
 
-func UnAuthorizedErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func UnAuthorizedErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusUnauthorized,
 		Message:       UnAuthorized,
@@ -88,7 +88,7 @@ func UnAuthorizedErrorResponse(msg string, data helpers.JSON) *ResponseException
 	return &exception
 }
 
-func BadRequestErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func BadRequestErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusBadRequest,
 		Message:       BadRequest,
@@ -99,7 +99,7 @@ func BadRequestErrorResponse(msg string, data helpers.JSON) *ResponseException {
 	return &exception
 }
 
-func NotFoundErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func NotFoundErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusNotFound,
 		Message:       NotFound,
@@ -109,7 +109,7 @@ func NotFoundErrorResponse(msg string, data helpers.JSON) *ResponseException {
 	return &exception
 }
 
-func ForbiddenErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func ForbiddenErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusForbidden,
 		Message:       Forbidden,
@@ -120,7 +120,7 @@ func ForbiddenErrorResponse(msg string, data helpers.JSON) *ResponseException {
 	return &exception
 }
 
-func InteralServerErrorResponse(msg string, data helpers.JSON) *ResponseException {
+func InteralServerErrorResponse(msg string, data libs.JSON) *ResponseException {
 	exception := ResponseException{
 		Code:          http.StatusInternalServerError,
 		Message:       InteralServer,

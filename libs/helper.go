@@ -1,3 +1,3 @@
-package helpers
+package libs
 
 type JSON = map[string]interface{}

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/models"
 	"github.com/OhMinsSup/story-server/repository"
 	"github.com/gin-gonic/gin"
@@ -12,7 +12,7 @@ import (
 	"net/http"
 )
 
-func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func GetPostService(db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	postRepository := repository.NewPostRepository(db)
 
 	post, code, err := postRepository.GetPost(ctx.Param("post_id"))
@@ -23,12 +23,12 @@ func GetPostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
 	return post, http.StatusOK, nil
 }
 
-func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func DeletePostService(db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 	postId := ctx.Param("post_id")
 
 	if postId == "" {
-		return nil, http.StatusBadRequest, helpers.ErrorParamRequired
+		return nil, http.StatusBadRequest, libs.ErrorParamRequired
 	}
 
 	postRepository := repository.NewPostRepository(db)
@@ -38,13 +38,13 @@ func DeletePostService(db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error)
 		return nil, code, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"post": isDeleted,
 	}, http.StatusOK, nil
 }
 
 // UpdatePostService - 포스트 수정 서비스 코드
-func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	postRepository := repository.NewPostRepository(db)
 
 	postId, code, err := postRepository.UpdatePost(body, fmt.Sprintf("%v", ctx.MustGet("id")), ctx.Param("post_id"))
@@ -52,13 +52,13 @@ func UpdatePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (h
 		return nil, code, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"post_id": postId,
 	}, http.StatusOK, nil
 }
 
 // WritePostService - 포스트 등록 서비스 코드
-func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	postRepository := repository.NewPostRepository(db)
 
 	postId, code, err := postRepository.CreatePost(body, fmt.Sprintf("%v", ctx.MustGet("id")))
@@ -66,13 +66,13 @@ func WritePostService(body dto.WritePostBody, db *gorm.DB, ctx *gin.Context) (he
 		return nil, code, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"post_id": postId,
 	}, http.StatusOK, nil
 }
 
 // CreatePostHistoryService - 임시 저장에 대한 포스트 히스토리를 생성
-func CreatePostHistoryService(body dto.CreatePostHistoryBody, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func CreatePostHistoryService(body dto.CreatePostHistoryBody, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	tx := db.Begin()
 	postId := ctx.Param("post_id")
 
@@ -116,7 +116,7 @@ func CreatePostHistoryService(body dto.CreatePostHistoryBody, db *gorm.DB, ctx *
 	return nil, http.StatusOK, nil
 }
 
-func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (helpers.JSON, int, error) {
+func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
 	userId := fmt.Sprintf("%v", ctx.MustGet("id"))
 
 	if userId == "" {
@@ -129,7 +129,7 @@ func PostViewService(body dto.PostViewParams, db *gorm.DB, ctx *gin.Context) (he
 		return nil, code, err
 	}
 
-	return helpers.JSON{
+	return libs.JSON{
 		"post": true,
 	}, http.StatusOK, nil
 }

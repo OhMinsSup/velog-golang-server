@@ -1,7 +1,7 @@
 package aws
 
 import (
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -23,9 +23,9 @@ type StorageRepository struct {
 
 // Initialize aws sdk project server init function
 func Initialize() *session.Session {
-	AccessKeyID = helpers.GetEnvWithKey("AWS_ACCESS_KEY_ID")
-	SecretAccessKey = helpers.GetEnvWithKey("AWS_SECRET_ACCESS_KEY")
-	Region = helpers.GetEnvWithKey("AWS_REGION")
+	AccessKeyID = libs.GetEnvWithKey("AWS_ACCESS_KEY_ID")
+	SecretAccessKey = libs.GetEnvWithKey("AWS_SECRET_ACCESS_KEY")
+	Region = libs.GetEnvWithKey("AWS_REGION")
 
 	// aws sdk session create
 	sess, err := session.NewSession(

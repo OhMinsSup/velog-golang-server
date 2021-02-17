@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/OhMinsSup/story-server/helpers"
+	"github.com/OhMinsSup/story-server/libs"
 	"time"
 )
 
@@ -27,8 +27,8 @@ type Post struct {
 	PostComment []Comment     `gorm:"polymorphic:Owner;" json:"post_comment"`
 }
 
-func (p Post) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (p Post) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":          p.ID,
 		"user_id":     p.UserID,
 		"title":       p.Title,
@@ -51,8 +51,8 @@ type Tag struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (t Tag) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (t Tag) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":   t.ID,
 		"name": t.Name,
 	}
@@ -72,8 +72,8 @@ type Comment struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-func (c Comment) Serialize() helpers.JSON {
-	return helpers.JSON{
+func (c Comment) Serialize() libs.JSON {
+	return libs.JSON{
 		"id":          c.ID,
 		"user_id":     c.UserId,
 		"post_id":     c.PostId,
