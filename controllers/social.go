@@ -25,8 +25,8 @@ func SocialRedirectController(ctx *gin.Context) {
 		return
 	}
 
-	loginUrl := social.GenerateSocialLink(provider, next)
-	ctx.Redirect(http.StatusMovedPermanently, loginUrl)
+	redirectUrl := social.GenerateSocialLink(provider, next)
+	ctx.Redirect(http.StatusMovedPermanently, redirectUrl)
 }
 
 func SocialFacebookCallbackController(ctx *gin.Context) {

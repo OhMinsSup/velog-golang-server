@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/SKAhack/go-shortid v0.0.0-20140827050853-24d054c393fe
+	github.com/alexpantyukhin/go-pattern-match v0.0.0-20200628201436-c57d5ad3f2c5
 	github.com/aws/aws-sdk-go v1.33.5
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/facebook/ent v0.5.4

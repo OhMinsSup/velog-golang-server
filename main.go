@@ -28,7 +28,7 @@ func main() {
 		Handler: server,
 	}
 
-	log.Println("Listening and serving HTTP on :" + port)
+	log.Println("🚀 Velog Server Listening and serving HTTP on :" + port)
 
 	go func() {
 		// service connections
@@ -55,10 +55,13 @@ func main() {
 	// catching ctx.Done(). timeout of 5 seconds.
 	select {
 	case <-ctx.Done():
-		log.Println("timeout of 5 seconds.")
+		log.Println("🌔 timeout of 5 seconds.")
 
-		log.Println("Database Close...")
-		client.Close()
+		log.Println("🙏🏻 Database Close...")
+		if err := client.Close(); err != nil {
+			log.Println("Database Close error:", err)
+		}
+
 	}
-	log.Println("Server exiting")
+	log.Println("👋 Server exiting")
 }

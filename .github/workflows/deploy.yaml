@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
-
 jobs:
   build:
     name: Build
@@ -29,4 +25,7 @@ jobs:
         run: |
           export GO111MODULE=on
           CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/story-server
+
+      - name: Deploy
+
 

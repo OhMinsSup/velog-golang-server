@@ -2,26 +2,26 @@ package social
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/OhMinsSup/story-server/libs"
 	"golang.org/x/oauth2"
-	"os"
 )
 
 var redirectPath = "http://localhost:8080/api/v1.0/auth/social/callback/"
 
-type State struct {
+type SocialState struct {
 	Provider string `json:"provider"`
 	Next     string `json:"next"`
 }
 
-type Action interface {
+type SocialAction interface {
 	Github() string
 	Facebook() string
 	Google() string
 	Kakao() string
 }
 
-func (s State) Google() string {
+func (s SocialState) Google() string {
 	callbackUri := redirectPath + "google"
 	state, _ := json.Marshal(s.Next)
 	oauthConfig := &oauth2.Config{
@@ -35,28 +35,28 @@ func (s State) Google() string {
 	return oauthConfig.AuthCodeURL(string(state))
 }
 
-func (s State) Facebook() string {
-	id := os.Getenv("FACEBOOK_CLIENT_ID")
-	callbackUrl := redirectPath + "facebook"
+func (s SocialState) Facebook() string {
+	id := libs.GetEnvWithKey("FACEBOOK_CLIENT_ID")
+	redirectUrl := redirectPath + "facebook"
 	state, _ := json.Marshal(s.Next)
-	return "https://www.facebook.com/v4.0/dialog/oauth?client_id=" + id + "&redirect_uri=" + callbackUrl + "&state=" + string(state) + "&scope=email,public_profile"
+	return fmt.Sprintf("https://www.facebook.com/v4.0/dialog/oauth?client_id=%v&redirect_uri=%v&state=%v&scope=email,public_profile", id, redirectUrl, state)
 }
 
-func (s State) Github() string {
-	id := os.Getenv("GITHUB_CLIENT_ID")
+func (s SocialState) Github() string {
+	id := libs.GetEnvWithKey("GITHUB_CLIENT_ID")
 	redirectUriWithNext := redirectPath + "github?next=" + s.Next
-	return "https://github.com/login/oauth/authorize?scope=user:email&client_id=" + id + "&redirect_uri=" + redirectUriWithNext
+	return fmt.Sprintf("https://github.com/login/oauth/authorize?scope=user:email&client_id=%v&redirect_uri=%v", id, redirectUriWithNext)
 }
 
-func (s State) Kakao() string {
+func (s SocialState) Kakao() string {
 	restKey := libs.GetEnvWithKey("KAKAO_REST_API_KEY")
 	state, _ := json.Marshal(s.Next)
-	redirectUriWithNext := redirectPath + "kakao"
-	return "https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=" + restKey + "&redirect_uri=" + redirectUriWithNext + "&state=" + string(state) + "&prompt=none"
+	redirectUrl := redirectPath + "kakao"
+	return fmt.Sprintf("https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=%v&redirect_uri=%v&state=%v", restKey, redirectUrl, state)
 }
 
-func Social(provider, next string) Action {
-	state := State{
+func Social(provider, next string) SocialAction {
+	state := SocialState{
 		Provider: provider,
 		Next:     next,
 	}

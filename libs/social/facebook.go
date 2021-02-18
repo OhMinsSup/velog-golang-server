@@ -31,11 +31,11 @@ type FacebookProfile struct {
 }
 
 type FacebookToken struct {
-	AccessToken  string
-	TokenType    string
-	RefreshToken string
-	Expiry       time.Time
-	Raw          interface{}
+	AccessToken  string      `json:"access_token"`
+	TokenType    string      `json:"token_type"`
+	RefreshToken string      `json:"refresh_token"`
+	Expiry       time.Time   `json:"expiry"`
+	Raw          interface{} `json:"raw"`
 }
 
 type FacebookTokenJSON struct {

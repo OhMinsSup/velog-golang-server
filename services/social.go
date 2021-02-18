@@ -2,9 +2,10 @@ package services
 
 import (
 	"github.com/OhMinsSup/story-server/app"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/libs/social"
+	match "github.com/alexpantyukhin/go-pattern-match"
 	"github.com/gin-gonic/gin"
-	"github.com/google/go-github/github"
 	"net/http"
 )
 
@@ -14,18 +15,11 @@ func SocialCallbackService(provider string, ctx *gin.Context) (*app.ResponseExce
 		return app.BadRequestErrorResponse("CODE IS EMPTY", nil), nil
 	}
 
-	facebookProfile, githubProfile, token := getSocialInfo(provider, code)
-	switch provider {
-	case "facebook":
-		ctx.Set("profile", facebookProfile)
-		break
-	case "github":
-		ctx.Set("profile", githubProfile)
-		break
-	}
-
-	ctx.Set("token", token)
+	result := getSocialInfo(provider, code).(libs.JSON)
+	ctx.Set("profile", result["profile"])
+	ctx.Set("token", result["token"])
 	ctx.Set("provider", provider)
+
 	return &app.ResponseException{
 		Code:          http.StatusOK,
 		ResultCode:    0,
@@ -35,31 +29,36 @@ func SocialCallbackService(provider string, ctx *gin.Context) (*app.ResponseExce
 	}, nil
 }
 
-func getSocialInfo(provider, code string) (*social.FacebookProfile, *github.User, string) {
-	switch provider {
-	case "facebook":
-		accessToken := social.GetFacebookAccessToken(code)
-		profile := social.GetFacebookProfile(accessToken)
+func getSocialInfo(provider, code string) interface{} {
+	_, result := match.Match(provider).
+		When("facebook", func() libs.JSON {
+			accessToken := social.GetFacebookAccessToken(code)
+			profile := social.GetFacebookProfile(accessToken)
+			data := libs.JSON{
+				"token":   accessToken,
+				"profile": profile,
+			}
+			return data
+		}).
+		When("github", func() libs.JSON {
+			accessToken := social.GetGithubAccessToken(code)
+			profile := social.GetGithubProfile(accessToken)
+			data := libs.JSON{
+				"token":   accessToken,
+				"profile": profile,
+			}
+			return data
+		}).
+		When("kakao", func() libs.JSON {
+			accessToken := social.GetKakaoAccessToken(code)
+			profile := ""
+			data := libs.JSON{
+				"token":   accessToken,
+				"profile": profile,
+			}
+			return data
+		}).
+		Result()
 
-		if profile == nil {
-			return nil, nil, ""
-		}
-
-		return profile, nil, accessToken
-	case "github":
-		accessToken := social.GetGithubAccessToken(code)
-		profile := social.GetGithubProfile(accessToken)
-
-		if profile == nil {
-			return nil, nil, ""
-		}
-
-		return nil, profile, accessToken
-	case "kakao":
-		return nil, nil, ""
-	case "google":
-		return nil, nil, ""
-	default:
-		return nil, nil, ""
-	}
+	return result
 }
