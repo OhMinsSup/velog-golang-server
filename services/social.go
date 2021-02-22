@@ -51,7 +51,7 @@ func getSocialInfo(provider, code string) interface{} {
 		}).
 		When("kakao", func() libs.JSON {
 			accessToken := social.GetKakaoAccessToken(code)
-			profile := ""
+			profile := social.GetKakaoProfile(accessToken)
 			data := libs.JSON{
 				"token":   accessToken,
 				"profile": profile,

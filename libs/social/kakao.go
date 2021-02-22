@@ -7,12 +7,39 @@ import (
 	"github.com/google/go-querystring/query"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 )
+
+type KakaoProfile struct {
+	ID           int64        `json:"id"`
+	KakaoAccount KakaoAccount `json:"kakao_account"`
+}
+
+type KakaoAccount struct {
+	ProfileNeedsAgreement  bool               `json:"profile_needs_agreement"`
+	Profile                KakaoDetailProfile `json:"profile"`
+	EmailNeedsAgreement    bool               `json:"email_needs_agreement"`
+	IsEmailValid           bool               `json:"is_email_valid"`
+	IsEmailVerified        bool               `json:"is_email_verified"`
+	Email                  string             `json:"email"`
+	AgeRangeNeedsAgreement bool               `json:"age_range_needs_agreement"`
+	AgeRange               string             `json:"age_range"`
+	BirthdayNeedsAgreement bool               `json:"birthday_needs_agreement"`
+	Birthday               string             `json:"birthday"`
+	GenderNeedsAgreement   bool               `json:"gender_needs_agreement"`
+	Gender                 string             `json:"gender"`
+}
+
+type KakaoDetailProfile struct {
+	Nickname          string `json:"nickname"`
+	ThumbnailImageURL string `json:"thumbnail_image_url"`
+	ProfileImageURL   string `json:"profile_image_url"`
+}
 
 type KakaoToken struct {
 	TokenType             string    `json:"token_type"`
@@ -64,7 +91,7 @@ func GetKakaoAccessToken(code string) string {
 		ClientID:     id,
 		ClientSecret: secret,
 		GrantType:    "authorization_code",
-		RedirectUri:  "http://localhost:8080/api/v1.0/auth/social/callback/facebook",
+		RedirectUri:  "http://localhost:8080/api/v1.0/auth/social/callback/kakao",
 	}
 
 	queryString, _ := query.Values(params)
@@ -95,7 +122,7 @@ func GetKakaoAccessToken(code string) string {
 		if err != nil {
 			panic(err)
 		}
-
+		log.Println("logs", values)
 		token = &KakaoToken{
 			AccessToken:  values.Get("access_token"),
 			TokenType:    values.Get("token_type"),
@@ -119,7 +146,6 @@ func GetKakaoAccessToken(code string) string {
 		if err = json.Unmarshal(body, &tokenJson); err != nil {
 			panic(err)
 		}
-
 		token = &KakaoToken{
 			AccessToken:           tokenJson.AccessToken,
 			TokenType:             tokenJson.TokenType,
@@ -134,5 +160,25 @@ func GetKakaoAccessToken(code string) string {
 		panic(errors.New("oauth2: server response missing access_token"))
 	}
 	return token.AccessToken
-	return ""
+}
+
+func GetKakaoProfile(token string) *KakaoProfile {
+	req, err := http.NewRequest("POST", "https://kapi.kakao.com/v2/user/me", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	var result KakaoProfile
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		panic(err)
+	}
+	return &result
 }

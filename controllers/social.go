@@ -59,9 +59,11 @@ func SocialKakaoCallbackController(ctx *gin.Context) {
 func SocialCallbackController(ctx *gin.Context) {
 	token := ctx.MustGet("token").(string)
 	provider := ctx.MustGet("provider").(string)
+	profile := ctx.MustGet("profile").(libs.JSON)
 	ctx.JSON(200, libs.JSON{
 		"token":    token,
 		"provider": provider,
+		"profile":  profile,
 	})
 }
 

@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+type JSON = map[string]interface{}
+
 // CreateHash 해시를 생성하는 함수
 func CreateHash(data string) string {
 	hash := sha256.New()

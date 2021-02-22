@@ -17,8 +17,6 @@ import (
 
 func New() (*gin.Engine, *ent.Client) {
 	// initializes database
-	//db, _ := database.Initialize()
-
 	dbUser := libs.GetEnvWithKey("POSTGRES_USER")
 	dbPassword := libs.GetEnvWithKey("POSTGRES_PASSWORD")
 	dbName := libs.GetEnvWithKey("POSTGRES_DB")

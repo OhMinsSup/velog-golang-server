@@ -55,9 +55,9 @@ func main() {
 	// catching ctx.Done(). timeout of 5 seconds.
 	select {
 	case <-ctx.Done():
-		log.Println("🌔 timeout of 5 seconds.")
+		log.Println("timeout of 5 seconds.")
 
-		log.Println("🙏🏻 Database Close...")
+		log.Println("Database Close...")
 		if err := client.Close(); err != nil {
 			log.Println("Database Close error:", err)
 		}
