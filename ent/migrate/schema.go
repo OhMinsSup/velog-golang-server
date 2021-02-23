@@ -52,24 +52,16 @@ var (
 		{Name: "social_id", Type: field.TypeString, Size: 255},
 		{Name: "access_token", Type: field.TypeString, Size: 255},
 		{Name: "provider", Type: field.TypeString, Size: 255},
+		{Name: "fk_user_id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "fk_user_id", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// SocialAccountsTable holds the schema information for the "social_accounts" table.
 	SocialAccountsTable = &schema.Table{
-		Name:       "social_accounts",
-		Columns:    SocialAccountsColumns,
-		PrimaryKey: []*schema.Column{SocialAccountsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:  "social_accounts_users_social_account",
-				Columns: []*schema.Column{SocialAccountsColumns[6]},
-
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
+		Name:        "social_accounts",
+		Columns:     SocialAccountsColumns,
+		PrimaryKey:  []*schema.Column{SocialAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
@@ -182,7 +174,6 @@ var (
 )
 
 func init() {
-	SocialAccountsTable.ForeignKeys[0].RefTable = UsersTable
 	UserMetaTable.ForeignKeys[0].RefTable = UsersTable
 	UserProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	VelogConfigsTable.ForeignKeys[0].RefTable = UsersTable

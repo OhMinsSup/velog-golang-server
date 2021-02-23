@@ -419,22 +419,6 @@ func (c *SocialAccountClient) GetX(ctx context.Context, id uuid.UUID) *SocialAcc
 	return obj
 }
 
-// QueryUser queries the user edge of a SocialAccount.
-func (c *SocialAccountClient) QueryUser(sa *SocialAccount) *UserQuery {
-	query := &UserQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := sa.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(socialaccount.Table, socialaccount.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, socialaccount.UserTable, socialaccount.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(sa.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *SocialAccountClient) Hooks() []Hook {
 	return c.hooks.SocialAccount
@@ -564,22 +548,6 @@ func (c *UserClient) QueryUserMeta(u *User) *UserMetaQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(usermeta.Table, usermeta.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, user.UserMetaTable, user.UserMetaColumn),
-		)
-		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QuerySocialAccount queries the social_account edge of a User.
-func (c *UserClient) QuerySocialAccount(u *User) *SocialAccountQuery {
-	query := &SocialAccountQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := u.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(socialaccount.Table, socialaccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, user.SocialAccountTable, user.SocialAccountColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

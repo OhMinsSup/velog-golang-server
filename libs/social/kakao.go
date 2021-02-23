@@ -162,7 +162,7 @@ func GetKakaoAccessToken(code string) string {
 	return token.AccessToken
 }
 
-func GetKakaoProfile(token string) *KakaoProfile {
+func GetKakaoProfile(token string) *SocialProfile {
 	req, err := http.NewRequest("POST", "https://kapi.kakao.com/v2/user/me", nil)
 	if err != nil {
 		panic(err)
@@ -180,5 +180,13 @@ func GetKakaoProfile(token string) *KakaoProfile {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		panic(err)
 	}
-	return &result
+
+	profile := SocialProfile{
+		ID:        strconv.FormatInt(result.ID, 10),
+		Name:      result.KakaoAccount.Profile.Nickname,
+		Email:     result.KakaoAccount.Email,
+		Thumbnail: result.KakaoAccount.Profile.ThumbnailImageURL,
+	}
+
+	return &profile
 }

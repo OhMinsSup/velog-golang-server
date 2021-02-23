@@ -615,34 +615,6 @@ func HasUserMetaWith(preds ...predicate.UserMeta) predicate.User {
 	})
 }
 
-// HasSocialAccount applies the HasEdge predicate on the "social_account" edge.
-func HasSocialAccount() predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SocialAccountTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, SocialAccountTable, SocialAccountColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasSocialAccountWith applies the HasEdge predicate on the "social_account" edge with a given conditions (other predicates).
-func HasSocialAccountWith(preds ...predicate.SocialAccount) predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(SocialAccountInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, SocialAccountTable, SocialAccountColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(func(s *sql.Selector) {

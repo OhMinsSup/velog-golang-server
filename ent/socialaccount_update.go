@@ -4,13 +4,11 @@ package ent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
@@ -48,32 +46,21 @@ func (sau *SocialAccountUpdate) SetProvider(s string) *SocialAccountUpdate {
 	return sau
 }
 
+// SetFkUserID sets the "fk_user_id" field.
+func (sau *SocialAccountUpdate) SetFkUserID(u uuid.UUID) *SocialAccountUpdate {
+	sau.mutation.SetFkUserID(u)
+	return sau
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (sau *SocialAccountUpdate) SetUpdatedAt(t time.Time) *SocialAccountUpdate {
 	sau.mutation.SetUpdatedAt(t)
 	return sau
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (sau *SocialAccountUpdate) SetUserID(id uuid.UUID) *SocialAccountUpdate {
-	sau.mutation.SetUserID(id)
-	return sau
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (sau *SocialAccountUpdate) SetUser(u *User) *SocialAccountUpdate {
-	return sau.SetUserID(u.ID)
-}
-
 // Mutation returns the SocialAccountMutation object of the builder.
 func (sau *SocialAccountUpdate) Mutation() *SocialAccountMutation {
 	return sau.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (sau *SocialAccountUpdate) ClearUser() *SocialAccountUpdate {
-	sau.mutation.ClearUser()
-	return sau
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -159,9 +146,6 @@ func (sau *SocialAccountUpdate) check() error {
 			return &ValidationError{Name: "provider", err: fmt.Errorf("ent: validator failed for field \"provider\": %w", err)}
 		}
 	}
-	if _, ok := sau.mutation.UserID(); sau.mutation.UserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"user\"")
-	}
 	return nil
 }
 
@@ -204,47 +188,19 @@ func (sau *SocialAccountUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Column: socialaccount.FieldProvider,
 		})
 	}
+	if value, ok := sau.mutation.FkUserID(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeUUID,
+			Value:  value,
+			Column: socialaccount.FieldFkUserID,
+		})
+	}
 	if value, ok := sau.mutation.UpdatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Value:  value,
 			Column: socialaccount.FieldUpdatedAt,
 		})
-	}
-	if sau.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   socialaccount.UserTable,
-			Columns: []string{socialaccount.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := sau.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   socialaccount.UserTable,
-			Columns: []string{socialaccount.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, sau.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -282,32 +238,21 @@ func (sauo *SocialAccountUpdateOne) SetProvider(s string) *SocialAccountUpdateOn
 	return sauo
 }
 
+// SetFkUserID sets the "fk_user_id" field.
+func (sauo *SocialAccountUpdateOne) SetFkUserID(u uuid.UUID) *SocialAccountUpdateOne {
+	sauo.mutation.SetFkUserID(u)
+	return sauo
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (sauo *SocialAccountUpdateOne) SetUpdatedAt(t time.Time) *SocialAccountUpdateOne {
 	sauo.mutation.SetUpdatedAt(t)
 	return sauo
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (sauo *SocialAccountUpdateOne) SetUserID(id uuid.UUID) *SocialAccountUpdateOne {
-	sauo.mutation.SetUserID(id)
-	return sauo
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (sauo *SocialAccountUpdateOne) SetUser(u *User) *SocialAccountUpdateOne {
-	return sauo.SetUserID(u.ID)
-}
-
 // Mutation returns the SocialAccountMutation object of the builder.
 func (sauo *SocialAccountUpdateOne) Mutation() *SocialAccountMutation {
 	return sauo.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (sauo *SocialAccountUpdateOne) ClearUser() *SocialAccountUpdateOne {
-	sauo.mutation.ClearUser()
-	return sauo
 }
 
 // Save executes the query and returns the updated SocialAccount entity.
@@ -393,9 +338,6 @@ func (sauo *SocialAccountUpdateOne) check() error {
 			return &ValidationError{Name: "provider", err: fmt.Errorf("ent: validator failed for field \"provider\": %w", err)}
 		}
 	}
-	if _, ok := sauo.mutation.UserID(); sauo.mutation.UserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"user\"")
-	}
 	return nil
 }
 
@@ -436,47 +378,19 @@ func (sauo *SocialAccountUpdateOne) sqlSave(ctx context.Context) (_node *SocialA
 			Column: socialaccount.FieldProvider,
 		})
 	}
+	if value, ok := sauo.mutation.FkUserID(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeUUID,
+			Value:  value,
+			Column: socialaccount.FieldFkUserID,
+		})
+	}
 	if value, ok := sauo.mutation.UpdatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Value:  value,
 			Column: socialaccount.FieldUpdatedAt,
 		})
-	}
-	if sauo.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   socialaccount.UserTable,
-			Columns: []string{socialaccount.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := sauo.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   socialaccount.UserTable,
-			Columns: []string{socialaccount.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &SocialAccount{config: sauo.config}
 	_spec.Assign = _node.assignValues

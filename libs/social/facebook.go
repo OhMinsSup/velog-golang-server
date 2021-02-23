@@ -15,7 +15,7 @@ import (
 )
 
 type Picture struct {
-	Data map[string]struct {
+	Data struct {
 		Height       int    `json:"height"`
 		IsSilhouette bool   `json:"is_silhouette"`
 		Url          string `json:"url"`
@@ -132,13 +132,13 @@ func GetFacebookAccessToken(code string) string {
 	return token.AccessToken
 }
 
-func GetFacebookProfile(token string) *FacebookProfile {
+func GetFacebookProfile(token string) *SocialProfile {
 	req, err := http.NewRequest("GET", "https://graph.facebook.com/v4.0/me?fields=id,name,email,picture", nil)
 	if err != nil {
 		panic(err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Basic "+token)
+	req.Header.Add("Authorization", "Bearer "+token)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -150,5 +150,13 @@ func GetFacebookProfile(token string) *FacebookProfile {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		panic(err)
 	}
-	return &result
+
+	profile := SocialProfile{
+		ID:        result.ID,
+		Name:      result.Name,
+		Email:     result.Email,
+		Thumbnail: result.Picture.Data.Url,
+	}
+
+	return &profile
 }

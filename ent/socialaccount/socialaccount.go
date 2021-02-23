@@ -19,23 +19,15 @@ const (
 	FieldAccessToken = "access_token"
 	// FieldProvider holds the string denoting the provider field in the database.
 	FieldProvider = "provider"
+	// FieldFkUserID holds the string denoting the fk_user_id field in the database.
+	FieldFkUserID = "fk_user_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 
-	// EdgeUser holds the string denoting the user edge name in mutations.
-	EdgeUser = "user"
-
 	// Table holds the table name of the socialaccount in the database.
 	Table = "social_accounts"
-	// UserTable is the table the holds the user relation/edge.
-	UserTable = "social_accounts"
-	// UserInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "users"
-	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "fk_user_id"
 )
 
 // Columns holds all SQL columns for socialaccount fields.
@@ -44,24 +36,15 @@ var Columns = []string{
 	FieldSocialID,
 	FieldAccessToken,
 	FieldProvider,
+	FieldFkUserID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the SocialAccount type.
-var ForeignKeys = []string{
-	"fk_user_id",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}

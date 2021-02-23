@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -44,11 +43,9 @@ type UserEdges struct {
 	VelogConfig *VelogConfig
 	// UserMeta holds the value of the user_meta edge.
 	UserMeta *UserMeta
-	// SocialAccount holds the value of the social_account edge.
-	SocialAccount *SocialAccount
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [3]bool
 }
 
 // UserProfileOrErr returns the UserProfile value or an error if the edge
@@ -91,20 +88,6 @@ func (e UserEdges) UserMetaOrErr() (*UserMeta, error) {
 		return e.UserMeta, nil
 	}
 	return nil, &NotLoadedError{edge: "user_meta"}
-}
-
-// SocialAccountOrErr returns the SocialAccount value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e UserEdges) SocialAccountOrErr() (*SocialAccount, error) {
-	if e.loadedTypes[3] {
-		if e.SocialAccount == nil {
-			// The edge social_account was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: socialaccount.Label}
-		}
-		return e.SocialAccount, nil
-	}
-	return nil, &NotLoadedError{edge: "social_account"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -190,11 +173,6 @@ func (u *User) QueryVelogConfig() *VelogConfigQuery {
 // QueryUserMeta queries the "user_meta" edge of the User entity.
 func (u *User) QueryUserMeta() *UserMetaQuery {
 	return (&UserClient{config: u.config}).QueryUserMeta(u)
-}
-
-// QuerySocialAccount queries the "social_account" edge of the User entity.
-func (u *User) QuerySocialAccount() *SocialAccountQuery {
-	return (&UserClient{config: u.config}).QuerySocialAccount(u)
 }
 
 // Update returns a builder for updating this User.

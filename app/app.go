@@ -60,7 +60,6 @@ func New() (*gin.Engine, *ent.Client) {
 		c.Set("client", client)
 		c.Next()
 	})
-	//app.Use(database.Inject(db))
 
 	allowOrigins := []string{"https://storeis.vercel.app"}
 

@@ -1012,11 +1012,10 @@ type SocialAccountMutation struct {
 	social_id     *string
 	access_token  *string
 	provider      *string
+	fk_user_id    *uuid.UUID
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
-	user          *uuid.UUID
-	cleareduser   bool
 	done          bool
 	oldValue      func(context.Context) (*SocialAccount, error)
 	predicates    []predicate.SocialAccount
@@ -1215,6 +1214,42 @@ func (m *SocialAccountMutation) ResetProvider() {
 	m.provider = nil
 }
 
+// SetFkUserID sets the "fk_user_id" field.
+func (m *SocialAccountMutation) SetFkUserID(u uuid.UUID) {
+	m.fk_user_id = &u
+}
+
+// FkUserID returns the value of the "fk_user_id" field in the mutation.
+func (m *SocialAccountMutation) FkUserID() (r uuid.UUID, exists bool) {
+	v := m.fk_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFkUserID returns the old "fk_user_id" field's value of the SocialAccount entity.
+// If the SocialAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SocialAccountMutation) OldFkUserID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldFkUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldFkUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFkUserID: %w", err)
+	}
+	return oldValue.FkUserID, nil
+}
+
+// ResetFkUserID resets all changes to the "fk_user_id" field.
+func (m *SocialAccountMutation) ResetFkUserID() {
+	m.fk_user_id = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *SocialAccountMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -1287,45 +1322,6 @@ func (m *SocialAccountMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetUserID sets the "user" edge to the User entity by id.
-func (m *SocialAccountMutation) SetUserID(id uuid.UUID) {
-	m.user = &id
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (m *SocialAccountMutation) ClearUser() {
-	m.cleareduser = true
-}
-
-// UserCleared returns if the "user" edge to the User entity was cleared.
-func (m *SocialAccountMutation) UserCleared() bool {
-	return m.cleareduser
-}
-
-// UserID returns the "user" edge ID in the mutation.
-func (m *SocialAccountMutation) UserID() (id uuid.UUID, exists bool) {
-	if m.user != nil {
-		return *m.user, true
-	}
-	return
-}
-
-// UserIDs returns the "user" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *SocialAccountMutation) UserIDs() (ids []uuid.UUID) {
-	if id := m.user; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUser resets all changes to the "user" edge.
-func (m *SocialAccountMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
-}
-
 // Op returns the operation name.
 func (m *SocialAccountMutation) Op() Op {
 	return m.op
@@ -1340,7 +1336,7 @@ func (m *SocialAccountMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SocialAccountMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.social_id != nil {
 		fields = append(fields, socialaccount.FieldSocialID)
 	}
@@ -1349,6 +1345,9 @@ func (m *SocialAccountMutation) Fields() []string {
 	}
 	if m.provider != nil {
 		fields = append(fields, socialaccount.FieldProvider)
+	}
+	if m.fk_user_id != nil {
+		fields = append(fields, socialaccount.FieldFkUserID)
 	}
 	if m.created_at != nil {
 		fields = append(fields, socialaccount.FieldCreatedAt)
@@ -1370,6 +1369,8 @@ func (m *SocialAccountMutation) Field(name string) (ent.Value, bool) {
 		return m.AccessToken()
 	case socialaccount.FieldProvider:
 		return m.Provider()
+	case socialaccount.FieldFkUserID:
+		return m.FkUserID()
 	case socialaccount.FieldCreatedAt:
 		return m.CreatedAt()
 	case socialaccount.FieldUpdatedAt:
@@ -1389,6 +1390,8 @@ func (m *SocialAccountMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldAccessToken(ctx)
 	case socialaccount.FieldProvider:
 		return m.OldProvider(ctx)
+	case socialaccount.FieldFkUserID:
+		return m.OldFkUserID(ctx)
 	case socialaccount.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case socialaccount.FieldUpdatedAt:
@@ -1422,6 +1425,13 @@ func (m *SocialAccountMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetProvider(v)
+		return nil
+	case socialaccount.FieldFkUserID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFkUserID(v)
 		return nil
 	case socialaccount.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -1495,6 +1505,9 @@ func (m *SocialAccountMutation) ResetField(name string) error {
 	case socialaccount.FieldProvider:
 		m.ResetProvider()
 		return nil
+	case socialaccount.FieldFkUserID:
+		m.ResetFkUserID()
+		return nil
 	case socialaccount.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -1507,103 +1520,73 @@ func (m *SocialAccountMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *SocialAccountMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.user != nil {
-		edges = append(edges, socialaccount.EdgeUser)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *SocialAccountMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case socialaccount.EdgeUser:
-		if id := m.user; id != nil {
-			return []ent.Value{*id}
-		}
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *SocialAccountMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *SocialAccountMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *SocialAccountMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.cleareduser {
-		edges = append(edges, socialaccount.EdgeUser)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *SocialAccountMutation) EdgeCleared(name string) bool {
-	switch name {
-	case socialaccount.EdgeUser:
-		return m.cleareduser
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *SocialAccountMutation) ClearEdge(name string) error {
-	switch name {
-	case socialaccount.EdgeUser:
-		m.ClearUser()
-		return nil
-	}
 	return fmt.Errorf("unknown SocialAccount unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *SocialAccountMutation) ResetEdge(name string) error {
-	switch name {
-	case socialaccount.EdgeUser:
-		m.ResetUser()
-		return nil
-	}
 	return fmt.Errorf("unknown SocialAccount edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *uuid.UUID
-	username              *string
-	email                 *string
-	is_certified          *bool
-	created_at            *time.Time
-	updated_at            *time.Time
-	clearedFields         map[string]struct{}
-	user_profile          *uuid.UUID
-	cleareduser_profile   bool
-	velog_config          *uuid.UUID
-	clearedvelog_config   bool
-	user_meta             *uuid.UUID
-	cleareduser_meta      bool
-	social_account        *uuid.UUID
-	clearedsocial_account bool
-	done                  bool
-	oldValue              func(context.Context) (*User, error)
-	predicates            []predicate.User
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	username            *string
+	email               *string
+	is_certified        *bool
+	created_at          *time.Time
+	updated_at          *time.Time
+	clearedFields       map[string]struct{}
+	user_profile        *uuid.UUID
+	cleareduser_profile bool
+	velog_config        *uuid.UUID
+	clearedvelog_config bool
+	user_meta           *uuid.UUID
+	cleareduser_meta    bool
+	done                bool
+	oldValue            func(context.Context) (*User, error)
+	predicates          []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -2001,45 +1984,6 @@ func (m *UserMutation) ResetUserMeta() {
 	m.cleareduser_meta = false
 }
 
-// SetSocialAccountID sets the "social_account" edge to the SocialAccount entity by id.
-func (m *UserMutation) SetSocialAccountID(id uuid.UUID) {
-	m.social_account = &id
-}
-
-// ClearSocialAccount clears the "social_account" edge to the SocialAccount entity.
-func (m *UserMutation) ClearSocialAccount() {
-	m.clearedsocial_account = true
-}
-
-// SocialAccountCleared returns if the "social_account" edge to the SocialAccount entity was cleared.
-func (m *UserMutation) SocialAccountCleared() bool {
-	return m.clearedsocial_account
-}
-
-// SocialAccountID returns the "social_account" edge ID in the mutation.
-func (m *UserMutation) SocialAccountID() (id uuid.UUID, exists bool) {
-	if m.social_account != nil {
-		return *m.social_account, true
-	}
-	return
-}
-
-// SocialAccountIDs returns the "social_account" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// SocialAccountID instead. It exists only for internal usage by the builders.
-func (m *UserMutation) SocialAccountIDs() (ids []uuid.UUID) {
-	if id := m.social_account; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetSocialAccount resets all changes to the "social_account" edge.
-func (m *UserMutation) ResetSocialAccount() {
-	m.social_account = nil
-	m.clearedsocial_account = false
-}
-
 // Op returns the operation name.
 func (m *UserMutation) Op() Op {
 	return m.op
@@ -2230,7 +2174,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 3)
 	if m.user_profile != nil {
 		edges = append(edges, user.EdgeUserProfile)
 	}
@@ -2239,9 +2183,6 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.user_meta != nil {
 		edges = append(edges, user.EdgeUserMeta)
-	}
-	if m.social_account != nil {
-		edges = append(edges, user.EdgeSocialAccount)
 	}
 	return edges
 }
@@ -2262,17 +2203,13 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user_meta; id != nil {
 			return []ent.Value{*id}
 		}
-	case user.EdgeSocialAccount:
-		if id := m.social_account; id != nil {
-			return []ent.Value{*id}
-		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 3)
 	return edges
 }
 
@@ -2286,7 +2223,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 3)
 	if m.cleareduser_profile {
 		edges = append(edges, user.EdgeUserProfile)
 	}
@@ -2295,9 +2232,6 @@ func (m *UserMutation) ClearedEdges() []string {
 	}
 	if m.cleareduser_meta {
 		edges = append(edges, user.EdgeUserMeta)
-	}
-	if m.clearedsocial_account {
-		edges = append(edges, user.EdgeSocialAccount)
 	}
 	return edges
 }
@@ -2312,8 +2246,6 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedvelog_config
 	case user.EdgeUserMeta:
 		return m.cleareduser_meta
-	case user.EdgeSocialAccount:
-		return m.clearedsocial_account
 	}
 	return false
 }
@@ -2331,9 +2263,6 @@ func (m *UserMutation) ClearEdge(name string) error {
 	case user.EdgeUserMeta:
 		m.ClearUserMeta()
 		return nil
-	case user.EdgeSocialAccount:
-		m.ClearSocialAccount()
-		return nil
 	}
 	return fmt.Errorf("unknown User unique edge %s", name)
 }
@@ -2350,9 +2279,6 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeUserMeta:
 		m.ResetUserMeta()
-		return nil
-	case user.EdgeSocialAccount:
-		m.ResetSocialAccount()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

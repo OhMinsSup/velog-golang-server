@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/google/uuid"
 )
@@ -24,37 +23,12 @@ type SocialAccount struct {
 	AccessToken string `json:"access_token,omitempty"`
 	// Provider holds the value of the "provider" field.
 	Provider string `json:"provider,omitempty"`
+	// FkUserID holds the value of the "fk_user_id" field.
+	FkUserID uuid.UUID `json:"fk_user_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the SocialAccountQuery when eager-loading is set.
-	Edges      SocialAccountEdges `json:"edges"`
-	fk_user_id *uuid.UUID
-}
-
-// SocialAccountEdges holds the relations/edges for other nodes in the graph.
-type SocialAccountEdges struct {
-	// User holds the value of the user edge.
-	User *User
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e SocialAccountEdges) UserOrErr() (*User, error) {
-	if e.loadedTypes[0] {
-		if e.User == nil {
-			// The edge user was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: user.Label}
-		}
-		return e.User, nil
-	}
-	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -66,9 +40,7 @@ func (*SocialAccount) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullString{}
 		case socialaccount.FieldCreatedAt, socialaccount.FieldUpdatedAt:
 			values[i] = &sql.NullTime{}
-		case socialaccount.FieldID:
-			values[i] = &uuid.UUID{}
-		case socialaccount.ForeignKeys[0]: // fk_user_id
+		case socialaccount.FieldID, socialaccount.FieldFkUserID:
 			values[i] = &uuid.UUID{}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type SocialAccount", columns[i])
@@ -109,6 +81,12 @@ func (sa *SocialAccount) assignValues(columns []string, values []interface{}) er
 			} else if value.Valid {
 				sa.Provider = value.String
 			}
+		case socialaccount.FieldFkUserID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field fk_user_id", values[i])
+			} else if value != nil {
+				sa.FkUserID = *value
+			}
 		case socialaccount.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -121,20 +99,9 @@ func (sa *SocialAccount) assignValues(columns []string, values []interface{}) er
 			} else if value.Valid {
 				sa.UpdatedAt = value.Time
 			}
-		case socialaccount.ForeignKeys[0]:
-			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field fk_user_id", values[i])
-			} else if value != nil {
-				sa.fk_user_id = value
-			}
 		}
 	}
 	return nil
-}
-
-// QueryUser queries the "user" edge of the SocialAccount entity.
-func (sa *SocialAccount) QueryUser() *UserQuery {
-	return (&SocialAccountClient{config: sa.config}).QueryUser(sa)
 }
 
 // Update returns a builder for updating this SocialAccount.
@@ -166,6 +133,8 @@ func (sa *SocialAccount) String() string {
 	builder.WriteString(sa.AccessToken)
 	builder.WriteString(", provider=")
 	builder.WriteString(sa.Provider)
+	builder.WriteString(", fk_user_id=")
+	builder.WriteString(fmt.Sprintf("%v", sa.FkUserID))
 	builder.WriteString(", created_at=")
 	builder.WriteString(sa.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", updated_at=")

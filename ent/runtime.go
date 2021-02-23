@@ -75,11 +75,11 @@ func init() {
 	// socialaccount.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
 	socialaccount.ProviderValidator = socialaccountDescProvider.Validators[0].(func(string) error)
 	// socialaccountDescCreatedAt is the schema descriptor for created_at field.
-	socialaccountDescCreatedAt := socialaccountFields[4].Descriptor()
+	socialaccountDescCreatedAt := socialaccountFields[5].Descriptor()
 	// socialaccount.DefaultCreatedAt holds the default value on creation for the created_at field.
 	socialaccount.DefaultCreatedAt = socialaccountDescCreatedAt.Default.(func() time.Time)
 	// socialaccountDescUpdatedAt is the schema descriptor for updated_at field.
-	socialaccountDescUpdatedAt := socialaccountFields[5].Descriptor()
+	socialaccountDescUpdatedAt := socialaccountFields[6].Descriptor()
 	// socialaccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	socialaccount.DefaultUpdatedAt = socialaccountDescUpdatedAt.Default.(func() time.Time)
 	// socialaccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

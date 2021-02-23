@@ -2,7 +2,6 @@ package schema
 
 import (
 	"github.com/facebook/ent"
-	"github.com/facebook/ent/schema/edge"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
 	"time"
@@ -20,17 +19,8 @@ func (SocialAccount) Fields() []ent.Field {
 		field.String("social_id").MaxLen(255),
 		field.String("access_token").MaxLen(255),
 		field.String("provider").MaxLen(255),
+		field.UUID("fk_user_id", uuid.UUID{}),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
-	}
-}
-
-// Edges of the SocialAccount.
-func (SocialAccount) Edges() []ent.Edge {
-	return []ent.Edge {
-		edge.From("user", User.Type).
-			Ref("social_account").
-			Unique().
-			Required(),
 	}
 }

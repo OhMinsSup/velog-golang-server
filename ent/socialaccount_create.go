@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -37,6 +36,12 @@ func (sac *SocialAccountCreate) SetAccessToken(s string) *SocialAccountCreate {
 // SetProvider sets the "provider" field.
 func (sac *SocialAccountCreate) SetProvider(s string) *SocialAccountCreate {
 	sac.mutation.SetProvider(s)
+	return sac
+}
+
+// SetFkUserID sets the "fk_user_id" field.
+func (sac *SocialAccountCreate) SetFkUserID(u uuid.UUID) *SocialAccountCreate {
+	sac.mutation.SetFkUserID(u)
 	return sac
 }
 
@@ -72,17 +77,6 @@ func (sac *SocialAccountCreate) SetNillableUpdatedAt(t *time.Time) *SocialAccoun
 func (sac *SocialAccountCreate) SetID(u uuid.UUID) *SocialAccountCreate {
 	sac.mutation.SetID(u)
 	return sac
-}
-
-// SetUserID sets the "user" edge to the User entity by ID.
-func (sac *SocialAccountCreate) SetUserID(id uuid.UUID) *SocialAccountCreate {
-	sac.mutation.SetUserID(id)
-	return sac
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (sac *SocialAccountCreate) SetUser(u *User) *SocialAccountCreate {
-	return sac.SetUserID(u.ID)
 }
 
 // Mutation returns the SocialAccountMutation object of the builder.
@@ -177,14 +171,14 @@ func (sac *SocialAccountCreate) check() error {
 			return &ValidationError{Name: "provider", err: fmt.Errorf("ent: validator failed for field \"provider\": %w", err)}
 		}
 	}
+	if _, ok := sac.mutation.FkUserID(); !ok {
+		return &ValidationError{Name: "fk_user_id", err: errors.New("ent: missing required field \"fk_user_id\"")}
+	}
 	if _, ok := sac.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New("ent: missing required field \"created_at\"")}
 	}
 	if _, ok := sac.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New("ent: missing required field \"updated_at\"")}
-	}
-	if _, ok := sac.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user", err: errors.New("ent: missing required edge \"user\"")}
 	}
 	return nil
 }
@@ -239,6 +233,14 @@ func (sac *SocialAccountCreate) createSpec() (*SocialAccount, *sqlgraph.CreateSp
 		})
 		_node.Provider = value
 	}
+	if value, ok := sac.mutation.FkUserID(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeUUID,
+			Value:  value,
+			Column: socialaccount.FieldFkUserID,
+		})
+		_node.FkUserID = value
+	}
 	if value, ok := sac.mutation.CreatedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -254,25 +256,6 @@ func (sac *SocialAccountCreate) createSpec() (*SocialAccount, *sqlgraph.CreateSp
 			Column: socialaccount.FieldUpdatedAt,
 		})
 		_node.UpdatedAt = value
-	}
-	if nodes := sac.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: true,
-			Table:   socialaccount.UserTable,
-			Columns: []string{socialaccount.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

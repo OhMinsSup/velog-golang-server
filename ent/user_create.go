@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -148,25 +147,6 @@ func (uc *UserCreate) SetNillableUserMetaID(id *uuid.UUID) *UserCreate {
 // SetUserMeta sets the "user_meta" edge to the UserMeta entity.
 func (uc *UserCreate) SetUserMeta(u *UserMeta) *UserCreate {
 	return uc.SetUserMetaID(u.ID)
-}
-
-// SetSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID.
-func (uc *UserCreate) SetSocialAccountID(id uuid.UUID) *UserCreate {
-	uc.mutation.SetSocialAccountID(id)
-	return uc
-}
-
-// SetNillableSocialAccountID sets the "social_account" edge to the SocialAccount entity by ID if the given value is not nil.
-func (uc *UserCreate) SetNillableSocialAccountID(id *uuid.UUID) *UserCreate {
-	if id != nil {
-		uc = uc.SetSocialAccountID(*id)
-	}
-	return uc
-}
-
-// SetSocialAccount sets the "social_account" edge to the SocialAccount entity.
-func (uc *UserCreate) SetSocialAccount(s *SocialAccount) *UserCreate {
-	return uc.SetSocialAccountID(s.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -381,25 +361,6 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: usermeta.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := uc.mutation.SocialAccountIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
-			Table:   user.SocialAccountTable,
-			Columns: []string{user.SocialAccountColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: socialaccount.FieldID,
 				},
 			},
 		}

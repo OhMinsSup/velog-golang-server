@@ -10,7 +10,6 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
-	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
@@ -25,9 +24,6 @@ type SocialAccountQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.SocialAccount
-	// eager-loading edges.
-	withUser *UserQuery
-	withFKs  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -55,28 +51,6 @@ func (saq *SocialAccountQuery) Offset(offset int) *SocialAccountQuery {
 func (saq *SocialAccountQuery) Order(o ...OrderFunc) *SocialAccountQuery {
 	saq.order = append(saq.order, o...)
 	return saq
-}
-
-// QueryUser chains the current query on the "user" edge.
-func (saq *SocialAccountQuery) QueryUser() *UserQuery {
-	query := &UserQuery{config: saq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := saq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := saq.sqlQuery()
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(socialaccount.Table, socialaccount.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, socialaccount.UserTable, socialaccount.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(saq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first SocialAccount entity from the query.
@@ -260,22 +234,10 @@ func (saq *SocialAccountQuery) Clone() *SocialAccountQuery {
 		offset:     saq.offset,
 		order:      append([]OrderFunc{}, saq.order...),
 		predicates: append([]predicate.SocialAccount{}, saq.predicates...),
-		withUser:   saq.withUser.Clone(),
 		// clone intermediate query.
 		sql:  saq.sql.Clone(),
 		path: saq.path,
 	}
-}
-
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (saq *SocialAccountQuery) WithUser(opts ...func(*UserQuery)) *SocialAccountQuery {
-	query := &UserQuery{config: saq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	saq.withUser = query
-	return saq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -341,19 +303,9 @@ func (saq *SocialAccountQuery) prepareQuery(ctx context.Context) error {
 
 func (saq *SocialAccountQuery) sqlAll(ctx context.Context) ([]*SocialAccount, error) {
 	var (
-		nodes       = []*SocialAccount{}
-		withFKs     = saq.withFKs
-		_spec       = saq.querySpec()
-		loadedTypes = [1]bool{
-			saq.withUser != nil,
-		}
+		nodes = []*SocialAccount{}
+		_spec = saq.querySpec()
 	)
-	if saq.withUser != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, socialaccount.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &SocialAccount{config: saq.config}
 		nodes = append(nodes, node)
@@ -364,7 +316,6 @@ func (saq *SocialAccountQuery) sqlAll(ctx context.Context) ([]*SocialAccount, er
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if err := sqlgraph.QueryNodes(ctx, saq.driver, _spec); err != nil {
@@ -373,32 +324,6 @@ func (saq *SocialAccountQuery) sqlAll(ctx context.Context) ([]*SocialAccount, er
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-
-	if query := saq.withUser; query != nil {
-		ids := make([]uuid.UUID, 0, len(nodes))
-		nodeids := make(map[uuid.UUID][]*SocialAccount)
-		for i := range nodes {
-			if fk := nodes[i].fk_user_id; fk != nil {
-				ids = append(ids, *fk)
-				nodeids[*fk] = append(nodeids[*fk], nodes[i])
-			}
-		}
-		query.Where(user.IDIn(ids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := nodeids[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.User = n
-			}
-		}
-	}
-
 	return nodes, nil
 }
 

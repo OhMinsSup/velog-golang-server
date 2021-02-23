@@ -123,7 +123,7 @@ func (t *GithubTokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-func GetGithubProfile(accessToken string) *github.User {
+func GetGithubProfile(accessToken string) *SocialProfile {
 	tokenSource := &GithubTokenSource{
 		AccessToken: accessToken,
 	}
@@ -135,5 +135,13 @@ func GetGithubProfile(accessToken string) *github.User {
 	if err != nil {
 		panic(err)
 	}
-	return user
+
+	profile := SocialProfile{
+		ID:        strconv.FormatInt(*user.ID, 10),
+		Name:      *user.Name,
+		Email:     *user.Email,
+		Thumbnail: *user.AvatarURL,
+	}
+
+	return &profile
 }

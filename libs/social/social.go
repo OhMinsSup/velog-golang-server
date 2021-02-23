@@ -14,6 +14,13 @@ type SocialState struct {
 	Next     string `json:"next"`
 }
 
+type SocialProfile struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Thumbnail string `json:"thumbnail"`
+}
+
 type SocialAction interface {
 	Github() string
 	Facebook() string

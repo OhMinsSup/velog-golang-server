@@ -10,7 +10,6 @@ import (
 	"math"
 
 	"github.com/OhMinsSup/story-server/ent/predicate"
-	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -30,10 +29,9 @@ type UserQuery struct {
 	fields     []string
 	predicates []predicate.User
 	// eager-loading edges.
-	withUserProfile   *UserProfileQuery
-	withVelogConfig   *VelogConfigQuery
-	withUserMeta      *UserMetaQuery
-	withSocialAccount *SocialAccountQuery
+	withUserProfile *UserProfileQuery
+	withVelogConfig *VelogConfigQuery
+	withUserMeta    *UserMetaQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -122,28 +120,6 @@ func (uq *UserQuery) QueryUserMeta() *UserMetaQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(usermeta.Table, usermeta.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, user.UserMetaTable, user.UserMetaColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QuerySocialAccount chains the current query on the "social_account" edge.
-func (uq *UserQuery) QuerySocialAccount() *SocialAccountQuery {
-	query := &SocialAccountQuery{config: uq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := uq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := uq.sqlQuery()
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(socialaccount.Table, socialaccount.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, user.SocialAccountTable, user.SocialAccountColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -327,15 +303,14 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:            uq.config,
-		limit:             uq.limit,
-		offset:            uq.offset,
-		order:             append([]OrderFunc{}, uq.order...),
-		predicates:        append([]predicate.User{}, uq.predicates...),
-		withUserProfile:   uq.withUserProfile.Clone(),
-		withVelogConfig:   uq.withVelogConfig.Clone(),
-		withUserMeta:      uq.withUserMeta.Clone(),
-		withSocialAccount: uq.withSocialAccount.Clone(),
+		config:          uq.config,
+		limit:           uq.limit,
+		offset:          uq.offset,
+		order:           append([]OrderFunc{}, uq.order...),
+		predicates:      append([]predicate.User{}, uq.predicates...),
+		withUserProfile: uq.withUserProfile.Clone(),
+		withVelogConfig: uq.withVelogConfig.Clone(),
+		withUserMeta:    uq.withUserMeta.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -372,17 +347,6 @@ func (uq *UserQuery) WithUserMeta(opts ...func(*UserMetaQuery)) *UserQuery {
 		opt(query)
 	}
 	uq.withUserMeta = query
-	return uq
-}
-
-// WithSocialAccount tells the query-builder to eager-load the nodes that are connected to
-// the "social_account" edge. The optional arguments are used to configure the query builder of the edge.
-func (uq *UserQuery) WithSocialAccount(opts ...func(*SocialAccountQuery)) *UserQuery {
-	query := &SocialAccountQuery{config: uq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	uq.withSocialAccount = query
 	return uq
 }
 
@@ -451,11 +415,10 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [3]bool{
 			uq.withUserProfile != nil,
 			uq.withVelogConfig != nil,
 			uq.withUserMeta != nil,
-			uq.withSocialAccount != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -559,34 +522,6 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.UserMeta = n
-		}
-	}
-
-	if query := uq.withSocialAccount; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		nodeids := make(map[uuid.UUID]*User)
-		for i := range nodes {
-			fks = append(fks, nodes[i].ID)
-			nodeids[nodes[i].ID] = nodes[i]
-		}
-		query.withFKs = true
-		query.Where(predicate.SocialAccount(func(s *sql.Selector) {
-			s.Where(sql.InValues(user.SocialAccountColumn, fks...))
-		}))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			fk := n.fk_user_id
-			if fk == nil {
-				return nil, fmt.Errorf(`foreign-key "fk_user_id" is nil for node %v`, n.ID)
-			}
-			node, ok := nodeids[*fk]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "fk_user_id" returned %v for node %v`, *fk, n.ID)
-			}
-			node.Edges.SocialAccount = n
 		}
 	}
 
