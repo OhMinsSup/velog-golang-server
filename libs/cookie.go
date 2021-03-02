@@ -18,16 +18,16 @@ func SetCookie(ctx *gin.Context, accessToken, refreshToken string) {
 	}
 }
 
-func SetRegisterCookie(ctx *gin.Context, registerToken string) string {
+func SetRegisterCookie(ctx *gin.Context, registerToken string) {
 	env := GetEnvWithKey("APP_ENV")
 	switch env {
 	case "production":
 		ctx.SetCookie("register_token", registerToken, 60*60, "/", ".storeis.vercel.app", true, true)
-		return "https://storeis.vercel.app/#/register?social=1"
+		break
 	case "development":
 		ctx.SetCookie("register_token", registerToken, 60*60, "/", "localhost", false, true)
-		return "http://localhost:5000/#/register?social=1"
+		break
 	default:
-		return ""
+		break
 	}
 }

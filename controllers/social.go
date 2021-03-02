@@ -2,12 +2,19 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/app"
+	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/libs/social"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 )
+
+func SocialRegisterController(ctx *gin.Context) {
+	ctx.JSON(200, libs.JSON{
+		"ok": true,
+	})
+}
 
 func SocialRedirectController(ctx *gin.Context) {
 	provider := ctx.Param("provider")
@@ -61,5 +68,10 @@ func SocialCallbackController(ctx *gin.Context) {
 		ctx.Redirect(http.StatusMovedPermanently, result.Data["redirectUrl"].(string))
 		return
 	}
+	ctx.JSON(result.Code, result)
+}
+
+func GetSocialProfileController(ctx *gin.Context) {
+	result, _ := services.GetSocialProfileInfoService(ctx)
 	ctx.JSON(result.Code, result)
 }
