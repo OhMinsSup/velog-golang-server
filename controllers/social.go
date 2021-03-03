@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/OhMinsSup/story-server/app"
-	"github.com/OhMinsSup/story-server/libs"
+	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/libs/social"
 	"github.com/OhMinsSup/story-server/services"
 	"github.com/gin-gonic/gin"
@@ -11,9 +11,14 @@ import (
 )
 
 func SocialRegisterController(ctx *gin.Context) {
-	ctx.JSON(200, libs.JSON{
-		"ok": true,
-	})
+	var body dto.SocialRegisterDTO
+	if err := ctx.ShouldBind(&body); err != nil {
+		ctx.JSON(http.StatusBadRequest, app.BadRequestErrorResponse(err.Error(), nil))
+		return
+	}
+
+	result, _ := services.SocialRegisterService(ctx, body)
+	ctx.JSON(result.Code, result)
 }
 
 func SocialRedirectController(ctx *gin.Context) {

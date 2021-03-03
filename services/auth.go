@@ -92,9 +92,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	// 유저 생성이 실패한 경
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 
 	userProfile, err := tx.UserProfile.
@@ -109,9 +109,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	// 유저 프로필 생성이 실패한 경
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 
 	velogConfig, err := tx.VelogConfig.
@@ -124,9 +124,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	// velog config 생성이 실패한 경
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 
 	userMeta, err := tx.UserMeta.
@@ -139,9 +139,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	// user meta 생성이 실패한 경
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 
 	authToken, err := tx.AuthToken.
@@ -152,9 +152,9 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	// 토큰 생성이 실패한 경우
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
-			err = fmt.Errorf("%v: %v", err, rerr)
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 		}
-		return app.TransactionsErrorResponse(err.Error(), nil), nil
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 
 	// 토큰 생성
@@ -351,65 +351,3 @@ func SendEmailService(body dto.SendEmailBody, ctx *gin.Context) (*app.ResponseEx
 		},
 	}, tx.Commit()
 }
-
-//func SocialRegisterService(body dto.SocialRegisterBody, registerToken string, db *gorm.DB, ctx *gin.Context) (libs.JSON, int, error) {
-//	authRepository := repository.NewAuthRepository(db)
-//
-//	decoded, err := libs.DecodeToken(registerToken)
-//	if err != nil {
-//		return nil, http.StatusForbidden, err
-//	}
-//
-//	// decoded data (email, id)
-//	payload := decoded["payload"].(libs.JSON)
-//	profile := payload["profile"].(libs.JSON)
-//
-//	userData := dto.SocialUserParams{
-//		Email:       strings.ToLower(payload["email"].(string)),
-//		Username:    body.UserName,
-//		UserID:      payload["id"].(string),
-//		DisplayName: body.DisplayName,
-//		ShortBio:    body.ShortBio,
-//		SocialID:    fmt.Sprintf("%c", profile["ID"]),
-//		AccessToken: fmt.Sprintf("%c", payload["access_token"]),
-//		Provider:    fmt.Sprintf("%c", payload["provider"]),
-//	}
-//
-//	// username, email 이미 존재하는지 체크
-//	_, existsCode, existsError := authRepository.ExistsByEmailAndUsername(userData.Username, userData.Email)
-//	if existsError != nil {
-//		return nil, existsCode, existsError
-//	}
-//
-//	user, userProfile, userCode, userError := authRepository.SocialUser(userData)
-//	if userError != nil {
-//		return nil, userCode, userError
-//	}
-//
-//	tokens := user.GenerateUserToken(db)
-//	env := libs.GetEnvWithKey("APP_ENV")
-//	switch env {
-//	case "production":
-//		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", ".storeis.vercel.app", true, true)
-//		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", ".storeis.vercel.app", true, true)
-//		break
-//	case "development":
-//		ctx.SetCookie("access_token", tokens["accessToken"].(string), 60*60*24, "/", "localhost", false, true)
-//		ctx.SetCookie("refresh_token", tokens["refreshToken"].(string), 60*60*24*30, "/", "localhost", false, true)
-//		break
-//	default:
-//		break
-//	}
-//
-//	return libs.JSON{
-//		"id":           user.ID,
-//		"username":     user.Username,
-//		"email":        user.Email,
-//		"thumbnail":    userProfile.Thumbnail,
-//		"display_name": userProfile.DisplayName,
-//		"short_bio":    userProfile.ShortBio,
-//		"accessToken":  tokens["accessToken"],
-//		"refreshToken": tokens["refreshToken"],
-//	}, http.StatusOK, nil
-//}
-//
