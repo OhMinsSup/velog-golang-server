@@ -8,10 +8,12 @@ import (
 	"github.com/OhMinsSup/story-server/ent/migrate"
 	"github.com/OhMinsSup/story-server/libs"
 	"github.com/OhMinsSup/story-server/libs/aws"
+	"github.com/OhMinsSup/story-server/middlewares"
 	"github.com/facebook/ent/dialect"
 	entsql "github.com/facebook/ent/dialect/sql"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"log"
 )
 
@@ -26,7 +28,7 @@ func New() (*gin.Engine, *ent.Client) {
 	dbConfig := fmt.Sprintf("host=%v port=%v user=%v dbname=%v password=%v sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
 
 	// database tcp/ip connection error:: https://stackoverflow.com/questions/37307346/is-the-server-running-on-host-localhost-1-and-accepting-tcp-ip-connections
-	db, err := sql.Open("postgres", dbConfig)
+	db, err := sql.Open("pgx", dbConfig)
 	if err != nil {
 		log.Fatalf("failed opening connection to postgres: %v", err)
 	}
@@ -75,7 +77,7 @@ func New() (*gin.Engine, *ent.Client) {
 
 	// auth middleware and set cors
 	app.Use(cors.New(corsConfig))
-	//app.Use(middlewares.ConsumeUser(db))
+	app.Use(middlewares.ConsumeUser(client))
 
 	return app, client
 }

@@ -3,6 +3,7 @@ package apis
 import (
 	"github.com/OhMinsSup/story-server/apis/auth"
 	"github.com/OhMinsSup/story-server/apis/file"
+	"github.com/OhMinsSup/story-server/apis/user"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -17,6 +18,7 @@ func ApplyRoutes(r *gin.Engine) {
 		})
 
 		auth.ApplyRoutes(api)
+		user.ApplyRoutes(api)
 		file.ApplyRoutes(api)
 	}
 }

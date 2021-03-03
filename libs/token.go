@@ -3,6 +3,7 @@ package libs
 import (
 	"github.com/OhMinsSup/story-server/ent"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 	"log"
 	"time"
 )
@@ -31,7 +32,7 @@ func GenerateUserToken(user *ent.User, authToken *ent.AuthToken) (string, string
 	return accessToken, refreshToken
 }
 
-func RefreshUserToken(user *ent.User, client *ent.Client, tokenId, originalRefreshToken string, refreshTokenExp int64) (string, string) {
+func RefreshUserToken(user *ent.User, tokenId uuid.UUID, originalRefreshToken string, refreshTokenExp int64) (string, string) {
 	now := time.Now().Unix()
 	diff := refreshTokenExp - now
 

@@ -1,45 +1,67 @@
 package middlewares
 
 import (
-	"errors"
-	"fmt"
+	"context"
+	"github.com/OhMinsSup/story-server/ent"
+	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/libs"
-	"github.com/OhMinsSup/story-server/models"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
 	"time"
 )
 
+type PayloadDTO struct {
+	UserID  uuid.UUID `json:"user_id"`
+	TokenID uuid.UUID `json:"token_id"`
+}
+
 // refresh 토큰을 재발급하는 함수
-func refresh(db *gorm.DB, ctx *gin.Context, refreshToken string) (string, error) {
-	// refresh token 을 decode 를 한다
+func refresh(client *ent.Client, ctx *gin.Context, refreshToken string) (string, error) {
+	bg := context.Background()
+	//refresh token 을 decode 를 한다
 	decodeTokenData, err := libs.DecodeToken(refreshToken)
 	if err != nil {
 		return "", errors.New("INVALID_TOKEN")
 	}
 
-	payload := decodeTokenData["payload"].(map[string]interface{})
+	payload := decodeTokenData["payload"].(libs.JSON)
 
-	var user models.User
+	userId, err := uuid.Parse(payload["user_id"].(string))
+	if err != nil {
+		log.Println(err)
+		return "", errors.New("INVALID_USER_ID_UUID")
+	}
+
+	tokenId, err := uuid.Parse(payload["token_id"].(string))
+	if err != nil {
+		log.Println(err)
+		return "", errors.New("INVALID_TOKEN_ID_UUID")
+	}
+
 	// payload 에서 가져온 값이 실제로 존재하는 유저인지 체크
-	if err := db.Where("id = ?", payload["user_id"].(string)).First(&user).Error; err != nil {
+	user, err := client.User.Query().Where(
+		userEnt.IDEQ(
+			userId,
+		),
+	).First(bg)
+
+	if err != nil {
 		return "", errors.New("INVALID_TOKEN")
 	}
 
-	userId := payload["user_id"].(string)
-	tokenId := payload["token_id"].(string)
 	exp := int64(decodeTokenData["exp"].(float64))
 
 	// 토큰값으로 access, refresh 재발급
-	tokens := user.RefreshUserToken(tokenId, exp, refreshToken)
-	libs.SetCookie(ctx, fmt.Sprintf("%v", tokens["accessToken"]), fmt.Sprintf("%v", tokens["refreshToken"]))
-	return userId, nil
+	accessToken, refreshToken := libs.RefreshUserToken(user, tokenId, refreshToken, exp)
+	libs.SetCookie(ctx, accessToken, refreshToken)
+	return userId.String(), nil
 }
 
 // ConsumeUser token 검증및 재발급 프로세스
-func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
+func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		if context.FullPath() == "/auth/logout" {
 			context.Next()
@@ -81,7 +103,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 			}
 			// 토큰이 존재하는 경우 다시 token을 재발급 받는다.
 			// 그리고 userid값을 받아서 context에 할당
-			userId, _ := refresh(db, context, refreshToken)
+			userId, _ := refresh(client, context, refreshToken)
 			context.Set("id", userId)
 			context.Next()
 			return
@@ -102,7 +124,7 @@ func ConsumeUser(db *gorm.DB) gin.HandlerFunc {
 		// 만료 시간을 넘은경우 & refreshToken 이 존재하는 경우
 		if diff < 60*60 && refreshToken != "" {
 			log.Println("refresh...")
-			userId, err := refresh(db, context, refreshToken)
+			userId, err := refresh(client, context, refreshToken)
 			if err != nil {
 				context.Next()
 				return
