@@ -42,5 +42,6 @@ func (User) Edges() []ent.Edge {
 			StorageKey(edge.Column("fk_user_id")).Unique(),
 		edge.To("user_meta", UserMeta.Type).
 			StorageKey(edge.Column("fk_user_id")).Unique(),
+		edge.To("posts", Post.Type),
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
+	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/schema"
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
@@ -60,6 +61,50 @@ func init() {
 	emailauthDescID := emailauthFields[0].Descriptor()
 	// emailauth.DefaultID holds the default value on creation for the id field.
 	emailauth.DefaultID = emailauthDescID.Default.(func() uuid.UUID)
+	postFields := schema.Post{}.Fields()
+	_ = postFields
+	// postDescTitle is the schema descriptor for title field.
+	postDescTitle := postFields[2].Descriptor()
+	// post.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	post.TitleValidator = postDescTitle.Validators[0].(func(string) error)
+	// postDescThumbnail is the schema descriptor for thumbnail field.
+	postDescThumbnail := postFields[4].Descriptor()
+	// post.ThumbnailValidator is a validator for the "thumbnail" field. It is called by the builders before save.
+	post.ThumbnailValidator = postDescThumbnail.Validators[0].(func(string) error)
+	// postDescIsPrivate is the schema descriptor for is_private field.
+	postDescIsPrivate := postFields[7].Descriptor()
+	// post.DefaultIsPrivate holds the default value on creation for the is_private field.
+	post.DefaultIsPrivate = postDescIsPrivate.Default.(bool)
+	// postDescURLSlug is the schema descriptor for url_slug field.
+	postDescURLSlug := postFields[8].Descriptor()
+	// post.URLSlugValidator is a validator for the "url_slug" field. It is called by the builders before save.
+	post.URLSlugValidator = postDescURLSlug.Validators[0].(func(string) error)
+	// postDescLikes is the schema descriptor for likes field.
+	postDescLikes := postFields[9].Descriptor()
+	// post.DefaultLikes holds the default value on creation for the likes field.
+	post.DefaultLikes = postDescLikes.Default.(int64)
+	// postDescViews is the schema descriptor for views field.
+	postDescViews := postFields[10].Descriptor()
+	// post.DefaultViews holds the default value on creation for the views field.
+	post.DefaultViews = postDescViews.Default.(int64)
+	// postDescReleasedAt is the schema descriptor for released_at field.
+	postDescReleasedAt := postFields[12].Descriptor()
+	// post.DefaultReleasedAt holds the default value on creation for the released_at field.
+	post.DefaultReleasedAt = postDescReleasedAt.Default.(func() time.Time)
+	// postDescCreatedAt is the schema descriptor for created_at field.
+	postDescCreatedAt := postFields[13].Descriptor()
+	// post.DefaultCreatedAt holds the default value on creation for the created_at field.
+	post.DefaultCreatedAt = postDescCreatedAt.Default.(func() time.Time)
+	// postDescUpdatedAt is the schema descriptor for updated_at field.
+	postDescUpdatedAt := postFields[14].Descriptor()
+	// post.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	post.DefaultUpdatedAt = postDescUpdatedAt.Default.(func() time.Time)
+	// post.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	post.UpdateDefaultUpdatedAt = postDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// postDescID is the schema descriptor for id field.
+	postDescID := postFields[0].Descriptor()
+	// post.DefaultID holds the default value on creation for the id field.
+	post.DefaultID = postDescID.Default.(func() uuid.UUID)
 	socialaccountFields := schema.SocialAccount{}.Fields()
 	_ = socialaccountFields
 	// socialaccountDescSocialID is the schema descriptor for social_id field.

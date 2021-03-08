@@ -12,6 +12,7 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
+	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
@@ -32,6 +33,8 @@ type Client struct {
 	AuthToken *AuthTokenClient
 	// EmailAuth is the client for interacting with the EmailAuth builders.
 	EmailAuth *EmailAuthClient
+	// Post is the client for interacting with the Post builders.
+	Post *PostClient
 	// SocialAccount is the client for interacting with the SocialAccount builders.
 	SocialAccount *SocialAccountClient
 	// User is the client for interacting with the User builders.
@@ -57,6 +60,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.AuthToken = NewAuthTokenClient(c.config)
 	c.EmailAuth = NewEmailAuthClient(c.config)
+	c.Post = NewPostClient(c.config)
 	c.SocialAccount = NewSocialAccountClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.UserMeta = NewUserMetaClient(c.config)
@@ -96,6 +100,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:        cfg,
 		AuthToken:     NewAuthTokenClient(cfg),
 		EmailAuth:     NewEmailAuthClient(cfg),
+		Post:          NewPostClient(cfg),
 		SocialAccount: NewSocialAccountClient(cfg),
 		User:          NewUserClient(cfg),
 		UserMeta:      NewUserMetaClient(cfg),
@@ -118,6 +123,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:        cfg,
 		AuthToken:     NewAuthTokenClient(cfg),
 		EmailAuth:     NewEmailAuthClient(cfg),
+		Post:          NewPostClient(cfg),
 		SocialAccount: NewSocialAccountClient(cfg),
 		User:          NewUserClient(cfg),
 		UserMeta:      NewUserMetaClient(cfg),
@@ -153,6 +159,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	c.AuthToken.Use(hooks...)
 	c.EmailAuth.Use(hooks...)
+	c.Post.Use(hooks...)
 	c.SocialAccount.Use(hooks...)
 	c.User.Use(hooks...)
 	c.UserMeta.Use(hooks...)
@@ -334,6 +341,110 @@ func (c *EmailAuthClient) GetX(ctx context.Context, id uuid.UUID) *EmailAuth {
 // Hooks returns the client hooks.
 func (c *EmailAuthClient) Hooks() []Hook {
 	return c.hooks.EmailAuth
+}
+
+// PostClient is a client for the Post schema.
+type PostClient struct {
+	config
+}
+
+// NewPostClient returns a client for the Post from the given config.
+func NewPostClient(c config) *PostClient {
+	return &PostClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `post.Hooks(f(g(h())))`.
+func (c *PostClient) Use(hooks ...Hook) {
+	c.hooks.Post = append(c.hooks.Post, hooks...)
+}
+
+// Create returns a create builder for Post.
+func (c *PostClient) Create() *PostCreate {
+	mutation := newPostMutation(c.config, OpCreate)
+	return &PostCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Post entities.
+func (c *PostClient) CreateBulk(builders ...*PostCreate) *PostCreateBulk {
+	return &PostCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Post.
+func (c *PostClient) Update() *PostUpdate {
+	mutation := newPostMutation(c.config, OpUpdate)
+	return &PostUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PostClient) UpdateOne(po *Post) *PostUpdateOne {
+	mutation := newPostMutation(c.config, OpUpdateOne, withPost(po))
+	return &PostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PostClient) UpdateOneID(id uuid.UUID) *PostUpdateOne {
+	mutation := newPostMutation(c.config, OpUpdateOne, withPostID(id))
+	return &PostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Post.
+func (c *PostClient) Delete() *PostDelete {
+	mutation := newPostMutation(c.config, OpDelete)
+	return &PostDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *PostClient) DeleteOne(po *Post) *PostDeleteOne {
+	return c.DeleteOneID(po.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *PostClient) DeleteOneID(id uuid.UUID) *PostDeleteOne {
+	builder := c.Delete().Where(post.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PostDeleteOne{builder}
+}
+
+// Query returns a query builder for Post.
+func (c *PostClient) Query() *PostQuery {
+	return &PostQuery{config: c.config}
+}
+
+// Get returns a Post entity by its id.
+func (c *PostClient) Get(ctx context.Context, id uuid.UUID) (*Post, error) {
+	return c.Query().Where(post.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PostClient) GetX(ctx context.Context, id uuid.UUID) *Post {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a Post.
+func (c *PostClient) QueryUser(po *Post) *UserQuery {
+	query := &UserQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := po.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(post.Table, post.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, post.UserTable, post.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(po.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PostClient) Hooks() []Hook {
+	return c.hooks.Post
 }
 
 // SocialAccountClient is a client for the SocialAccount schema.
@@ -548,6 +659,22 @@ func (c *UserClient) QueryUserMeta(u *User) *UserMetaQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(usermeta.Table, usermeta.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, user.UserMetaTable, user.UserMetaColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPosts queries the posts edge of a User.
+func (c *UserClient) QueryPosts(u *User) *PostQuery {
+	query := &PostQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(post.Table, post.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PostsTable, user.PostsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

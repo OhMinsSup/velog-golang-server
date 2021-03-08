@@ -26,6 +26,7 @@ type config struct {
 type hooks struct {
 	AuthToken     []ent.Hook
 	EmailAuth     []ent.Hook
+	Post          []ent.Hook
 	SocialAccount []ent.Hook
 	User          []ent.Hook
 	UserMeta      []ent.Hook

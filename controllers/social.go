@@ -3,8 +3,8 @@ package controllers
 import (
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
-	"github.com/OhMinsSup/story-server/libs/social"
 	"github.com/OhMinsSup/story-server/services"
+	"github.com/OhMinsSup/story-server/social"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"

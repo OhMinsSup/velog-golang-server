@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/OhMinsSup/story-server/libs/social"
+import "github.com/OhMinsSup/story-server/social"
 
 // SendEmailBody - SendEmailController 이메일 발송 body 데이터
 type SendEmailBody struct {
@@ -38,7 +38,7 @@ type SocialRegisterDTO struct {
 
 // RegisterTokenDTO - registerToken 내에 정의된 데이터 정보
 type RegisterTokenDTO struct {
-	Profile social.SocialProfile `json:"profile"`
-	Token string `json:"token"`
-	Provider string `json:"provider"`
+	Profile  social.SocialProfile `json:"profile"`
+	Token    string               `json:"authorize"`
+	Provider string               `json:"provider"`
 }

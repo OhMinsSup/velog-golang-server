@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
+	"github.com/OhMinsSup/story-server/email"
 	"github.com/OhMinsSup/story-server/ent"
 	emailAuthEnt "github.com/OhMinsSup/story-server/ent/emailauth"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	userprofileEnt "github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/OhMinsSup/story-server/libs"
-	"github.com/OhMinsSup/story-server/libs/email"
+	"github.com/OhMinsSup/story-server/authorize"
 	"github.com/SKAhack/go-shortid"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -24,15 +25,15 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	client := ctx.MustGet("client").(*ent.Client)
 	bg := context.Background()
 
-	// email register token deocoded
-	decoded, err := libs.DecodeToken(body.RegisterToken)
+	// email register authorize deocoded
+	decoded, err := authorize.DecodeToken(body.RegisterToken)
 	if err != nil {
 		return app.ForbiddenErrorResponse(err.Error(), nil), nil
 	}
 
 	// velog 서버에서 발행한 정보가 email-register 가 아닌 다른 값인 경우에는 회원가입시 발급한 코드값이 아님
 	if decoded["subject"] != "email-register" {
-		return app.ForbiddenErrorResponse(errors.New("Not valid token information.").Error(), nil), nil
+		return app.ForbiddenErrorResponse(errors.New("Not valid authorize information.").Error(), nil), nil
 	}
 
 	// decoded data (email, id)
@@ -158,12 +159,12 @@ func LocalRegisterService(body dto.LocalRegisterBody, ctx *gin.Context) (*app.Re
 	}
 
 	// 토큰 생성
-	accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
+	accessToken, refreshToken := authorize.GenerateUserToken(user, authToken)
 	if accessToken == "" || refreshToken == "" {
 		if err := tx.Rollback(); err != nil {
 			return app.TransactionsErrorResponse(err.Error(), nil), nil
 		}
-		return app.InteralServerErrorResponse("token is not created", nil), nil
+		return app.InteralServerErrorResponse("authorize is not created", nil), nil
 	}
 
 	libs.SetCookie(ctx, accessToken, refreshToken)
@@ -213,8 +214,8 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 			"id":    emailAuth.ID,
 		}
 
-		// 회원가입시 서버에서 발급하는 register token 을 가지고 회원가입 절차를 가짐
-		registerToken, err := libs.GenerateRegisterToken(payload, subject)
+		// 회원가입시 서버에서 발급하는 register authorize 을 가지고 회원가입 절차를 가짐
+		registerToken, err := authorize.GenerateRegisterToken(payload, subject)
 		if err != nil {
 			return &app.ResponseException{
 				Code:          http.StatusConflict,
@@ -265,12 +266,12 @@ func CodeAuthService(ctx *gin.Context) (*app.ResponseException, error) {
 	}
 
 	// 토큰 생성
-	accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
+	accessToken, refreshToken := authorize.GenerateUserToken(user, authToken)
 	if accessToken == "" || refreshToken == "" {
 		if err := tx.Rollback(); err != nil {
 			return app.TransactionsErrorResponse(err.Error(), nil), nil
 		}
-		return app.InteralServerErrorResponse("token is not created", nil), nil
+		return app.InteralServerErrorResponse("authorize is not created", nil), nil
 	}
 
 	libs.SetCookie(ctx, accessToken, refreshToken)

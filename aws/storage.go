@@ -34,7 +34,7 @@ func Initialize() *session.Session {
 			Credentials: credentials.NewStaticCredentials(
 				AccessKeyID,
 				SecretAccessKey,
-				"", // a token will be created when the session it's used.
+				"", // a authorize will be created when the session it's used.
 			),
 		})
 

@@ -8,7 +8,8 @@ import (
 	socialaccountEnt "github.com/OhMinsSup/story-server/ent/socialaccount"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/libs"
-	"github.com/OhMinsSup/story-server/libs/social"
+	"github.com/OhMinsSup/story-server/social"
+	"github.com/OhMinsSup/story-server/authorize"
 	match "github.com/alexpantyukhin/go-pattern-match"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -19,10 +20,10 @@ import (
 func SocialRegisterService(ctx *gin.Context, body dto.SocialRegisterDTO) (*app.ResponseException, error) {
 	registerToken, err := ctx.Cookie("register_token")
 	if err != nil {
-		return app.ForbiddenErrorResponse("register token is empty or invalid", nil), nil
+		return app.ForbiddenErrorResponse("register authorize is empty or invalid", nil), nil
 	}
 
-	decoded, err := libs.DecodeToken(registerToken)
+	decoded, err := authorize.DecodeToken(registerToken)
 	if err != nil {
 		return app.NotFoundErrorResponse("decoded parsing is missing", nil), nil
 	}
@@ -157,12 +158,12 @@ func SocialRegisterService(ctx *gin.Context, body dto.SocialRegisterDTO) (*app.R
 	}
 
 	// 토큰 생성
-	accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
+	accessToken, refreshToken := authorize.GenerateUserToken(user, authToken)
 	if accessToken == "" || refreshToken == "" {
 		if err := tx.Rollback(); err != nil {
 			return app.TransactionsErrorResponse(err.Error(), nil), nil
 		}
-		return app.InteralServerErrorResponse("token is not created", nil), nil
+		return app.InteralServerErrorResponse("authorize is not created", nil), nil
 	}
 
 	libs.SetCookie(ctx, accessToken, refreshToken)
@@ -183,10 +184,10 @@ func SocialRegisterService(ctx *gin.Context, body dto.SocialRegisterDTO) (*app.R
 func GetSocialProfileInfoService(ctx *gin.Context) (*app.ResponseException, error) {
 	registerToken, err := ctx.Cookie("register_token")
 	if err != nil {
-		return app.ForbiddenErrorResponse("register token is empty or invalid", nil), nil
+		return app.ForbiddenErrorResponse("register authorize is empty or invalid", nil), nil
 	}
 
-	decoded, err := libs.DecodeToken(registerToken)
+	decoded, err := authorize.DecodeToken(registerToken)
 	if err != nil {
 		return app.NotFoundErrorResponse("decoded parsing is missing", nil), nil
 	}
@@ -211,7 +212,7 @@ func SocialCallbackService(provider string, ctx *gin.Context) (*app.ResponseExce
 
 	result := getSocialInfo(provider, code).(libs.JSON)
 	ctx.Set("profile", result["profile"])
-	ctx.Set("token", result["token"])
+	ctx.Set("authorize", result["authorize"])
 	ctx.Set("provider", provider)
 
 	return &app.ResponseException{
@@ -225,12 +226,12 @@ func SocialCallbackService(provider string, ctx *gin.Context) (*app.ResponseExce
 
 // SocialAuthenticationService - 유저 인증 서비스
 func SocialAuthenticationService(ctx *gin.Context) (*app.ResponseException, error) {
-	token := ctx.MustGet("token").(string)
+	token := ctx.MustGet("authorize").(string)
 	provider := ctx.MustGet("provider").(string)
 	profile := ctx.MustGet("profile").(*social.SocialProfile)
 
 	if profile == nil || token == "" {
-		return app.ForbiddenErrorResponse("profile and token is empty", nil), nil
+		return app.ForbiddenErrorResponse("profile and authorize is empty", nil), nil
 	}
 
 	client := ctx.MustGet("client").(*ent.Client)
@@ -272,12 +273,12 @@ func SocialAuthenticationService(ctx *gin.Context) (*app.ResponseException, erro
 		}
 
 		// 토큰 생성
-		accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
+		accessToken, refreshToken := authorize.GenerateUserToken(user, authToken)
 		if accessToken == "" || refreshToken == "" {
 			if err := tx.Rollback(); err != nil {
 				return app.TransactionsErrorResponse(err.Error(), nil), nil
 			}
-			return app.InteralServerErrorResponse("token is not created", nil), nil
+			return app.InteralServerErrorResponse("authorize is not created", nil), nil
 		}
 
 		libs.SetCookie(ctx, accessToken, refreshToken)
@@ -323,12 +324,12 @@ func SocialAuthenticationService(ctx *gin.Context) (*app.ResponseException, erro
 		}
 
 		// 토큰 생성
-		accessToken, refreshToken := libs.GenerateUserToken(user, authToken)
+		accessToken, refreshToken := authorize.GenerateUserToken(user, authToken)
 		if accessToken == "" || refreshToken == "" {
 			if err := tx.Rollback(); err != nil {
 				return app.TransactionsErrorResponse(err.Error(), nil), nil
 			}
-			return app.InteralServerErrorResponse("token is not created", nil), nil
+			return app.InteralServerErrorResponse("authorize is not created", nil), nil
 		}
 
 		libs.SetCookie(ctx, accessToken, refreshToken)
@@ -349,10 +350,10 @@ func SocialAuthenticationService(ctx *gin.Context) (*app.ResponseException, erro
 		"accessToken": token,
 	}
 
-	// 회원가입시 서버에서 발급하는 register token 을 가지고 회원가입 절차를 가짐
-	registerToken, err := libs.GenerateRegisterToken(payload, "")
+	// 회원가입시 서버에서 발급하는 register authorize 을 가지고 회원가입 절차를 가짐
+	registerToken, err := authorize.GenerateRegisterToken(payload, "")
 	if registerToken == "" || err != nil {
-		return app.ForbiddenErrorResponse("token is not created", nil), nil
+		return app.ForbiddenErrorResponse("authorize is not created", nil), nil
 	}
 
 	libs.SetRegisterCookie(ctx, registerToken)
@@ -367,14 +368,14 @@ func SocialAuthenticationService(ctx *gin.Context) (*app.ResponseException, erro
 	}, tx.Commit()
 }
 
-// getSocialInfo - provider에 따라 token, profile 정보를 다르게 가져오는 함수
+// getSocialInfo - provider에 따라 authorize, profile 정보를 다르게 가져오는 함수
 func getSocialInfo(provider, code string) interface{} {
 	_, result := match.Match(provider).
 		When("facebook", func() libs.JSON {
 			accessToken := social.GetFacebookAccessToken(code)
 			profile := social.GetFacebookProfile(accessToken)
 			data := libs.JSON{
-				"token":   accessToken,
+				"authorize":   accessToken,
 				"profile": profile,
 			}
 			return data
@@ -383,7 +384,7 @@ func getSocialInfo(provider, code string) interface{} {
 			accessToken := social.GetGithubAccessToken(code)
 			profile := social.GetGithubProfile(accessToken)
 			data := libs.JSON{
-				"token":   accessToken,
+				"authorize":   accessToken,
 				"profile": profile,
 			}
 			return data
@@ -392,7 +393,7 @@ func getSocialInfo(provider, code string) interface{} {
 			accessToken := social.GetKakaoAccessToken(code)
 			profile := social.GetKakaoProfile(accessToken)
 			data := libs.JSON{
-				"token":   accessToken,
+				"authorize":   accessToken,
 				"profile": profile,
 			}
 			return data

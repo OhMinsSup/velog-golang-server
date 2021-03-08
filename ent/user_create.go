@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -147,6 +148,21 @@ func (uc *UserCreate) SetNillableUserMetaID(id *uuid.UUID) *UserCreate {
 // SetUserMeta sets the "user_meta" edge to the UserMeta entity.
 func (uc *UserCreate) SetUserMeta(u *UserMeta) *UserCreate {
 	return uc.SetUserMetaID(u.ID)
+}
+
+// AddPostIDs adds the "posts" edge to the Post entity by IDs.
+func (uc *UserCreate) AddPostIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddPostIDs(ids...)
+	return uc
+}
+
+// AddPosts adds the "posts" edges to the Post entity.
+func (uc *UserCreate) AddPosts(p ...*Post) *UserCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uc.AddPostIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -361,6 +377,25 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: usermeta.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.PostsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
 				},
 			},
 		}

@@ -95,7 +95,7 @@ func GetKakaoAccessToken(code string) string {
 	}
 
 	queryString, _ := query.Values(params)
-	req, err := http.NewRequest("POST", "https://kauth.kakao.com/oauth/token?"+queryString.Encode(), nil)
+	req, err := http.NewRequest("POST", "https://kauth.kakao.com/oauth/authorize?"+queryString.Encode(), nil)
 	if err != nil {
 		panic(err)
 	}

@@ -5,6 +5,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/libs"
+	"github.com/OhMinsSup/story-server/authorize"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -21,8 +22,8 @@ type PayloadDTO struct {
 // refresh 토큰을 재발급하는 함수
 func refresh(client *ent.Client, ctx *gin.Context, refreshToken string) (string, error) {
 	bg := context.Background()
-	//refresh token 을 decode 를 한다
-	decodeTokenData, err := libs.DecodeToken(refreshToken)
+	//refresh authorize 을 decode 를 한다
+	decodeTokenData, err := authorize.DecodeToken(refreshToken)
 	if err != nil {
 		return "", errors.New("INVALID_TOKEN")
 	}
@@ -55,12 +56,12 @@ func refresh(client *ent.Client, ctx *gin.Context, refreshToken string) (string,
 	exp := int64(decodeTokenData["exp"].(float64))
 
 	// 토큰값으로 access, refresh 재발급
-	accessToken, refreshToken := libs.RefreshUserToken(user, tokenId, refreshToken, exp)
+	accessToken, refreshToken := authorize.RefreshUserToken(user, tokenId, refreshToken, exp)
 	libs.SetCookie(ctx, accessToken, refreshToken)
 	return userId.String(), nil
 }
 
-// ConsumeUser token 검증및 재발급 프로세스
+// ConsumeUser authorize 검증및 재발급 프로세스
 func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		if context.FullPath() == "/auth/logout" {
@@ -68,7 +69,7 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		// access token 을 가져온다.
+		// access authorize 을 가져온다.
 		accessToken, err := context.Cookie("access_token")
 		// 못 가져온 경우
 		if err != nil {
@@ -76,7 +77,7 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 			authorization := context.Request.Header.Get("Authorization")
 			if authorization != "" {
 				sp := strings.Split(authorization, "Bearer ")
-				// invalid token
+				// invalid authorize
 				if len(sp) < 1 {
 					context.Next()
 					return
@@ -86,7 +87,7 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 			}
 		}
 
-		// refresh token 을 가져온다
+		// refresh authorize 을 가져온다
 		refreshToken, err := context.Cookie("refresh_token")
 		if err != nil {
 			context.Next()
@@ -95,7 +96,7 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 
 		// access Token refresh token의 값이 없는 경우에는
 		if accessToken == "" {
-			// invalid token! try token refresh...
+			// invalid authorize! try authorize refresh...
 			// refresh token이 없는 경우에 다음 미들웨어로 이동
 			if refreshToken == "" {
 				context.Next()
@@ -109,8 +110,8 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		// access token 이 존재하는 경우 token 을 decoed 를 한다
-		decodeTokenData, err := libs.DecodeToken(accessToken)
+		// access authorize 이 존재하는 경우 authorize 을 decoed 를 한다
+		decodeTokenData, err := authorize.DecodeToken(accessToken)
 		if err != nil {
 			context.Next()
 			return

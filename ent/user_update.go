@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
@@ -134,6 +135,21 @@ func (uu *UserUpdate) SetUserMeta(u *UserMeta) *UserUpdate {
 	return uu.SetUserMetaID(u.ID)
 }
 
+// AddPostIDs adds the "posts" edge to the Post entity by IDs.
+func (uu *UserUpdate) AddPostIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddPostIDs(ids...)
+	return uu
+}
+
+// AddPosts adds the "posts" edges to the Post entity.
+func (uu *UserUpdate) AddPosts(p ...*Post) *UserUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uu.AddPostIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -155,6 +171,27 @@ func (uu *UserUpdate) ClearVelogConfig() *UserUpdate {
 func (uu *UserUpdate) ClearUserMeta() *UserUpdate {
 	uu.mutation.ClearUserMeta()
 	return uu
+}
+
+// ClearPosts clears all "posts" edges to the Post entity.
+func (uu *UserUpdate) ClearPosts() *UserUpdate {
+	uu.mutation.ClearPosts()
+	return uu
+}
+
+// RemovePostIDs removes the "posts" edge to Post entities by IDs.
+func (uu *UserUpdate) RemovePostIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemovePostIDs(ids...)
+	return uu
+}
+
+// RemovePosts removes "posts" edges to Post entities.
+func (uu *UserUpdate) RemovePosts(p ...*Post) *UserUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uu.RemovePostIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -395,6 +432,60 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.PostsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedPostsIDs(); len(nodes) > 0 && !uu.mutation.PostsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.PostsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -516,6 +607,21 @@ func (uuo *UserUpdateOne) SetUserMeta(u *UserMeta) *UserUpdateOne {
 	return uuo.SetUserMetaID(u.ID)
 }
 
+// AddPostIDs adds the "posts" edge to the Post entity by IDs.
+func (uuo *UserUpdateOne) AddPostIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddPostIDs(ids...)
+	return uuo
+}
+
+// AddPosts adds the "posts" edges to the Post entity.
+func (uuo *UserUpdateOne) AddPosts(p ...*Post) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uuo.AddPostIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -537,6 +643,27 @@ func (uuo *UserUpdateOne) ClearVelogConfig() *UserUpdateOne {
 func (uuo *UserUpdateOne) ClearUserMeta() *UserUpdateOne {
 	uuo.mutation.ClearUserMeta()
 	return uuo
+}
+
+// ClearPosts clears all "posts" edges to the Post entity.
+func (uuo *UserUpdateOne) ClearPosts() *UserUpdateOne {
+	uuo.mutation.ClearPosts()
+	return uuo
+}
+
+// RemovePostIDs removes the "posts" edge to Post entities by IDs.
+func (uuo *UserUpdateOne) RemovePostIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemovePostIDs(ids...)
+	return uuo
+}
+
+// RemovePosts removes "posts" edges to Post entities.
+func (uuo *UserUpdateOne) RemovePosts(p ...*Post) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uuo.RemovePostIDs(ids...)
 }
 
 // Save executes the query and returns the updated User entity.
@@ -767,6 +894,60 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: usermeta.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.PostsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedPostsIDs(); len(nodes) > 0 && !uuo.mutation.PostsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.PostsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PostsTable,
+			Columns: []string{user.PostsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: post.FieldID,
 				},
 			},
 		}

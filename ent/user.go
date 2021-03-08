@@ -43,9 +43,11 @@ type UserEdges struct {
 	VelogConfig *VelogConfig
 	// UserMeta holds the value of the user_meta edge.
 	UserMeta *UserMeta
+	// Posts holds the value of the posts edge.
+	Posts []*Post
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // UserProfileOrErr returns the UserProfile value or an error if the edge
@@ -88,6 +90,15 @@ func (e UserEdges) UserMetaOrErr() (*UserMeta, error) {
 		return e.UserMeta, nil
 	}
 	return nil, &NotLoadedError{edge: "user_meta"}
+}
+
+// PostsOrErr returns the Posts value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PostsOrErr() ([]*Post, error) {
+	if e.loadedTypes[3] {
+		return e.Posts, nil
+	}
+	return nil, &NotLoadedError{edge: "posts"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -173,6 +184,11 @@ func (u *User) QueryVelogConfig() *VelogConfigQuery {
 // QueryUserMeta queries the "user_meta" edge of the User entity.
 func (u *User) QueryUserMeta() *UserMetaQuery {
 	return (&UserClient{config: u.config}).QueryUserMeta(u)
+}
+
+// QueryPosts queries the "posts" edge of the User entity.
+func (u *User) QueryPosts() *PostQuery {
+	return (&UserClient{config: u.config}).QueryPosts(u)
 }
 
 // Update returns a builder for updating this User.

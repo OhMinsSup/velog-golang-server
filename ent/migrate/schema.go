@@ -46,6 +46,40 @@ var (
 			},
 		},
 	}
+	// PostsColumns holds the columns for the "posts" table.
+	PostsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "fk_user_id", Type: field.TypeUUID},
+		{Name: "title", Type: field.TypeString, Size: 255},
+		{Name: "body", Type: field.TypeString, Size: 2147483647},
+		{Name: "thumbnail", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "is_temp", Type: field.TypeBool},
+		{Name: "is_markdown", Type: field.TypeBool},
+		{Name: "is_private", Type: field.TypeBool, Default: true},
+		{Name: "url_slug", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "likes", Type: field.TypeInt64},
+		{Name: "views", Type: field.TypeInt64},
+		{Name: "meta", Type: field.TypeJSON},
+		{Name: "released_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_posts", Type: field.TypeUUID, Nullable: true},
+	}
+	// PostsTable holds the schema information for the "posts" table.
+	PostsTable = &schema.Table{
+		Name:       "posts",
+		Columns:    PostsColumns,
+		PrimaryKey: []*schema.Column{PostsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "posts_users_posts",
+				Columns: []*schema.Column{PostsColumns[15]},
+
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// SocialAccountsColumns holds the columns for the "social_accounts" table.
 	SocialAccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -165,6 +199,7 @@ var (
 	Tables = []*schema.Table{
 		AuthTokensTable,
 		EmailAuthsTable,
+		PostsTable,
 		SocialAccountsTable,
 		UsersTable,
 		UserMetaTable,
@@ -174,6 +209,7 @@ var (
 )
 
 func init() {
+	PostsTable.ForeignKeys[0].RefTable = UsersTable
 	UserMetaTable.ForeignKeys[0].RefTable = UsersTable
 	UserProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	VelogConfigsTable.ForeignKeys[0].RefTable = UsersTable

@@ -10,6 +10,7 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/authtoken"
 	"github.com/OhMinsSup/story-server/ent/emailauth"
+	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/predicate"
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
 	"github.com/OhMinsSup/story-server/ent/user"
@@ -32,6 +33,7 @@ const (
 	// Node types.
 	TypeAuthToken     = "AuthToken"
 	TypeEmailAuth     = "EmailAuth"
+	TypePost          = "Post"
 	TypeSocialAccount = "SocialAccount"
 	TypeUser          = "User"
 	TypeUserMeta      = "UserMeta"
@@ -1003,6 +1005,1161 @@ func (m *EmailAuthMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown EmailAuth edge %s", name)
 }
 
+// PostMutation represents an operation that mutates the Post nodes in the graph.
+type PostMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	fk_user_id    *uuid.UUID
+	title         *string
+	body          *string
+	thumbnail     *string
+	is_temp       *bool
+	is_markdown   *bool
+	is_private    *bool
+	url_slug      *string
+	likes         *int64
+	addlikes      *int64
+	views         *int64
+	addviews      *int64
+	meta          *map[string]interface{}
+	released_at   *time.Time
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	user          *uuid.UUID
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*Post, error)
+	predicates    []predicate.Post
+}
+
+var _ ent.Mutation = (*PostMutation)(nil)
+
+// postOption allows management of the mutation configuration using functional options.
+type postOption func(*PostMutation)
+
+// newPostMutation creates new mutation for the Post entity.
+func newPostMutation(c config, op Op, opts ...postOption) *PostMutation {
+	m := &PostMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePost,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPostID sets the ID field of the mutation.
+func withPostID(id uuid.UUID) postOption {
+	return func(m *PostMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Post
+		)
+		m.oldValue = func(ctx context.Context) (*Post, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Post.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPost sets the old Post of the mutation.
+func withPost(node *Post) postOption {
+	return func(m *PostMutation) {
+		m.oldValue = func(context.Context) (*Post, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PostMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PostMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Post entities.
+func (m *PostMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *PostMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetFkUserID sets the "fk_user_id" field.
+func (m *PostMutation) SetFkUserID(u uuid.UUID) {
+	m.fk_user_id = &u
+}
+
+// FkUserID returns the value of the "fk_user_id" field in the mutation.
+func (m *PostMutation) FkUserID() (r uuid.UUID, exists bool) {
+	v := m.fk_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFkUserID returns the old "fk_user_id" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldFkUserID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldFkUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldFkUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFkUserID: %w", err)
+	}
+	return oldValue.FkUserID, nil
+}
+
+// ResetFkUserID resets all changes to the "fk_user_id" field.
+func (m *PostMutation) ResetFkUserID() {
+	m.fk_user_id = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *PostMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *PostMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *PostMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetBody sets the "body" field.
+func (m *PostMutation) SetBody(s string) {
+	m.body = &s
+}
+
+// Body returns the value of the "body" field in the mutation.
+func (m *PostMutation) Body() (r string, exists bool) {
+	v := m.body
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBody returns the old "body" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldBody(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldBody is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldBody requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBody: %w", err)
+	}
+	return oldValue.Body, nil
+}
+
+// ResetBody resets all changes to the "body" field.
+func (m *PostMutation) ResetBody() {
+	m.body = nil
+}
+
+// SetThumbnail sets the "thumbnail" field.
+func (m *PostMutation) SetThumbnail(s string) {
+	m.thumbnail = &s
+}
+
+// Thumbnail returns the value of the "thumbnail" field in the mutation.
+func (m *PostMutation) Thumbnail() (r string, exists bool) {
+	v := m.thumbnail
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldThumbnail returns the old "thumbnail" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldThumbnail(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldThumbnail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldThumbnail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldThumbnail: %w", err)
+	}
+	return oldValue.Thumbnail, nil
+}
+
+// ClearThumbnail clears the value of the "thumbnail" field.
+func (m *PostMutation) ClearThumbnail() {
+	m.thumbnail = nil
+	m.clearedFields[post.FieldThumbnail] = struct{}{}
+}
+
+// ThumbnailCleared returns if the "thumbnail" field was cleared in this mutation.
+func (m *PostMutation) ThumbnailCleared() bool {
+	_, ok := m.clearedFields[post.FieldThumbnail]
+	return ok
+}
+
+// ResetThumbnail resets all changes to the "thumbnail" field.
+func (m *PostMutation) ResetThumbnail() {
+	m.thumbnail = nil
+	delete(m.clearedFields, post.FieldThumbnail)
+}
+
+// SetIsTemp sets the "is_temp" field.
+func (m *PostMutation) SetIsTemp(b bool) {
+	m.is_temp = &b
+}
+
+// IsTemp returns the value of the "is_temp" field in the mutation.
+func (m *PostMutation) IsTemp() (r bool, exists bool) {
+	v := m.is_temp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsTemp returns the old "is_temp" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldIsTemp(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldIsTemp is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldIsTemp requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsTemp: %w", err)
+	}
+	return oldValue.IsTemp, nil
+}
+
+// ResetIsTemp resets all changes to the "is_temp" field.
+func (m *PostMutation) ResetIsTemp() {
+	m.is_temp = nil
+}
+
+// SetIsMarkdown sets the "is_markdown" field.
+func (m *PostMutation) SetIsMarkdown(b bool) {
+	m.is_markdown = &b
+}
+
+// IsMarkdown returns the value of the "is_markdown" field in the mutation.
+func (m *PostMutation) IsMarkdown() (r bool, exists bool) {
+	v := m.is_markdown
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsMarkdown returns the old "is_markdown" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldIsMarkdown(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldIsMarkdown is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldIsMarkdown requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsMarkdown: %w", err)
+	}
+	return oldValue.IsMarkdown, nil
+}
+
+// ResetIsMarkdown resets all changes to the "is_markdown" field.
+func (m *PostMutation) ResetIsMarkdown() {
+	m.is_markdown = nil
+}
+
+// SetIsPrivate sets the "is_private" field.
+func (m *PostMutation) SetIsPrivate(b bool) {
+	m.is_private = &b
+}
+
+// IsPrivate returns the value of the "is_private" field in the mutation.
+func (m *PostMutation) IsPrivate() (r bool, exists bool) {
+	v := m.is_private
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPrivate returns the old "is_private" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldIsPrivate(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldIsPrivate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldIsPrivate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPrivate: %w", err)
+	}
+	return oldValue.IsPrivate, nil
+}
+
+// ResetIsPrivate resets all changes to the "is_private" field.
+func (m *PostMutation) ResetIsPrivate() {
+	m.is_private = nil
+}
+
+// SetURLSlug sets the "url_slug" field.
+func (m *PostMutation) SetURLSlug(s string) {
+	m.url_slug = &s
+}
+
+// URLSlug returns the value of the "url_slug" field in the mutation.
+func (m *PostMutation) URLSlug() (r string, exists bool) {
+	v := m.url_slug
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldURLSlug returns the old "url_slug" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldURLSlug(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldURLSlug is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldURLSlug requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldURLSlug: %w", err)
+	}
+	return oldValue.URLSlug, nil
+}
+
+// ResetURLSlug resets all changes to the "url_slug" field.
+func (m *PostMutation) ResetURLSlug() {
+	m.url_slug = nil
+}
+
+// SetLikes sets the "likes" field.
+func (m *PostMutation) SetLikes(i int64) {
+	m.likes = &i
+	m.addlikes = nil
+}
+
+// Likes returns the value of the "likes" field in the mutation.
+func (m *PostMutation) Likes() (r int64, exists bool) {
+	v := m.likes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLikes returns the old "likes" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldLikes(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldLikes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldLikes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLikes: %w", err)
+	}
+	return oldValue.Likes, nil
+}
+
+// AddLikes adds i to the "likes" field.
+func (m *PostMutation) AddLikes(i int64) {
+	if m.addlikes != nil {
+		*m.addlikes += i
+	} else {
+		m.addlikes = &i
+	}
+}
+
+// AddedLikes returns the value that was added to the "likes" field in this mutation.
+func (m *PostMutation) AddedLikes() (r int64, exists bool) {
+	v := m.addlikes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLikes resets all changes to the "likes" field.
+func (m *PostMutation) ResetLikes() {
+	m.likes = nil
+	m.addlikes = nil
+}
+
+// SetViews sets the "views" field.
+func (m *PostMutation) SetViews(i int64) {
+	m.views = &i
+	m.addviews = nil
+}
+
+// Views returns the value of the "views" field in the mutation.
+func (m *PostMutation) Views() (r int64, exists bool) {
+	v := m.views
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldViews returns the old "views" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldViews(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldViews is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldViews requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldViews: %w", err)
+	}
+	return oldValue.Views, nil
+}
+
+// AddViews adds i to the "views" field.
+func (m *PostMutation) AddViews(i int64) {
+	if m.addviews != nil {
+		*m.addviews += i
+	} else {
+		m.addviews = &i
+	}
+}
+
+// AddedViews returns the value that was added to the "views" field in this mutation.
+func (m *PostMutation) AddedViews() (r int64, exists bool) {
+	v := m.addviews
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetViews resets all changes to the "views" field.
+func (m *PostMutation) ResetViews() {
+	m.views = nil
+	m.addviews = nil
+}
+
+// SetMeta sets the "meta" field.
+func (m *PostMutation) SetMeta(value map[string]interface{}) {
+	m.meta = &value
+}
+
+// Meta returns the value of the "meta" field in the mutation.
+func (m *PostMutation) Meta() (r map[string]interface{}, exists bool) {
+	v := m.meta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMeta returns the old "meta" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldMeta(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldMeta is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldMeta requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMeta: %w", err)
+	}
+	return oldValue.Meta, nil
+}
+
+// ResetMeta resets all changes to the "meta" field.
+func (m *PostMutation) ResetMeta() {
+	m.meta = nil
+}
+
+// SetReleasedAt sets the "released_at" field.
+func (m *PostMutation) SetReleasedAt(t time.Time) {
+	m.released_at = &t
+}
+
+// ReleasedAt returns the value of the "released_at" field in the mutation.
+func (m *PostMutation) ReleasedAt() (r time.Time, exists bool) {
+	v := m.released_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleasedAt returns the old "released_at" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldReleasedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldReleasedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldReleasedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleasedAt: %w", err)
+	}
+	return oldValue.ReleasedAt, nil
+}
+
+// ResetReleasedAt resets all changes to the "released_at" field.
+func (m *PostMutation) ResetReleasedAt() {
+	m.released_at = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *PostMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *PostMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *PostMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *PostMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *PostMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the Post entity.
+// If the Post object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PostMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *PostMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *PostMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *PostMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared returns if the "user" edge to the User entity was cleared.
+func (m *PostMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *PostMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *PostMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *PostMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Op returns the operation name.
+func (m *PostMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Post).
+func (m *PostMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PostMutation) Fields() []string {
+	fields := make([]string, 0, 14)
+	if m.fk_user_id != nil {
+		fields = append(fields, post.FieldFkUserID)
+	}
+	if m.title != nil {
+		fields = append(fields, post.FieldTitle)
+	}
+	if m.body != nil {
+		fields = append(fields, post.FieldBody)
+	}
+	if m.thumbnail != nil {
+		fields = append(fields, post.FieldThumbnail)
+	}
+	if m.is_temp != nil {
+		fields = append(fields, post.FieldIsTemp)
+	}
+	if m.is_markdown != nil {
+		fields = append(fields, post.FieldIsMarkdown)
+	}
+	if m.is_private != nil {
+		fields = append(fields, post.FieldIsPrivate)
+	}
+	if m.url_slug != nil {
+		fields = append(fields, post.FieldURLSlug)
+	}
+	if m.likes != nil {
+		fields = append(fields, post.FieldLikes)
+	}
+	if m.views != nil {
+		fields = append(fields, post.FieldViews)
+	}
+	if m.meta != nil {
+		fields = append(fields, post.FieldMeta)
+	}
+	if m.released_at != nil {
+		fields = append(fields, post.FieldReleasedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, post.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, post.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PostMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case post.FieldFkUserID:
+		return m.FkUserID()
+	case post.FieldTitle:
+		return m.Title()
+	case post.FieldBody:
+		return m.Body()
+	case post.FieldThumbnail:
+		return m.Thumbnail()
+	case post.FieldIsTemp:
+		return m.IsTemp()
+	case post.FieldIsMarkdown:
+		return m.IsMarkdown()
+	case post.FieldIsPrivate:
+		return m.IsPrivate()
+	case post.FieldURLSlug:
+		return m.URLSlug()
+	case post.FieldLikes:
+		return m.Likes()
+	case post.FieldViews:
+		return m.Views()
+	case post.FieldMeta:
+		return m.Meta()
+	case post.FieldReleasedAt:
+		return m.ReleasedAt()
+	case post.FieldCreatedAt:
+		return m.CreatedAt()
+	case post.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PostMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case post.FieldFkUserID:
+		return m.OldFkUserID(ctx)
+	case post.FieldTitle:
+		return m.OldTitle(ctx)
+	case post.FieldBody:
+		return m.OldBody(ctx)
+	case post.FieldThumbnail:
+		return m.OldThumbnail(ctx)
+	case post.FieldIsTemp:
+		return m.OldIsTemp(ctx)
+	case post.FieldIsMarkdown:
+		return m.OldIsMarkdown(ctx)
+	case post.FieldIsPrivate:
+		return m.OldIsPrivate(ctx)
+	case post.FieldURLSlug:
+		return m.OldURLSlug(ctx)
+	case post.FieldLikes:
+		return m.OldLikes(ctx)
+	case post.FieldViews:
+		return m.OldViews(ctx)
+	case post.FieldMeta:
+		return m.OldMeta(ctx)
+	case post.FieldReleasedAt:
+		return m.OldReleasedAt(ctx)
+	case post.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case post.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Post field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PostMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case post.FieldFkUserID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFkUserID(v)
+		return nil
+	case post.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case post.FieldBody:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBody(v)
+		return nil
+	case post.FieldThumbnail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetThumbnail(v)
+		return nil
+	case post.FieldIsTemp:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsTemp(v)
+		return nil
+	case post.FieldIsMarkdown:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsMarkdown(v)
+		return nil
+	case post.FieldIsPrivate:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPrivate(v)
+		return nil
+	case post.FieldURLSlug:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetURLSlug(v)
+		return nil
+	case post.FieldLikes:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLikes(v)
+		return nil
+	case post.FieldViews:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetViews(v)
+		return nil
+	case post.FieldMeta:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMeta(v)
+		return nil
+	case post.FieldReleasedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleasedAt(v)
+		return nil
+	case post.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case post.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Post field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PostMutation) AddedFields() []string {
+	var fields []string
+	if m.addlikes != nil {
+		fields = append(fields, post.FieldLikes)
+	}
+	if m.addviews != nil {
+		fields = append(fields, post.FieldViews)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PostMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case post.FieldLikes:
+		return m.AddedLikes()
+	case post.FieldViews:
+		return m.AddedViews()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PostMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case post.FieldLikes:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLikes(v)
+		return nil
+	case post.FieldViews:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddViews(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Post numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PostMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(post.FieldThumbnail) {
+		fields = append(fields, post.FieldThumbnail)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PostMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PostMutation) ClearField(name string) error {
+	switch name {
+	case post.FieldThumbnail:
+		m.ClearThumbnail()
+		return nil
+	}
+	return fmt.Errorf("unknown Post nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PostMutation) ResetField(name string) error {
+	switch name {
+	case post.FieldFkUserID:
+		m.ResetFkUserID()
+		return nil
+	case post.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case post.FieldBody:
+		m.ResetBody()
+		return nil
+	case post.FieldThumbnail:
+		m.ResetThumbnail()
+		return nil
+	case post.FieldIsTemp:
+		m.ResetIsTemp()
+		return nil
+	case post.FieldIsMarkdown:
+		m.ResetIsMarkdown()
+		return nil
+	case post.FieldIsPrivate:
+		m.ResetIsPrivate()
+		return nil
+	case post.FieldURLSlug:
+		m.ResetURLSlug()
+		return nil
+	case post.FieldLikes:
+		m.ResetLikes()
+		return nil
+	case post.FieldViews:
+		m.ResetViews()
+		return nil
+	case post.FieldMeta:
+		m.ResetMeta()
+		return nil
+	case post.FieldReleasedAt:
+		m.ResetReleasedAt()
+		return nil
+	case post.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case post.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Post field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PostMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, post.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PostMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case post.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PostMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PostMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PostMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, post.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PostMutation) EdgeCleared(name string) bool {
+	switch name {
+	case post.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PostMutation) ClearEdge(name string) error {
+	switch name {
+	case post.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown Post unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PostMutation) ResetEdge(name string) error {
+	switch name {
+	case post.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown Post edge %s", name)
+}
+
 // SocialAccountMutation represents an operation that mutates the SocialAccount nodes in the graph.
 type SocialAccountMutation struct {
 	config
@@ -1584,6 +2741,9 @@ type UserMutation struct {
 	clearedvelog_config bool
 	user_meta           *uuid.UUID
 	cleareduser_meta    bool
+	posts               map[uuid.UUID]struct{}
+	removedposts        map[uuid.UUID]struct{}
+	clearedposts        bool
 	done                bool
 	oldValue            func(context.Context) (*User, error)
 	predicates          []predicate.User
@@ -1984,6 +3144,59 @@ func (m *UserMutation) ResetUserMeta() {
 	m.cleareduser_meta = false
 }
 
+// AddPostIDs adds the "posts" edge to the Post entity by ids.
+func (m *UserMutation) AddPostIDs(ids ...uuid.UUID) {
+	if m.posts == nil {
+		m.posts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.posts[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPosts clears the "posts" edge to the Post entity.
+func (m *UserMutation) ClearPosts() {
+	m.clearedposts = true
+}
+
+// PostsCleared returns if the "posts" edge to the Post entity was cleared.
+func (m *UserMutation) PostsCleared() bool {
+	return m.clearedposts
+}
+
+// RemovePostIDs removes the "posts" edge to the Post entity by IDs.
+func (m *UserMutation) RemovePostIDs(ids ...uuid.UUID) {
+	if m.removedposts == nil {
+		m.removedposts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.removedposts[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPosts returns the removed IDs of the "posts" edge to the Post entity.
+func (m *UserMutation) RemovedPostsIDs() (ids []uuid.UUID) {
+	for id := range m.removedposts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PostsIDs returns the "posts" edge IDs in the mutation.
+func (m *UserMutation) PostsIDs() (ids []uuid.UUID) {
+	for id := range m.posts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPosts resets all changes to the "posts" edge.
+func (m *UserMutation) ResetPosts() {
+	m.posts = nil
+	m.clearedposts = false
+	m.removedposts = nil
+}
+
 // Op returns the operation name.
 func (m *UserMutation) Op() Op {
 	return m.op
@@ -2174,7 +3387,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.user_profile != nil {
 		edges = append(edges, user.EdgeUserProfile)
 	}
@@ -2183,6 +3396,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.user_meta != nil {
 		edges = append(edges, user.EdgeUserMeta)
+	}
+	if m.posts != nil {
+		edges = append(edges, user.EdgePosts)
 	}
 	return edges
 }
@@ -2203,13 +3419,22 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user_meta; id != nil {
 			return []ent.Value{*id}
 		}
+	case user.EdgePosts:
+		ids := make([]ent.Value, 0, len(m.posts))
+		for id := range m.posts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
+	if m.removedposts != nil {
+		edges = append(edges, user.EdgePosts)
+	}
 	return edges
 }
 
@@ -2217,13 +3442,19 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case user.EdgePosts:
+		ids := make([]ent.Value, 0, len(m.removedposts))
+		for id := range m.removedposts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.cleareduser_profile {
 		edges = append(edges, user.EdgeUserProfile)
 	}
@@ -2232,6 +3463,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	}
 	if m.cleareduser_meta {
 		edges = append(edges, user.EdgeUserMeta)
+	}
+	if m.clearedposts {
+		edges = append(edges, user.EdgePosts)
 	}
 	return edges
 }
@@ -2246,6 +3480,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedvelog_config
 	case user.EdgeUserMeta:
 		return m.cleareduser_meta
+	case user.EdgePosts:
+		return m.clearedposts
 	}
 	return false
 }
@@ -2279,6 +3515,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeUserMeta:
 		m.ResetUserMeta()
+		return nil
+	case user.EdgePosts:
+		m.ResetPosts()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

@@ -137,3 +137,15 @@ github.com/jackc/pgx/v4/stdlib 이 라이브러리를 사용하면 된다는 내
 
 ### 오늘 한 일
 - 미들웨어
+
+## EP.14 포스트 작성 (1)
+
+오늘은 드디어 포스트 작성 API를 작업했다. 하지만 작업중 상당히 귀찮은 버그들이 많았는데, 첫번째는
+import cycle not allowed이다. 
+
+해당 오류는 Go는 순환 종속성을 지원하지 않기 때문에 컴파일 시간 동안 import cycle not allowed 오류가 발생하는 이슈가 있었고
+두번째는 UrlSlug내용이 이상하게 저장되는 이슈이다. 이건 다음번에 수정해야겠다.
+
+### 오늘 한 일
+- import cycle not allowed이한 폴더 구조 변경
+- 포스트 작성 API 추가

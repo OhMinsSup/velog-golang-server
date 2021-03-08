@@ -15,8 +15,8 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.1.4
+	github.com/gosimple/slug v1.9.0
 	github.com/jackc/pgx/v4 v4.10.1
-	github.com/jinzhu/gorm v1.9.12
 	github.com/joho/godotenv v1.3.0
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.3.0

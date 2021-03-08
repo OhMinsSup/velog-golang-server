@@ -30,6 +30,8 @@ const (
 	EdgeVelogConfig = "velog_config"
 	// EdgeUserMeta holds the string denoting the user_meta edge name in mutations.
 	EdgeUserMeta = "user_meta"
+	// EdgePosts holds the string denoting the posts edge name in mutations.
+	EdgePosts = "posts"
 
 	// Table holds the table name of the user in the database.
 	Table = "users"
@@ -54,6 +56,13 @@ const (
 	UserMetaInverseTable = "user_meta"
 	// UserMetaColumn is the table column denoting the user_meta relation/edge.
 	UserMetaColumn = "fk_user_id"
+	// PostsTable is the table the holds the posts relation/edge.
+	PostsTable = "posts"
+	// PostsInverseTable is the table name for the Post entity.
+	// It exists in this package in order to avoid circular dependency with the "post" package.
+	PostsInverseTable = "posts"
+	// PostsColumn is the table column denoting the posts relation/edge.
+	PostsColumn = "user_posts"
 )
 
 // Columns holds all SQL columns for user fields.

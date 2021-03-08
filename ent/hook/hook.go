@@ -35,6 +35,19 @@ func (f EmailAuthFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return f(ctx, mv)
 }
 
+// The PostFunc type is an adapter to allow the use of ordinary
+// function as Post mutator.
+type PostFunc func(context.Context, *ent.PostMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PostFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.PostMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PostMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The SocialAccountFunc type is an adapter to allow the use of ordinary
 // function as SocialAccount mutator.
 type SocialAccountFunc func(context.Context, *ent.SocialAccountMutation) (ent.Value, error)
