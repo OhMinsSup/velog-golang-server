@@ -28,6 +28,7 @@ type hooks struct {
 	EmailAuth     []ent.Hook
 	Post          []ent.Hook
 	SocialAccount []ent.Hook
+	Tag           []ent.Hook
 	User          []ent.Hook
 	UserMeta      []ent.Hook
 	UserProfile   []ent.Hook

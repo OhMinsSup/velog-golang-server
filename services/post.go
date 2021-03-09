@@ -7,6 +7,7 @@ import (
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/ent"
 	postEnt "github.com/OhMinsSup/story-server/ent/post"
+	tagEnt "github.com/OhMinsSup/story-server/ent/tag"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/libs"
 	"github.com/SKAhack/go-shortid"
@@ -42,18 +43,20 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 	processedUrlSlug := body.UrlSlug
 	urlSlugDuplicate, err := tx.Post.Query().Where(
 		postEnt.And(
-			postEnt.FkUserID(userId),
+			postEnt.HasUserWith(
+				userEnt.IDEQ(userId),
+			),
 			postEnt.URLSlug(body.UrlSlug),
 		),
 	).First(bg)
 	log.Println("post", urlSlugDuplicate)
 
 	if !ent.IsNotFound(err) {
-		if processedUrlSlug == "" {
-			processedUrlSlug = slug.Make(body.Title)
-		}
+		processedUrlSlug = generateUrlSlug(body.Title)
+	}
 
-		processedUrlSlug = fmt.Sprintf("%v-%v", processedUrlSlug, shortid.Generator())
+	if processedUrlSlug == "" {
+		processedUrlSlug = generateUrlSlug(body.Title)
 	}
 
 	post, err := tx.Post.
@@ -66,11 +69,11 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 		SetIsPrivate(body.IsPrivate).
 		SetThumbnail(body.Thumbnail).
 		SetMeta(body.Meta).
-		SetFkUserID(user.ID).
+		SetUserID(user.ID).
 		SetUser(user).
 		Save(bg)
 
-	// 포스트 생성이 실패한 경
+	// 포스트 생성이 실패한 경우
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
@@ -87,4 +90,43 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 			"id": post.ID,
 		},
 	}, tx.Commit()
+}
+
+func syncPostTags(postId uuid.UUID, tags []string, tx *ent.Tx) (*[]ent.Tag, error) {
+	bg := context.Background()
+
+	var tagIds []uuid.UUID
+	for _, tag := range tags {
+		findTag, err := tx.Tag.
+			Query().
+			Where(tagEnt.NameEQ(tag)).
+			First(bg)
+		// 태그가 존재하지 않느 경우 Tag 를 생성
+		if ent.IsNotFound(err) {
+			createTag, err := tx.Tag.Create().
+				SetName(tag).
+				Save(bg)
+			if err != nil {
+				if rerr := tx.Rollback(); rerr != nil {
+					return nil, rerr
+				}
+				return nil, err
+			}
+			tagIds = append(tagIds, createTag.ID)
+		} else {
+			// 존재하는 경우 해당 Tag ID 값을 가져온다
+			tagIds = append(tagIds, findTag.ID)
+		}
+	}
+
+
+
+	return nil, nil
+}
+
+func generateUrlSlug(title string) string {
+	urlSlug := slug.Make(title)
+	shortId := shortid.Generator()
+	result := fmt.Sprintf("%v-%v", urlSlug, shortId.Generate())
+	return result
 }

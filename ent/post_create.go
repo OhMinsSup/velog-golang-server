@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/OhMinsSup/story-server/ent/post"
+	"github.com/OhMinsSup/story-server/ent/tag"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
@@ -20,12 +21,6 @@ type PostCreate struct {
 	config
 	mutation *PostMutation
 	hooks    []Hook
-}
-
-// SetFkUserID sets the "fk_user_id" field.
-func (pc *PostCreate) SetFkUserID(u uuid.UUID) *PostCreate {
-	pc.mutation.SetFkUserID(u)
-	return pc
 }
 
 // SetTitle sets the "title" field.
@@ -187,6 +182,21 @@ func (pc *PostCreate) SetUser(u *User) *PostCreate {
 	return pc.SetUserID(u.ID)
 }
 
+// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
+func (pc *PostCreate) AddTagIDs(ids ...uuid.UUID) *PostCreate {
+	pc.mutation.AddTagIDs(ids...)
+	return pc
+}
+
+// AddTags adds the "tags" edges to the Tag entity.
+func (pc *PostCreate) AddTags(t ...*Tag) *PostCreate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return pc.AddTagIDs(ids...)
+}
+
 // Mutation returns the PostMutation object of the builder.
 func (pc *PostCreate) Mutation() *PostMutation {
 	return pc.mutation
@@ -271,9 +281,6 @@ func (pc *PostCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (pc *PostCreate) check() error {
-	if _, ok := pc.mutation.FkUserID(); !ok {
-		return &ValidationError{Name: "fk_user_id", err: errors.New("ent: missing required field \"fk_user_id\"")}
-	}
 	if _, ok := pc.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New("ent: missing required field \"title\"")}
 	}
@@ -353,14 +360,6 @@ func (pc *PostCreate) createSpec() (*Post, *sqlgraph.CreateSpec) {
 	if id, ok := pc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
-	}
-	if value, ok := pc.mutation.FkUserID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeUUID,
-			Value:  value,
-			Column: post.FieldFkUserID,
-		})
-		_node.FkUserID = value
 	}
 	if value, ok := pc.mutation.Title(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -477,6 +476,25 @@ func (pc *PostCreate) createSpec() (*Post, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
 				},
 			},
 		}

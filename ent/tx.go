@@ -20,6 +20,8 @@ type Tx struct {
 	Post *PostClient
 	// SocialAccount is the client for interacting with the SocialAccount builders.
 	SocialAccount *SocialAccountClient
+	// Tag is the client for interacting with the Tag builders.
+	Tag *TagClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// UserMeta is the client for interacting with the UserMeta builders.
@@ -167,6 +169,7 @@ func (tx *Tx) init() {
 	tx.EmailAuth = NewEmailAuthClient(tx.config)
 	tx.Post = NewPostClient(tx.config)
 	tx.SocialAccount = NewSocialAccountClient(tx.config)
+	tx.Tag = NewTagClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.UserMeta = NewUserMetaClient(tx.config)
 	tx.UserProfile = NewUserProfileClient(tx.config)

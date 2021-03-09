@@ -10,6 +10,7 @@ import (
 	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/schema"
 	"github.com/OhMinsSup/story-server/ent/socialaccount"
+	"github.com/OhMinsSup/story-server/ent/tag"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/ent/usermeta"
 	"github.com/OhMinsSup/story-server/ent/userprofile"
@@ -64,39 +65,39 @@ func init() {
 	postFields := schema.Post{}.Fields()
 	_ = postFields
 	// postDescTitle is the schema descriptor for title field.
-	postDescTitle := postFields[2].Descriptor()
+	postDescTitle := postFields[1].Descriptor()
 	// post.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	post.TitleValidator = postDescTitle.Validators[0].(func(string) error)
 	// postDescThumbnail is the schema descriptor for thumbnail field.
-	postDescThumbnail := postFields[4].Descriptor()
+	postDescThumbnail := postFields[3].Descriptor()
 	// post.ThumbnailValidator is a validator for the "thumbnail" field. It is called by the builders before save.
 	post.ThumbnailValidator = postDescThumbnail.Validators[0].(func(string) error)
 	// postDescIsPrivate is the schema descriptor for is_private field.
-	postDescIsPrivate := postFields[7].Descriptor()
+	postDescIsPrivate := postFields[6].Descriptor()
 	// post.DefaultIsPrivate holds the default value on creation for the is_private field.
 	post.DefaultIsPrivate = postDescIsPrivate.Default.(bool)
 	// postDescURLSlug is the schema descriptor for url_slug field.
-	postDescURLSlug := postFields[8].Descriptor()
+	postDescURLSlug := postFields[7].Descriptor()
 	// post.URLSlugValidator is a validator for the "url_slug" field. It is called by the builders before save.
 	post.URLSlugValidator = postDescURLSlug.Validators[0].(func(string) error)
 	// postDescLikes is the schema descriptor for likes field.
-	postDescLikes := postFields[9].Descriptor()
+	postDescLikes := postFields[8].Descriptor()
 	// post.DefaultLikes holds the default value on creation for the likes field.
 	post.DefaultLikes = postDescLikes.Default.(int64)
 	// postDescViews is the schema descriptor for views field.
-	postDescViews := postFields[10].Descriptor()
+	postDescViews := postFields[9].Descriptor()
 	// post.DefaultViews holds the default value on creation for the views field.
 	post.DefaultViews = postDescViews.Default.(int64)
 	// postDescReleasedAt is the schema descriptor for released_at field.
-	postDescReleasedAt := postFields[12].Descriptor()
+	postDescReleasedAt := postFields[11].Descriptor()
 	// post.DefaultReleasedAt holds the default value on creation for the released_at field.
 	post.DefaultReleasedAt = postDescReleasedAt.Default.(func() time.Time)
 	// postDescCreatedAt is the schema descriptor for created_at field.
-	postDescCreatedAt := postFields[13].Descriptor()
+	postDescCreatedAt := postFields[12].Descriptor()
 	// post.DefaultCreatedAt holds the default value on creation for the created_at field.
 	post.DefaultCreatedAt = postDescCreatedAt.Default.(func() time.Time)
 	// postDescUpdatedAt is the schema descriptor for updated_at field.
-	postDescUpdatedAt := postFields[14].Descriptor()
+	postDescUpdatedAt := postFields[13].Descriptor()
 	// post.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	post.DefaultUpdatedAt = postDescUpdatedAt.Default.(func() time.Time)
 	// post.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -133,6 +134,30 @@ func init() {
 	socialaccountDescID := socialaccountFields[0].Descriptor()
 	// socialaccount.DefaultID holds the default value on creation for the id field.
 	socialaccount.DefaultID = socialaccountDescID.Default.(func() uuid.UUID)
+	tagFields := schema.Tag{}.Fields()
+	_ = tagFields
+	// tagDescName is the schema descriptor for name field.
+	tagDescName := tagFields[1].Descriptor()
+	// tag.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	tag.NameValidator = tagDescName.Validators[0].(func(string) error)
+	// tagDescDescription is the schema descriptor for description field.
+	tagDescDescription := tagFields[2].Descriptor()
+	// tag.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
+	tag.DescriptionValidator = tagDescDescription.Validators[0].(func(string) error)
+	// tagDescCreatedAt is the schema descriptor for created_at field.
+	tagDescCreatedAt := tagFields[3].Descriptor()
+	// tag.DefaultCreatedAt holds the default value on creation for the created_at field.
+	tag.DefaultCreatedAt = tagDescCreatedAt.Default.(func() time.Time)
+	// tagDescUpdatedAt is the schema descriptor for updated_at field.
+	tagDescUpdatedAt := tagFields[4].Descriptor()
+	// tag.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	tag.DefaultUpdatedAt = tagDescUpdatedAt.Default.(func() time.Time)
+	// tag.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	tag.UpdateDefaultUpdatedAt = tagDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// tagDescID is the schema descriptor for id field.
+	tagDescID := tagFields[0].Descriptor()
+	// tag.DefaultID holds the default value on creation for the id field.
+	tag.DefaultID = tagDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUsername is the schema descriptor for username field.

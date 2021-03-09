@@ -13,8 +13,6 @@ const (
 	Label = "post"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldFkUserID holds the string denoting the fk_user_id field in the database.
-	FieldFkUserID = "fk_user_id"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldBody holds the string denoting the body field in the database.
@@ -44,6 +42,8 @@ const (
 
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
+	// EdgeTags holds the string denoting the tags edge name in mutations.
+	EdgeTags = "tags"
 
 	// Table holds the table name of the post in the database.
 	Table = "posts"
@@ -53,13 +53,17 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "user_posts"
+	UserColumn = "fk_user_id"
+	// TagsTable is the table the holds the tags relation/edge. The primary key declared below.
+	TagsTable = "tag_posts"
+	// TagsInverseTable is the table name for the Tag entity.
+	// It exists in this package in order to avoid circular dependency with the "tag" package.
+	TagsInverseTable = "tags"
 )
 
 // Columns holds all SQL columns for post fields.
 var Columns = []string{
 	FieldID,
-	FieldFkUserID,
 	FieldTitle,
 	FieldBody,
 	FieldThumbnail,
@@ -77,8 +81,14 @@ var Columns = []string{
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the Post type.
 var ForeignKeys = []string{
-	"user_posts",
+	"fk_user_id",
 }
+
+var (
+	// TagsPrimaryKey and TagsColumn2 are the table columns denoting the
+	// primary key for the tags relation (M2M).
+	TagsPrimaryKey = []string{"tag_id", "post_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

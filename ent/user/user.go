@@ -62,7 +62,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "post" package.
 	PostsInverseTable = "posts"
 	// PostsColumn is the table column denoting the posts relation/edge.
-	PostsColumn = "user_posts"
+	PostsColumn = "fk_user_id"
 )
 
 // Columns holds all SQL columns for user fields.

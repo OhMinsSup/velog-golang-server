@@ -19,8 +19,6 @@ type Post struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// FkUserID holds the value of the "fk_user_id" field.
-	FkUserID uuid.UUID `json:"fk_user_id,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Body holds the value of the "body" field.
@@ -50,16 +48,18 @@ type Post struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PostQuery when eager-loading is set.
 	Edges      PostEdges `json:"edges"`
-	user_posts *uuid.UUID
+	fk_user_id *uuid.UUID
 }
 
 // PostEdges holds the relations/edges for other nodes in the graph.
 type PostEdges struct {
 	// User holds the value of the user edge.
 	User *User
+	// Tags holds the value of the tags edge.
+	Tags []*Tag
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -74,6 +74,15 @@ func (e PostEdges) UserOrErr() (*User, error) {
 		return e.User, nil
 	}
 	return nil, &NotLoadedError{edge: "user"}
+}
+
+// TagsOrErr returns the Tags value or an error if the edge
+// was not loaded in eager-loading.
+func (e PostEdges) TagsOrErr() ([]*Tag, error) {
+	if e.loadedTypes[1] {
+		return e.Tags, nil
+	}
+	return nil, &NotLoadedError{edge: "tags"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -91,9 +100,9 @@ func (*Post) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = &sql.NullString{}
 		case post.FieldReleasedAt, post.FieldCreatedAt, post.FieldUpdatedAt:
 			values[i] = &sql.NullTime{}
-		case post.FieldID, post.FieldFkUserID:
+		case post.FieldID:
 			values[i] = &uuid.UUID{}
-		case post.ForeignKeys[0]: // user_posts
+		case post.ForeignKeys[0]: // fk_user_id
 			values[i] = &uuid.UUID{}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Post", columns[i])
@@ -115,12 +124,6 @@ func (po *Post) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				po.ID = *value
-			}
-		case post.FieldFkUserID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field fk_user_id", values[i])
-			} else if value != nil {
-				po.FkUserID = *value
 			}
 		case post.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -206,9 +209,9 @@ func (po *Post) assignValues(columns []string, values []interface{}) error {
 			}
 		case post.ForeignKeys[0]:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field user_posts", values[i])
+				return fmt.Errorf("unexpected type %T for field fk_user_id", values[i])
 			} else if value != nil {
-				po.user_posts = value
+				po.fk_user_id = value
 			}
 		}
 	}
@@ -218,6 +221,11 @@ func (po *Post) assignValues(columns []string, values []interface{}) error {
 // QueryUser queries the "user" edge of the Post entity.
 func (po *Post) QueryUser() *UserQuery {
 	return (&PostClient{config: po.config}).QueryUser(po)
+}
+
+// QueryTags queries the "tags" edge of the Post entity.
+func (po *Post) QueryTags() *TagQuery {
+	return (&PostClient{config: po.config}).QueryTags(po)
 }
 
 // Update returns a builder for updating this Post.
@@ -243,8 +251,6 @@ func (po *Post) String() string {
 	var builder strings.Builder
 	builder.WriteString("Post(")
 	builder.WriteString(fmt.Sprintf("id=%v", po.ID))
-	builder.WriteString(", fk_user_id=")
-	builder.WriteString(fmt.Sprintf("%v", po.FkUserID))
 	builder.WriteString(", title=")
 	builder.WriteString(po.Title)
 	builder.WriteString(", body=")

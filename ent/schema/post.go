@@ -19,7 +19,6 @@ type Post struct {
 func (Post) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.UUID("fk_user_id", uuid.UUID{}),
 		field.String("title").MaxLen(255),
 		field.Text("body"),
 		field.String("thumbnail").Nillable().Optional().MaxLen(255),
@@ -40,6 +39,7 @@ func (Post) Fields() []ent.Field {
 func (Post) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("posts").Unique(),
+		edge.From("tags", Tag.Type).Ref("posts"),
 	}
 }
 

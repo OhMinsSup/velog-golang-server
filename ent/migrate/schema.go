@@ -49,7 +49,6 @@ var (
 	// PostsColumns holds the columns for the "posts" table.
 	PostsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "fk_user_id", Type: field.TypeUUID},
 		{Name: "title", Type: field.TypeString, Size: 255},
 		{Name: "body", Type: field.TypeString, Size: 2147483647},
 		{Name: "thumbnail", Type: field.TypeString, Nullable: true, Size: 255},
@@ -63,7 +62,7 @@ var (
 		{Name: "released_at", Type: field.TypeTime},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "user_posts", Type: field.TypeUUID, Nullable: true},
+		{Name: "fk_user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// PostsTable holds the schema information for the "posts" table.
 	PostsTable = &schema.Table{
@@ -73,7 +72,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:  "posts_users_posts",
-				Columns: []*schema.Column{PostsColumns[15]},
+				Columns: []*schema.Column{PostsColumns[14]},
 
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -95,6 +94,21 @@ var (
 		Name:        "social_accounts",
 		Columns:     SocialAccountsColumns,
 		PrimaryKey:  []*schema.Column{SocialAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{},
+	}
+	// TagsColumns holds the columns for the "tags" table.
+	TagsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// TagsTable holds the schema information for the "tags" table.
+	TagsTable = &schema.Table{
+		Name:        "tags",
+		Columns:     TagsColumns,
+		PrimaryKey:  []*schema.Column{TagsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{},
 	}
 	// UsersColumns holds the columns for the "users" table.
@@ -195,16 +209,45 @@ var (
 			},
 		},
 	}
+	// TagPostsColumns holds the columns for the "tag_posts" table.
+	TagPostsColumns = []*schema.Column{
+		{Name: "tag_id", Type: field.TypeUUID},
+		{Name: "post_id", Type: field.TypeUUID},
+	}
+	// TagPostsTable holds the schema information for the "tag_posts" table.
+	TagPostsTable = &schema.Table{
+		Name:       "tag_posts",
+		Columns:    TagPostsColumns,
+		PrimaryKey: []*schema.Column{TagPostsColumns[0], TagPostsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:  "tag_posts_tag_id",
+				Columns: []*schema.Column{TagPostsColumns[0]},
+
+				RefColumns: []*schema.Column{TagsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:  "tag_posts_post_id",
+				Columns: []*schema.Column{TagPostsColumns[1]},
+
+				RefColumns: []*schema.Column{PostsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		AuthTokensTable,
 		EmailAuthsTable,
 		PostsTable,
 		SocialAccountsTable,
+		TagsTable,
 		UsersTable,
 		UserMetaTable,
 		UserProfilesTable,
 		VelogConfigsTable,
+		TagPostsTable,
 	}
 )
 
@@ -213,4 +256,6 @@ func init() {
 	UserMetaTable.ForeignKeys[0].RefTable = UsersTable
 	UserProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	VelogConfigsTable.ForeignKeys[0].RefTable = UsersTable
+	TagPostsTable.ForeignKeys[0].RefTable = TagsTable
+	TagPostsTable.ForeignKeys[1].RefTable = PostsTable
 }

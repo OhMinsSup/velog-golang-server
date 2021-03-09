@@ -12,4 +12,5 @@ type WritePostDTO struct {
 	UrlSlug    string    `json:"url_slug"`
 	Thumbnail  string    `json:"thumbnail"`
 	Meta       libs.JSON `json:"meta"`
+	Tags       []string  `json:"tag"`
 }

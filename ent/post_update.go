@@ -9,6 +9,7 @@ import (
 
 	"github.com/OhMinsSup/story-server/ent/post"
 	"github.com/OhMinsSup/story-server/ent/predicate"
+	"github.com/OhMinsSup/story-server/ent/tag"
 	"github.com/OhMinsSup/story-server/ent/user"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
@@ -26,12 +27,6 @@ type PostUpdate struct {
 // Where adds a new predicate for the PostUpdate builder.
 func (pu *PostUpdate) Where(ps ...predicate.Post) *PostUpdate {
 	pu.mutation.predicates = append(pu.mutation.predicates, ps...)
-	return pu
-}
-
-// SetFkUserID sets the "fk_user_id" field.
-func (pu *PostUpdate) SetFkUserID(u uuid.UUID) *PostUpdate {
-	pu.mutation.SetFkUserID(u)
 	return pu
 }
 
@@ -186,6 +181,21 @@ func (pu *PostUpdate) SetUser(u *User) *PostUpdate {
 	return pu.SetUserID(u.ID)
 }
 
+// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
+func (pu *PostUpdate) AddTagIDs(ids ...uuid.UUID) *PostUpdate {
+	pu.mutation.AddTagIDs(ids...)
+	return pu
+}
+
+// AddTags adds the "tags" edges to the Tag entity.
+func (pu *PostUpdate) AddTags(t ...*Tag) *PostUpdate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return pu.AddTagIDs(ids...)
+}
+
 // Mutation returns the PostMutation object of the builder.
 func (pu *PostUpdate) Mutation() *PostMutation {
 	return pu.mutation
@@ -195,6 +205,27 @@ func (pu *PostUpdate) Mutation() *PostMutation {
 func (pu *PostUpdate) ClearUser() *PostUpdate {
 	pu.mutation.ClearUser()
 	return pu
+}
+
+// ClearTags clears all "tags" edges to the Tag entity.
+func (pu *PostUpdate) ClearTags() *PostUpdate {
+	pu.mutation.ClearTags()
+	return pu
+}
+
+// RemoveTagIDs removes the "tags" edge to Tag entities by IDs.
+func (pu *PostUpdate) RemoveTagIDs(ids ...uuid.UUID) *PostUpdate {
+	pu.mutation.RemoveTagIDs(ids...)
+	return pu
+}
+
+// RemoveTags removes "tags" edges to Tag entities.
+func (pu *PostUpdate) RemoveTags(t ...*Tag) *PostUpdate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return pu.RemoveTagIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -300,13 +331,6 @@ func (pu *PostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := pu.mutation.FkUserID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeUUID,
-			Value:  value,
-			Column: post.FieldFkUserID,
-		})
 	}
 	if value, ok := pu.mutation.Title(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
@@ -447,6 +471,60 @@ func (pu *PostUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if pu.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.RemovedTagsIDs(); len(nodes) > 0 && !pu.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{post.Label}
@@ -463,12 +541,6 @@ type PostUpdateOne struct {
 	config
 	hooks    []Hook
 	mutation *PostMutation
-}
-
-// SetFkUserID sets the "fk_user_id" field.
-func (puo *PostUpdateOne) SetFkUserID(u uuid.UUID) *PostUpdateOne {
-	puo.mutation.SetFkUserID(u)
-	return puo
 }
 
 // SetTitle sets the "title" field.
@@ -622,6 +694,21 @@ func (puo *PostUpdateOne) SetUser(u *User) *PostUpdateOne {
 	return puo.SetUserID(u.ID)
 }
 
+// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
+func (puo *PostUpdateOne) AddTagIDs(ids ...uuid.UUID) *PostUpdateOne {
+	puo.mutation.AddTagIDs(ids...)
+	return puo
+}
+
+// AddTags adds the "tags" edges to the Tag entity.
+func (puo *PostUpdateOne) AddTags(t ...*Tag) *PostUpdateOne {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return puo.AddTagIDs(ids...)
+}
+
 // Mutation returns the PostMutation object of the builder.
 func (puo *PostUpdateOne) Mutation() *PostMutation {
 	return puo.mutation
@@ -631,6 +718,27 @@ func (puo *PostUpdateOne) Mutation() *PostMutation {
 func (puo *PostUpdateOne) ClearUser() *PostUpdateOne {
 	puo.mutation.ClearUser()
 	return puo
+}
+
+// ClearTags clears all "tags" edges to the Tag entity.
+func (puo *PostUpdateOne) ClearTags() *PostUpdateOne {
+	puo.mutation.ClearTags()
+	return puo
+}
+
+// RemoveTagIDs removes the "tags" edge to Tag entities by IDs.
+func (puo *PostUpdateOne) RemoveTagIDs(ids ...uuid.UUID) *PostUpdateOne {
+	puo.mutation.RemoveTagIDs(ids...)
+	return puo
+}
+
+// RemoveTags removes "tags" edges to Tag entities.
+func (puo *PostUpdateOne) RemoveTags(t ...*Tag) *PostUpdateOne {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return puo.RemoveTagIDs(ids...)
 }
 
 // Save executes the query and returns the updated Post entity.
@@ -735,13 +843,6 @@ func (puo *PostUpdateOne) sqlSave(ctx context.Context) (_node *Post, err error) 
 		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing Post.ID for update")}
 	}
 	_spec.Node.ID.Value = id
-	if value, ok := puo.mutation.FkUserID(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeUUID,
-			Value:  value,
-			Column: post.FieldFkUserID,
-		})
-	}
 	if value, ok := puo.mutation.Title(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -873,6 +974,60 @@ func (puo *PostUpdateOne) sqlSave(ctx context.Context) (_node *Post, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.RemovedTagsIDs(); len(nodes) > 0 && !puo.mutation.TagsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   post.TagsTable,
+			Columns: post.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: tag.FieldID,
 				},
 			},
 		}
