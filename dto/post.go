@@ -12,5 +12,19 @@ type WritePostDTO struct {
 	UrlSlug    string    `json:"url_slug"`
 	Thumbnail  string    `json:"thumbnail"`
 	Meta       libs.JSON `json:"meta"`
-	Tags       []string  `json:"tag"`
+	Tags       []string  `json:"tags"`
+}
+
+// WritePostDTO - 포스트 수정 body 데이터
+type UpdatePostDTO struct {
+	PostID     string    `json:"post_id"`
+	Title      string    `json:"title"`
+	Body       string    `json:"body" binding:"required"`
+	IsMarkdown bool      `json:"is_markdown"`
+	IsTemp     bool      `json:"is_temp"`
+	IsPrivate  bool      `json:"is_private"`
+	UrlSlug    string    `json:"url_slug"`
+	Thumbnail  string    `json:"thumbnail"`
+	Meta       libs.JSON `json:"meta"`
+	Tags       []string  `json:"tags"`
 }

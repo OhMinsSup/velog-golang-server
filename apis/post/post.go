@@ -10,5 +10,6 @@ func ApplyRoutes(r *gin.RouterGroup) {
 	post := r.Group("/post")
 	{
 		post.POST("/", middlewares.Authorized, controllers.WritePostController)
+		post.PUT("/", middlewares.Authorized, controllers.UpdatePostController)
 	}
 }
