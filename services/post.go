@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"github.com/OhMinsSup/story-server/app"
 	"github.com/OhMinsSup/story-server/dto"
@@ -16,15 +15,16 @@ import (
 	"github.com/gosimple/slug"
 	"log"
 	"net/http"
+	"time"
 )
 
 // 공용 스토어
 type PostStore struct {
 	tx  *ent.Tx
-	ctx context.Context
+	ctx *gin.Context
 }
 
-func NewPostStore(ctx context.Context, tx *ent.Tx) *PostStore {
+func NewPostStore(ctx *gin.Context, tx *ent.Tx) *PostStore {
 	return &PostStore{
 		tx:  tx,
 		ctx: ctx,
@@ -34,14 +34,13 @@ func NewPostStore(ctx context.Context, tx *ent.Tx) *PostStore {
 // UpdatePostService - 포스트 수정 서비스
 func UpdatePostService(body dto.UpdatePostDTO, ctx *gin.Context) (*app.ResponseException, error) {
 	client := ctx.MustGet("client").(*ent.Client)
-	bg := context.Background()
 
-	tx, err := client.Tx(bg)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return app.TransactionsErrorResponse(err.Error(), nil), nil
 	}
 
-	store := NewPostStore(bg, tx)
+	store := NewPostStore(ctx, tx)
 	log.Println(store)
 
 	userId, err := uuid.Parse(ctx.MustGet("id").(string))
@@ -49,13 +48,115 @@ func UpdatePostService(body dto.UpdatePostDTO, ctx *gin.Context) (*app.ResponseE
 		return app.UnAuthorizedErrorResponse("INVALID_USER_ID_UUID", nil), nil
 	}
 
-	user, err := tx.User.Query().Where(
-		userEnt.IDEQ(userId),
-	).First(bg)
+	postId, err := uuid.Parse(body.PostID)
+	if err != nil {
+		return app.BadRequestErrorResponse("INVALID_POST_ID_UUID", nil), nil
+	}
 
-	log.Println(user)
-	if ent.IsNotFound(err) {
-		return app.NotFoundErrorResponse("User Is Not Found", nil), nil
+	post, err := store.
+		tx.
+		Post.
+		Query().
+		WithTags().
+		WithUser().
+		Where(postEnt.IDEQ(postId)).
+		Only(store.ctx)
+
+	if err != nil {
+		return app.NotFoundErrorResponse("Post is not found", nil), nil
+	}
+
+	if post.Edges.User.ID != userId {
+		return app.ForbiddenErrorResponse("This post is not yours", nil), nil
+	}
+
+	updateQuery := post.
+		Update().
+		SetTitle(body.Title).
+		SetBody(body.Body).
+		SetIsPrivate(body.IsPrivate).
+		SetIsTemp(body.IsTemp).
+		SetIsMarkdown(body.IsMarkdown).
+		SetMeta(body.Meta).
+		SetThumbnail(body.Thumbnail)
+
+	if post.IsTemp && !body.IsTemp {
+		now := time.Now()
+		updateQuery.SetReleasedAt(now)
+	}
+
+	processedUrlSlug := body.UrlSlug
+	urlSlugDuplicate, err := tx.Post.Query().Where(
+		postEnt.And(
+			postEnt.HasUserWith(
+				userEnt.IDEQ(userId),
+			),
+			postEnt.URLSlug(body.UrlSlug),
+		),
+	).First(ctx)
+
+	if !ent.IsNotFound(err) && urlSlugDuplicate.ID != post.ID {
+		processedUrlSlug = generateUrlSlug(body.Title)
+	}
+
+	if processedUrlSlug == "" {
+		processedUrlSlug = generateUrlSlug(body.Title)
+	}
+
+	updateQuery.SetURLSlug(processedUrlSlug)
+
+	updatePost, err := updateQuery.Save(ctx)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
+		}
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
+	}
+	log.Println("update post", updatePost)
+	log.Println("tags", body.Tags)
+	tagObj, err := syncPostTags(post.ID, body.Tags, store)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return app.TransactionsErrorResponse(rerr.Error(), nil), nil
+		}
+		return app.InteralServerErrorResponse(err.Error(), nil), nil
+	}
+
+	// 태그 객체는 nil 일수도 있다. 그렇기 때문에 nil 체크를 한다.
+	if tagObj != nil {
+		missings := tagObj["missing"].([]uuid.UUID)
+		addings := tagObj["adding"].([]uuid.UUID)
+
+		log.Println("missings", missings)
+		log.Println("adding", addings)
+
+		if len(missings) > 0 {
+			_, err := post.
+				Update().
+				RemoveTagIDs(missings...).
+				Save(ctx)
+
+			if err != nil {
+				if rerr := tx.Rollback(); rerr != nil {
+					return app.TransactionsErrorResponse(rerr.Error(), nil), nil
+				}
+				return app.InteralServerErrorResponse(err.Error(), nil), nil
+			}
+		}
+
+		if len(addings) > 0 {
+			_, err := post.
+				Update().
+				AddTagIDs(addings...).
+				Save(ctx)
+
+			if err != nil {
+				if rerr := tx.Rollback(); rerr != nil {
+					return app.TransactionsErrorResponse(rerr.Error(), nil), nil
+				}
+				return app.InteralServerErrorResponse(err.Error(), nil), nil
+			}
+		}
 	}
 
 	return &app.ResponseException{
@@ -64,22 +165,21 @@ func UpdatePostService(body dto.UpdatePostDTO, ctx *gin.Context) (*app.ResponseE
 		Message:       "",
 		ResultMessage: "",
 		Data: libs.JSON{
-			"id": true,
+			"id": postId,
 		},
-	}, nil
+	}, tx.Commit()
 }
 
 // WritePostService - 포스트 작성 서비스
 func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseException, error) {
 	client := ctx.MustGet("client").(*ent.Client)
-	bg := context.Background()
 
-	tx, err := client.Tx(bg)
+	tx, err := client.Tx(ctx)
 	if err != nil {
 		return app.TransactionsErrorResponse(err.Error(), nil), nil
 	}
 
-	store := NewPostStore(bg, tx)
+	store := NewPostStore(ctx, tx)
 
 	userId, err := uuid.Parse(ctx.MustGet("id").(string))
 	if err != nil {
@@ -88,7 +188,7 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 
 	user, err := tx.User.Query().Where(
 		userEnt.IDEQ(userId),
-	).First(bg)
+	).First(ctx)
 
 	if ent.IsNotFound(err) {
 		return app.NotFoundErrorResponse("User Is Not Found", nil), nil
@@ -102,7 +202,7 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 			),
 			postEnt.URLSlug(body.UrlSlug),
 		),
-	).First(bg)
+	).First(ctx)
 	log.Println("post", urlSlugDuplicate)
 
 	if !ent.IsNotFound(err) {
@@ -125,7 +225,7 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 		SetMeta(body.Meta).
 		SetUserID(user.ID).
 		SetUser(user).
-		Save(bg)
+		Save(ctx)
 
 	// 포스트 생성이 실패한 경우
 	if err != nil {
@@ -156,12 +256,10 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 			_, err := post.
 				Update().
 				RemoveTagIDs(missings...).
-				Save(bg)
+				Save(ctx)
 
 			if err != nil {
-				log.Println("err missing", err)
 				if rerr := tx.Rollback(); rerr != nil {
-					log.Println("rerr missing", rerr)
 					return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 				}
 				return app.InteralServerErrorResponse(err.Error(), nil), nil
@@ -172,12 +270,10 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 			_, err := post.
 				Update().
 				AddTagIDs(addings...).
-				Save(bg)
+				Save(ctx)
 
 			if err != nil {
-				log.Println("err missing", err)
 				if rerr := tx.Rollback(); rerr != nil {
-					log.Println("rerr missing", rerr)
 					return app.TransactionsErrorResponse(rerr.Error(), nil), nil
 				}
 				return app.InteralServerErrorResponse(err.Error(), nil), nil
@@ -211,7 +307,7 @@ func syncPostTags(postId uuid.UUID, tags []string, store *PostStore) (libs.JSON,
 		QueryTags().
 		IDs(bg)
 
-	log.Println("errors", err)
+	log.Println("currentTags", currentTagList)
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			return nil, rerr
@@ -243,11 +339,10 @@ func syncPostTags(postId uuid.UUID, tags []string, store *PostStore) (libs.JSON,
 		}
 	}
 
-	log.Println("tagList", tagList)
 	// 중복을 제거한 배열을 얻는다.
 	var uniqueTagIds []uuid.UUID
 
-	// uniqueTagIds에 이미 존재하는 값인지 체크
+	// uniqueTagIds 에 이미 존재하는 값인지 체크
 	filterTagIds := make(map[uuid.UUID]bool)
 
 	for _, value := range tagList {
@@ -264,92 +359,47 @@ func syncPostTags(postId uuid.UUID, tags []string, store *PostStore) (libs.JSON,
 	// 삭제 할 태그
 	var missing []uuid.UUID
 
-	// 이미 존재하는 값인지 체크
-	comparesMissing := make(map[uuid.UUID]bool)
-	comparesAdding := make(map[uuid.UUID]bool)
-
 	if len(currentTagList) > len(uniqueTagIds) {
-		// ["1", "2"] 추가 할 태그
-		for _, parent := range uniqueTagIds {
-			// ["3", "4", "5", "1"] 이미 등록된 태그
-			for _, children := range currentTagList {
-				// 이미 등록된 태그에 똑같은 태그값을 넣은 경우에는 그냥 넘긴다.
-				if parent == children {
-					break
-				}
+		for _, parent := range currentTagList {
+			index := libs.FindUUID(uniqueTagIds, parent)
 
-				// 추가 할 태그와 이미 등록된 태그가 같지 않으면 중복되지 않은 이미 등록된 값들은
-				// missing 에 넣어준다
-				if parent != children && !comparesMissing[children] {
-					comparesMissing[children] = true
-					missing = append(missing, children)
-				}
+			if index < len(uniqueTagIds) && uniqueTagIds[index] == parent {
+				// 이미 존재하는 경우
+			} else {
+				missing = append(missing, parent)
 			}
 		}
 
-		// ["3", "4", "5", "1"] 이미 등록된 태그
-		for _, parent := range currentTagList {
-			// ["1", "2"] 추가 할 태그
-			for _, children := range uniqueTagIds {
-				// 이미 등록된 태그에 똑같은 태그값을 넣은 경우에는 그냥 넘긴다.
-				if parent == children {
-					break
-				}
+		for _, parent := range uniqueTagIds {
+			index := libs.FindUUID(currentTagList, parent)
 
-				// 추가 할 태그와 이미 등록된 태그가 같지 않으면 중복되지 않은 이미 등록된 값들은
-				// adding 에 넣어준다
-				if parent != children && !comparesAdding[children] {
-					comparesAdding[children] = true
-					adding = append(adding, children)
-				}
+			if index < len(currentTagList) && currentTagList[index] == parent {
+				// 이미 존재하는 경우
+			} else {
+				adding = append(adding, parent)
 			}
 		}
 	} else {
-		// ["1", "2"]  이미 등록된 태그
-		for _, parent := range currentTagList {
-			// ["3", "4", "5", "1"] 추가 할 태그
-			for _, children := range uniqueTagIds {
-				// 이미 등록된 태그에 똑같은 태그값을 넣은 경우에는 그냥 넘긴다.
-				if parent == children {
-					break
-				}
+		for _, parent := range uniqueTagIds {
+			index := libs.FindUUID(currentTagList, parent)
 
-				// 추가 할 태그와 이미 등록된 태그가 같지 않으면 중복되지 않은 이미 등록된 값들은
-				// missing 에 넣어준다
-				if parent != children && !comparesMissing[children] {
-					comparesMissing[children] = true
-					missing = append(missing, children)
-				}
+			if index < len(currentTagList) && currentTagList[index] == parent {
+				// 이미 존재하는 경우
+			} else {
+				adding = append(adding, parent)
 			}
 		}
 
-		// ["3", "4", "5", "1"] 추가 할 태그
-		for _, parent := range uniqueTagIds {
-			if len(currentTagList) == 0 {
-				// 이미 등록한 태그가 존재하지 않는 경우
-				adding = append(adding, parent)
-			} else {
-				// 이미 등록한 태그가 존재하는 경
-				// ["1", "2"]  이미 등록된 태그
-				for _, children := range currentTagList {
-					// 이미 등록된 태그에 똑같은 태그값을 넣은 경우에는 그냥 넘긴다.
-					if parent == children {
-						break
-					}
+		for _, parent := range currentTagList {
+			index := libs.FindUUID(uniqueTagIds, parent)
 
-					// 추가 할 태그와 이미 등록된 태그가 같지 않으면 중복되지 않은 이미 등록된 값들은
-					// adding 에 넣어준다
-					if parent != children && !comparesAdding[children] {
-						comparesAdding[children] = true
-						adding = append(adding, children)
-					}
-				}
+			if index < len(uniqueTagIds) && uniqueTagIds[index] == parent {
+				// 이미 존재하는 경우
+			} else {
+				missing = append(missing, parent)
 			}
 		}
 	}
-
-	log.Println("adding", adding)
-	log.Println("missing", missing)
 
 	return libs.JSON{
 		"adding":  adding,
