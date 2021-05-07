@@ -8,6 +8,7 @@ import (
 	postEnt "github.com/OhMinsSup/story-server/ent/post"
 	tagEnt "github.com/OhMinsSup/story-server/ent/tag"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
+	userProfileEnt "github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/OhMinsSup/story-server/libs"
 	"github.com/SKAhack/go-shortid"
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ import (
 	"github.com/gosimple/slug"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -29,6 +31,179 @@ func NewPostStore(ctx *gin.Context, tx *ent.Tx) *PostStore {
 		tx:  tx,
 		ctx: ctx,
 	}
+}
+
+// ListPostService - 포스트 리스트 상세 서비스
+func ListPostService(ctx *gin.Context) (*app.ResponseException, error) {
+	client := ctx.MustGet("client").(*ent.Client)
+
+	limit, err := strconv.ParseInt(ctx.DefaultQuery("limit", "20"), 10, 64)
+	if err != nil {
+		return &app.ResponseException{
+			Code:          http.StatusBadRequest,
+			ResultCode:    app.ResultErrorCodeQueryStringInvalid,
+			Message:       "invalid query string limit",
+			ResultMessage: "",
+			Data:          nil,
+		}, nil
+	}
+
+	if limit > 100 {
+		return &app.ResponseException{
+			Code:          http.StatusBadRequest,
+			ResultCode:    app.ResultErrorCodeQueryStringInvalid,
+			Message:       "Max limit is 100",
+			ResultMessage: "",
+			Data:          nil,
+		}, nil
+	}
+
+	username := ctx.Query("username")
+
+	var user *ent.User
+	if username != "" {
+		userInfo, err := client.User.Query().Where(
+			userEnt.UsernameEQ(username),
+		).First(ctx)
+
+		if err != nil {
+			user = nil
+		} else {
+			user = userInfo
+		}
+	}
+
+	query := client.Post.
+		Query().
+		Limit(int(limit)).
+		Order(ent.Desc(postEnt.FieldReleasedAt)).
+		Order(ent.Desc(postEnt.FieldID)).
+		WithTags(func(query *ent.TagQuery) {
+			query.Select(tagEnt.FieldID, tagEnt.FieldName)
+		}).
+		WithUser(func(query *ent.UserQuery) {
+			query.Select(userEnt.FieldUsername, userEnt.FieldID, userEnt.FieldEmail)
+			query.WithUserProfile(func(query *ent.UserProfileQuery) {
+				query.Select(userProfileEnt.FieldThumbnail, userProfileEnt.FieldShortBio)
+			})
+		})
+
+	userId, err := uuid.Parse(ctx.MustGet("id").(string))
+	if err != nil {
+		query.Where(postEnt.IsPrivateEQ(false))
+	} else {
+		query.Where(
+			postEnt.Or(
+				postEnt.IsPrivateEQ(false),
+				postEnt.HasUserWith(userEnt.IDEQ(userId)),
+			),
+		)
+	}
+
+	tempOnly, _ := strconv.ParseBool(ctx.Query("temp_only"))
+	if tempOnly {
+		if username == "" {
+			return &app.ResponseException{
+				Code:          http.StatusBadRequest,
+				ResultCode:    app.ResultErrorCodeQueryStringInvalid,
+				Message:       "username is missing",
+				ResultMessage: "",
+				Data:          nil,
+			}, nil
+		}
+
+		if userId == uuid.Nil {
+			return &app.ResponseException{
+				Code:          http.StatusNotFound,
+				ResultCode:    app.ResultErrorInvalid,
+				Message:       "Invalid username",
+				ResultMessage: "",
+				Data:          nil,
+			}, nil
+		}
+
+		if user.ID != userId {
+			return &app.ResponseException{
+				Code:          http.StatusForbidden,
+				ResultCode:    app.ResultErrorNoPermission,
+				Message:       "You have no permission to load temp posts",
+				ResultMessage: "",
+				Data:          nil,
+			}, nil
+		}
+
+		query.Where(
+			postEnt.And(
+				postEnt.IsTempEQ(true),
+			),
+		)
+	} else {
+		query.Where(
+			postEnt.And(
+				postEnt.IsTempEQ(false),
+			),
+		)
+	}
+
+	if username != "" {
+		query.Where(
+			postEnt.HasUserWith(
+				userEnt.UsernameEQ(username),
+			))
+	}
+
+	posts, _ := query.All(ctx)
+
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data: libs.JSON{
+			"posts": posts,
+		},
+	}, nil
+}
+
+// ReadPostService - 포스트 상세 서비스
+func ReadPostService(ctx *gin.Context) (*app.ResponseException, error) {
+	postId, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		return app.BadRequestErrorResponse("INVALID_POST_ID_UUID", nil), nil
+	}
+
+	client := ctx.MustGet("client").(*ent.Client)
+
+	post, err := client.
+		Post.
+		Query().
+		Where(
+			postEnt.IDEQ(postId),
+		).
+		WithTags(func(query *ent.TagQuery) {
+			query.Select(tagEnt.FieldID, tagEnt.FieldName)
+		}).
+		WithUser(func(query *ent.UserQuery) {
+			query.Select(userEnt.FieldUsername, userEnt.FieldID, userEnt.FieldEmail)
+			query.WithUserProfile(func(query *ent.UserProfileQuery) {
+				query.Select(userProfileEnt.FieldThumbnail, userProfileEnt.FieldShortBio)
+			})
+		}).
+		Only(ctx)
+
+	if err != nil {
+		return app.NotFoundErrorResponse("Post Is NotFound", nil), nil
+	}
+
+	return &app.ResponseException{
+		Code:          http.StatusOK,
+		ResultCode:    0,
+		Message:       "",
+		ResultMessage: "",
+		Data: libs.JSON{
+			"post": serializeReadPost(post),
+		},
+	}, nil
 }
 
 // UpdatePostService - 포스트 수정 서비스
@@ -113,7 +288,7 @@ func UpdatePostService(body dto.UpdatePostDTO, ctx *gin.Context) (*app.ResponseE
 		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 	log.Println("update post", updatePost)
-	log.Println("tags", body.Tags)
+
 	tagObj, err := syncPostTags(post.ID, body.Tags, store)
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
@@ -126,9 +301,6 @@ func UpdatePostService(body dto.UpdatePostDTO, ctx *gin.Context) (*app.ResponseE
 	if tagObj != nil {
 		missings := tagObj["missing"].([]uuid.UUID)
 		addings := tagObj["adding"].([]uuid.UUID)
-
-		log.Println("missings", missings)
-		log.Println("adding", addings)
 
 		if len(missings) > 0 {
 			_, err := post.
@@ -235,7 +407,6 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 		return app.InteralServerErrorResponse(err.Error(), nil), nil
 	}
 
-	log.Println("tags", body.Tags)
 	tagObj, err := syncPostTags(post.ID, body.Tags, store)
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
@@ -248,9 +419,6 @@ func WritePostService(body dto.WritePostDTO, ctx *gin.Context) (*app.ResponseExc
 	if tagObj != nil {
 		missings := tagObj["missing"].([]uuid.UUID)
 		addings := tagObj["adding"].([]uuid.UUID)
-
-		log.Println("missings", missings)
-		log.Println("adding", addings)
 
 		if len(missings) > 0 {
 			_, err := post.
@@ -307,7 +475,6 @@ func syncPostTags(postId uuid.UUID, tags []string, store *PostStore) (libs.JSON,
 		QueryTags().
 		IDs(bg)
 
-	log.Println("currentTags", currentTagList)
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			return nil, rerr
@@ -351,8 +518,6 @@ func syncPostTags(postId uuid.UUID, tags []string, store *PostStore) (libs.JSON,
 			uniqueTagIds = append(uniqueTagIds, value)
 		}
 	}
-
-	log.Println("uniqueTagIds", uniqueTagIds)
 
 	// 등록 할 태그
 	var adding []uuid.UUID
@@ -412,4 +577,36 @@ func generateUrlSlug(title string) string {
 	shortId := shortid.Generator()
 	result := fmt.Sprintf("%v-%v", urlSlug, shortId.Generate())
 	return result
+}
+
+func serializeReadPost(post *ent.Post) dto.ReadPostSchema {
+	readPost := dto.ReadPostSchema{
+		ID:         post.ID,
+		Title:      post.Title,
+		Body:       post.Body,
+		Thumbnail:  *post.Thumbnail,
+		UrlSlug:    post.URLSlug,
+		Likes:      post.Likes,
+		Views:      post.Views,
+		IsMarkdown: post.IsMarkdown,
+		IsPrivate:  post.IsPrivate,
+		IsTemp:     post.IsTemp,
+		ReleasedAt: post.ReleasedAt,
+		CreatedAt:  post.CreatedAt,
+		UpdatedAt:  post.UpdatedAt,
+		User: dto.PostUserSchema{
+			ID:       post.Edges.User.ID,
+			Username: post.Edges.User.Username,
+			Email:    *post.Edges.User.Email,
+		},
+	}
+
+	for _, tag := range post.Edges.Tags {
+		readPost.Tags = append(readPost.Tags, dto.PostTagSchema{
+			ID:   tag.ID,
+			Name: tag.Name,
+		})
+	}
+
+	return readPost
 }

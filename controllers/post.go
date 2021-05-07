@@ -31,3 +31,15 @@ func UpdatePostController(ctx *gin.Context) {
 	result, _ := services.UpdatePostService(body, ctx)
 	ctx.JSON(result.Code, result)
 }
+
+// ReadPostController - 포스트 상세 API
+func ReadPostController(ctx *gin.Context) {
+	result, _ := services.ReadPostService(ctx)
+	ctx.JSON(result.Code, result)
+}
+
+// ListPostController - 포스트 리스트 API
+func ListPostController(ctx *gin.Context)  {
+	result, _ := services.ListPostService(ctx)
+   ctx.JSON(result.Code, result)
+}

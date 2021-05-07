@@ -31,6 +31,9 @@ const (
 const (
 	ResultErrorCodeExists        = 40000
 	ResultErrorCodeAlreadyExists = 40001
+	ResultErrorCodeQueryStringInvalid = 40002
+	ResultErrorInvalid = 40003
+	ResultErrorNoPermission = 40004
 )
 
 func AlreadyExistsErrorResponse(msg string, data libs.JSON) *ResponseException {
