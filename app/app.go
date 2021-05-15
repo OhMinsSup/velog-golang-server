@@ -32,7 +32,7 @@ func New() (*gin.Engine, *ent.Client) {
 	if err != nil {
 		log.Fatalf("failed opening connection to postgres: %v", err)
 	}
-
+	
 	drv := entsql.OpenDB(dialect.Postgres, db)
 	// create database client
 	client := ent.NewClient(ent.Driver(drv))

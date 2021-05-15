@@ -41,5 +41,5 @@ func ReadPostController(ctx *gin.Context) {
 // ListPostController - 포스트 리스트 API
 func ListPostController(ctx *gin.Context)  {
 	result, _ := services.ListPostService(ctx)
-   ctx.JSON(result.Code, result)
+    ctx.JSON(result.Code, result)
 }

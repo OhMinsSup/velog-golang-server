@@ -6,11 +6,13 @@ import (
 	"github.com/OhMinsSup/story-server/dto"
 	"github.com/OhMinsSup/story-server/ent"
 	postEnt "github.com/OhMinsSup/story-server/ent/post"
+	"github.com/OhMinsSup/story-server/ent/predicate"
 	tagEnt "github.com/OhMinsSup/story-server/ent/tag"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	userProfileEnt "github.com/OhMinsSup/story-server/ent/userprofile"
 	"github.com/OhMinsSup/story-server/libs"
 	"github.com/SKAhack/go-shortid"
+	"github.com/facebook/ent/dialect/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -20,7 +22,6 @@ import (
 	"time"
 )
 
-// 공용 스토어
 type PostStore struct {
 	tx  *ent.Tx
 	ctx *gin.Context
@@ -58,101 +59,55 @@ func ListPostService(ctx *gin.Context) (*app.ResponseException, error) {
 		}, nil
 	}
 
-	username := ctx.Query("username")
+	var nextPost *ent.Post
+	cursor, _ := uuid.Parse(ctx.Query("cursor"))
 
-	var user *ent.User
-	if username != "" {
-		userInfo, err := client.User.Query().Where(
-			userEnt.UsernameEQ(username),
+	if cursor != uuid.Nil {
+		post, err := client.Post.Query().Where(
+			postEnt.IDEQ(cursor),
 		).First(ctx)
 
-		if err != nil {
-			user = nil
-		} else {
-			user = userInfo
+		if err != nil || post == nil {
+			return &app.ResponseException{
+				Code:          http.StatusBadRequest,
+				ResultCode:    app.ResultErrorInvalid,
+				Message:       "invalid cursor",
+				ResultMessage: "",
+				Data:          nil,
+			}, err
 		}
+
+		nextPost = post
 	}
 
-	query := client.Post.
+	posts, _ := client.Post.
 		Query().
 		Limit(int(limit)).
 		Order(ent.Desc(postEnt.FieldReleasedAt)).
 		Order(ent.Desc(postEnt.FieldID)).
-		WithTags(func(query *ent.TagQuery) {
-			query.Select(tagEnt.FieldID, tagEnt.FieldName)
-		}).
+		WithTags().
 		WithUser(func(query *ent.UserQuery) {
-			query.Select(userEnt.FieldUsername, userEnt.FieldID, userEnt.FieldEmail)
 			query.WithUserProfile(func(query *ent.UserProfileQuery) {
 				query.Select(userProfileEnt.FieldThumbnail, userProfileEnt.FieldShortBio)
 			})
-		})
-
-	userId, err := uuid.Parse(ctx.MustGet("id").(string))
-	if err != nil {
-		query.Where(postEnt.IsPrivateEQ(false))
-	} else {
-		query.Where(
-			postEnt.Or(
-				postEnt.IsPrivateEQ(false),
-				postEnt.HasUserWith(userEnt.IDEQ(userId)),
-			),
-		)
-	}
-
-	tempOnly, _ := strconv.ParseBool(ctx.Query("temp_only"))
-	if tempOnly {
-		if username == "" {
-			return &app.ResponseException{
-				Code:          http.StatusBadRequest,
-				ResultCode:    app.ResultErrorCodeQueryStringInvalid,
-				Message:       "username is missing",
-				ResultMessage: "",
-				Data:          nil,
-			}, nil
-		}
-
-		if userId == uuid.Nil {
-			return &app.ResponseException{
-				Code:          http.StatusNotFound,
-				ResultCode:    app.ResultErrorInvalid,
-				Message:       "Invalid username",
-				ResultMessage: "",
-				Data:          nil,
-			}, nil
-		}
-
-		if user.ID != userId {
-			return &app.ResponseException{
-				Code:          http.StatusForbidden,
-				ResultCode:    app.ResultErrorNoPermission,
-				Message:       "You have no permission to load temp posts",
-				ResultMessage: "",
-				Data:          nil,
-			}, nil
-		}
-
-		query.Where(
-			postEnt.And(
-				postEnt.IsTempEQ(true),
-			),
-		)
-	} else {
-		query.Where(
-			postEnt.And(
-				postEnt.IsTempEQ(false),
-			),
-		)
-	}
-
-	if username != "" {
-		query.Where(
-			postEnt.HasUserWith(
-				userEnt.UsernameEQ(username),
-			))
-	}
-
-	posts, _ := query.All(ctx)
+		}).
+		Where(predicate.Post(func(selector *sql.Selector) {
+			if nextPost != nil {
+				selector.
+					Where(sql.And(
+						sql.EQ(postEnt.FieldIsPrivate, false),
+						sql.EQ(postEnt.FieldIsTemp, false),
+						sql.LT(postEnt.FieldReleasedAt, nextPost.ReleasedAt),
+					))
+			} else {
+				selector.
+					Where(sql.And(
+						sql.EQ(postEnt.FieldIsPrivate, false),
+						sql.EQ(postEnt.FieldIsTemp, false),
+					))
+			}
+		})).
+		All(ctx)
 
 	return &app.ResponseException{
 		Code:          http.StatusOK,

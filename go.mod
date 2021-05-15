@@ -21,6 +21,7 @@ require (
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.3.0
 	github.com/pkg/errors v0.9.1
+	github.com/simukti/sqldb-logger v0.0.0-20201125162808-c35f87e285f2 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/go-playground/validator.v9 v9.31.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect

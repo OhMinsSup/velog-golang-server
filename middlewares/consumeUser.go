@@ -2,10 +2,10 @@ package middlewares
 
 import (
 	"context"
+	"github.com/OhMinsSup/story-server/authorize"
 	"github.com/OhMinsSup/story-server/ent"
 	userEnt "github.com/OhMinsSup/story-server/ent/user"
 	"github.com/OhMinsSup/story-server/libs"
-	"github.com/OhMinsSup/story-server/authorize"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -64,6 +64,8 @@ func refresh(client *ent.Client, ctx *gin.Context, refreshToken string) (string,
 // ConsumeUser authorize 검증및 재발급 프로세스
 func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 	return func(context *gin.Context) {
+		context.Set("id", "")
+
 		if context.FullPath() == "/auth/logout" {
 			context.Next()
 			return
@@ -82,7 +84,7 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 					context.Next()
 					return
 				}
-				// 헤더에 access token이 존재하는 경우에 access token에 값을 넣어준다
+				// 헤더에 access token 이 존재하는 경우에 access token 에 값을 넣어준다
 				accessToken = sp[1]
 			}
 		}
@@ -94,16 +96,16 @@ func ConsumeUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		// access Token refresh token의 값이 없는 경우에는
+		// access Token refresh token 의 값이 없는 경우에는
 		if accessToken == "" {
 			// invalid authorize! try authorize refresh...
-			// refresh token이 없는 경우에 다음 미들웨어로 이동
+			// refresh token 이 없는 경우에 다음 미들웨어로 이동
 			if refreshToken == "" {
 				context.Next()
 				return
 			}
-			// 토큰이 존재하는 경우 다시 token을 재발급 받는다.
-			// 그리고 userid값을 받아서 context에 할당
+			// 토큰이 존재하는 경우 다시 token 을 재발급 받는다.
+			// 그리고 userid 값을 받아서 context 에 할당
 			userId, _ := refresh(client, context, refreshToken)
 			context.Set("id", userId)
 			context.Next()
